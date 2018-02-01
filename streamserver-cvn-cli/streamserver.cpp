@@ -49,4 +49,17 @@ void StreamServer::initInput()
             throw std::runtime_error("Can't open input file \"" + fileName.toStdString() + "\": " + err.toStdString());
         }
     }
+
+    // Prepare a new notifier.
+    _inputFileNotifierPtr = std::make_unique<QSocketNotifier>(
+        _inputFilePtr->handle(), QSocketNotifier::Read, this);
+    connect(_inputFileNotifierPtr.get(), &QSocketNotifier::activated, this, &StreamServer::processInput);
+}
+
+void StreamServer::processInput()
+{
+    QByteArray packetBytes = _inputFilePtr->read(_tsPacketSize);
+    qDebug() << Q_FUNC_INFO << "Read data:" << packetBytes;
+
+    // TODO: Actually process the read data.
 }

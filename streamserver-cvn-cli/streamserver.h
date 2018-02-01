@@ -5,6 +5,7 @@
 
 #include <memory>
 #include <QFile>
+#include <QSocketNotifier>
 
 class StreamServer : public QObject
 {
@@ -12,6 +13,8 @@ class StreamServer : public QObject
 
     quint16                 _listenPort;
     std::unique_ptr<QFile>  _inputFilePtr;
+    std::unique_ptr<QSocketNotifier>  _inputFileNotifierPtr;
+    qint64                  _tsPacketSize = 188;
 
 public:
     explicit StreamServer(std::unique_ptr<QFile> &&inputFilePtr, quint16 listenPort = 8000, QObject *parent = 0);
@@ -25,6 +28,7 @@ public:
 signals:
 
 public slots:
+    void processInput();
 };
 
 #endif // STREAMSERVER_H
