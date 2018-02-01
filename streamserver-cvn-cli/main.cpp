@@ -1,7 +1,9 @@
+#include <QCoreApplication>
+
+#include "streamserver.h"
+
 #include <QTextStream>
 #include <QCommandLineParser>
-
-#include <QCoreApplication>
 
 int main(int argc, char *argv[])
 {
@@ -42,7 +44,16 @@ int main(int argc, char *argv[])
     out << "Input file path: " << inputFilePath << endl;
 
 
-    // FIXME
-    //return a.exec();
-    return 0;
+    StreamServer server(std::make_unique<QFile>(inputFilePath), listenPort);
+
+    try {
+        server.initInput();
+    }
+    catch (std::exception &ex) {
+        errout << a.applicationName() << ": Error initializing stream server input"
+               << ": " << ex.what() << endl;
+        return 1;
+    }
+
+    return a.exec();
 }

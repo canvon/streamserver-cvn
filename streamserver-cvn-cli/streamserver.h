@@ -20,6 +20,8 @@ public:
     QFile       &inputFile();
     const QFile &inputFile() const;
 
+    void initInput();
+
 signals:
 
 public slots:
