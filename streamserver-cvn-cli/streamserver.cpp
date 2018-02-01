@@ -33,6 +33,8 @@ const QFile &StreamServer::inputFile() const
 
 void StreamServer::initInput()
 {
+    qInfo() << Q_FUNC_INFO << "Initializing input";
+
     if (!_inputFilePtr->isOpen()) {
         const QString fileName = _inputFilePtr->fileName();
 
@@ -51,9 +53,14 @@ void StreamServer::initInput()
     }
 
     // Prepare a new notifier.
+    int inputFileHandle = _inputFilePtr->handle();
+    if (inputFileHandle < 0)
+        throw std::runtime_error("Can't get handle for input file");
     _inputFileNotifierPtr = std::make_unique<QSocketNotifier>(
-        _inputFilePtr->handle(), QSocketNotifier::Read, this);
+        inputFileHandle, QSocketNotifier::Read, this);
     connect(_inputFileNotifierPtr.get(), &QSocketNotifier::activated, this, &StreamServer::processInput);
+
+    qInfo() << Q_FUNC_INFO << "Successfully initialized input";
 }
 
 void StreamServer::processInput()
