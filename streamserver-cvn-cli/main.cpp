@@ -15,14 +15,13 @@ namespace {
 
 static void msgHandler(QtMsgType type, const QMessageLogContext &ctx, const QString &msg) {
     int sd_info = 5;  // SD_NOTICE
-    bool is_debug = (verbose >= 3);
     bool is_fatal_msg = false;
 
     switch (type) {
     case QtDebugMsg:
         sd_info = 7;  // SD_DEBUG
-        // Only at -vvv.
-        if (!is_debug)
+        // Only at --debug.
+        if (!(debug_level > 0))
             return;
         break;
     case QtInfoMsg:
@@ -47,22 +46,22 @@ static void msgHandler(QtMsgType type, const QMessageLogContext &ctx, const QStr
     if (ctx.category && strcmp(ctx.category, "default") != 0) {
         errout << "[" << ctx.category << "] ";
     }
-    if (is_debug) {
-        if (ctx.file) {
+    if (debug_level > 0) {
+        if (debug_level > 1 && ctx.file) {
             errout << ctx.file;
             if (ctx.line) {
                 errout << ":" << ctx.line;
             }
-            if (ctx.function) {
-                errout << ": " << ctx.function;
-            }
             errout << ": ";
+        }
+        if (ctx.function) {
+            errout << ctx.function << ": ";
         }
     }
     errout << msg << endl;
 
     if (is_fatal_msg) {
-        if (is_debug)
+        if (debug_level > 0)
             abort();
 
         exit(3);
