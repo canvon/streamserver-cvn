@@ -161,5 +161,8 @@ void StreamServer::processInput()
                                  ", but was " + std::to_string(packetBytes.length()));
 
     // Actually process the read data.
-    TSPacket packet(packetBytes, this);
+    TSPacket packet(packetBytes);
+    for (auto client : _clients) {
+        client->queuePacket(packet);
+    }
 }
