@@ -76,11 +76,21 @@ int main(int argc, char *argv[])
     parser.setApplicationDescription("Media streaming server from MPEG-TS to HTTP clients");
     parser.addHelpOption();
     parser.addOptions({
+        { { "v", "verbose" }, "Increase verbose level" },
+        { { "q", "quiet"   }, "Decrease verbose level" },
         { { "l", "listen" }, "Port to listen on for HTTP streaming client connections",
           "listen_port", "8000" },
     });
     parser.addPositionalArgument("input", "Input file name");
     parser.process(a);
+
+    // Apply incremental options.
+    for (QString opt : parser.optionNames()) {
+        if (opt == "v" || opt == "verbose")
+            verbose++;
+        else if (opt == "q" || opt == "quiet")
+            verbose--;
+    }
 
 
     QString listenPortStr = parser.value("listen");
