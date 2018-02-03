@@ -14,9 +14,9 @@ StreamServer::StreamServer(std::unique_ptr<QFile> &&inputFilePtr, quint16 listen
 {
     connect(&_listenSocket, &QTcpServer::newConnection, this, &StreamServer::clientConnected);
 
-    qInfo() << Q_FUNC_INFO << "Listening on port" << _listenPort << "...";
+    qInfo() << "Listening on port" << _listenPort << "...";
     if (!_listenSocket.listen(QHostAddress::Any, _listenPort)) {
-        qCritical() << Q_FUNC_INFO << "Error listening on port" << _listenPort
+        qCritical() << "Error listening on port" << _listenPort
                     << "due to" << _listenSocket.errorString();
         throw std::runtime_error("Listening on network port failed");
     }
@@ -54,10 +54,10 @@ void StreamServer::clientConnected()
 {
     std::unique_ptr<QTcpSocket> socketPtr(_listenSocket.nextPendingConnection());
     if (!socketPtr) {
-        qDebug() << Q_FUNC_INFO << "No next pending connection";
+        qDebug() << "No next pending connection";
         return;
     }
-    qInfo() << Q_FUNC_INFO << "Client connected:"
+    qInfo() << "Client connected:"
             << "From" << socketPtr->peerAddress()
             << "port" << socketPtr->peerPort();
 
@@ -74,18 +74,18 @@ void StreamServer::clientConnected()
 void StreamServer::clientDisconnected(QObject *objPtr)
 {
     if (!objPtr) {
-        qDebug() << Q_FUNC_INFO << "No object specified";
+        qDebug() << "No object specified";
         return;
     }
 
     auto *clientPtr = dynamic_cast<StreamClient *>(objPtr);
     if (!clientPtr) {
-        qDebug() << Q_FUNC_INFO << "Not a StreamClient";
+        qDebug() << "Not a StreamClient";
         return;
     }
 
     QTcpSocket &socket(clientPtr->socket());
-    qInfo() << Q_FUNC_INFO << "Client disconnected:"
+    qInfo() << "Client disconnected:"
             << "From" << socket.peerAddress()
             << "port" << socket.peerPort();
 
@@ -94,18 +94,16 @@ void StreamServer::clientDisconnected(QObject *objPtr)
 
 void StreamServer::initInput()
 {
-    qDebug() << Q_FUNC_INFO << "Initializing input";
+    qDebug() << "Initializing input";
 
     if (!_inputFilePtr->isOpen()) {
         const QString fileName = _inputFilePtr->fileName();
 
-        qInfo() << Q_FUNC_INFO
-                << "Opening input file" << fileName << "...";
+        qInfo() << "Opening input file" << fileName << "...";
 
         if (!_inputFilePtr->open(QFile::ReadOnly)) {
             const QString err = _inputFilePtr->errorString();
-            qCritical() << Q_FUNC_INFO
-                        << "Can't open input file" << fileName
+            qCritical() << "Can't open input file" << fileName
                         << "due to" << err
                         << ", excepting.";
             //qApp->exit(1);  // We can't always do this, as the main loop maybe has not started yet, so exiting it will have no effect!
@@ -121,14 +119,14 @@ void StreamServer::initInput()
         inputFileHandle, QSocketNotifier::Read, this);
     connect(_inputFileNotifierPtr.get(), &QSocketNotifier::activated, this, &StreamServer::processInput);
 
-    qDebug() << Q_FUNC_INFO << "Successfully initialized input";
+    qDebug() << "Successfully initialized input";
 }
 
 void StreamServer::finalizeInput()
 {
-    qDebug() << Q_FUNC_INFO << "Finalizing input";
+    qDebug() << "Finalizing input";
 
-    qInfo() << Q_FUNC_INFO << "Closing input...";
+    qInfo() << "Closing input...";
     _inputFilePtr->close();
 
     // Stop notifier gracefully, otherwise it outputs error messages from the event loop.
@@ -137,23 +135,23 @@ void StreamServer::finalizeInput()
         _inputFileNotifierPtr.reset();
     }
 
-    qDebug() << Q_FUNC_INFO << "Successfully finalized input";
+    qDebug() << "Successfully finalized input";
 }
 
 void StreamServer::processInput()
 {
     QByteArray packetBytes = _inputFilePtr->read(_tsPacketSize);
     if (packetBytes.isNull()) {
-        qInfo() << Q_FUNC_INFO << "EOF on input, finalizing...";
+        qInfo() << "EOF on input, finalizing...";
         finalizeInput();
 
-        qInfo() << Q_FUNC_INFO << "Setting up timer to open input again";
+        qInfo() << "Setting up timer to open input again";
         _inputFileReopenTimer.singleShot(_inputFileReopenTimeoutMillisec,
             this, &StreamServer::initInput);
 
         return;
     }
-    qDebug() << Q_FUNC_INFO << "Read data:" << packetBytes;
+    qDebug() << "Read data:" << packetBytes;
 
     if (packetBytes.length() != _tsPacketSize)
         throw std::runtime_error("Desync: Read packet should be size " + std::to_string(_tsPacketSize) +
