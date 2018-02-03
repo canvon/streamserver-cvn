@@ -35,9 +35,6 @@ public:
     QFile       &inputFile();
     const QFile &inputFile() const;
 
-    void clientConnected();
-    void clientDisconnected(QObject *objPtr);
-
     void initInput();
     void finalizeInput();
 
@@ -45,6 +42,10 @@ signals:
 
 public slots:
     void processInput();
+
+private slots:
+    void clientConnected();
+    void clientDisconnected(QObject *objPtr);
 };
 
 #endif // STREAMSERVER_H
