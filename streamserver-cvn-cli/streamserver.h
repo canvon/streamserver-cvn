@@ -6,6 +6,7 @@
 #include <memory>
 #include <QFile>
 #include <QSocketNotifier>
+#include <QTimer>
 
 class StreamServer : public QObject
 {
@@ -14,6 +15,8 @@ class StreamServer : public QObject
     quint16                 _listenPort;
     std::unique_ptr<QFile>  _inputFilePtr;
     std::unique_ptr<QSocketNotifier>  _inputFileNotifierPtr;
+    QTimer                  _inputFileReopenTimer;
+    int                     _inputFileReopenTimeoutMillisec = 1000;
     qint64                  _tsPacketSize = 188;
 
 public:

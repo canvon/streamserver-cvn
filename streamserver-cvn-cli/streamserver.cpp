@@ -5,7 +5,7 @@
 #include <QCoreApplication>
 
 StreamServer::StreamServer(std::unique_ptr<QFile> &&inputFilePtr, quint16 listenPort, QObject *parent) :
-    QObject(parent), _listenPort(listenPort)
+    QObject(parent), _listenPort(listenPort), _inputFileReopenTimer(this)
 {
     _inputFilePtr = std::move(inputFilePtr);
 }
@@ -66,6 +66,16 @@ void StreamServer::initInput()
 void StreamServer::processInput()
 {
     QByteArray packetBytes = _inputFilePtr->read(_tsPacketSize);
+    if (packetBytes.isNull()) {
+        qInfo() << Q_FUNC_INFO << "EOF on input, closing...";
+        _inputFilePtr->close();
+
+        qInfo() << Q_FUNC_INFO << "Setting up timer to open input again";
+        _inputFileReopenTimer.singleShot(_inputFileReopenTimeoutMillisec,
+            this, &StreamServer::initInput);
+
+        return;
+    }
     qDebug() << Q_FUNC_INFO << "Read data:" << packetBytes;
 
     // TODO: Actually process the read data.
