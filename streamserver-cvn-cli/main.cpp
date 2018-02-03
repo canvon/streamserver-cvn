@@ -16,6 +16,7 @@ namespace {
 static void msgHandler(QtMsgType type, const QMessageLogContext &ctx, const QString &msg) {
     int sd_info = 5;  // SD_NOTICE
     bool is_fatal_msg = false;
+    QString prefix;
 
     switch (type) {
     case QtDebugMsg:
@@ -23,6 +24,7 @@ static void msgHandler(QtMsgType type, const QMessageLogContext &ctx, const QStr
         // Only at --debug.
         if (!(debug_level > 0))
             return;
+        prefix = "DEBUG: ";
         break;
     case QtInfoMsg:
         sd_info = 6;  // SD_INFO
@@ -36,16 +38,25 @@ static void msgHandler(QtMsgType type, const QMessageLogContext &ctx, const QStr
     case QtFatalMsg:
         sd_info = 2;  // SD_CRIT
         is_fatal_msg = true;
+        prefix = "Fatal: ";
         break;
     default:
         errout << "<4>Warning: Log message handler got unrecognized message type " << type << endl;
         break;
     }
 
+    // systemd-compatible message severity.
     errout << "<" << sd_info << ">";
+
+    // Optional category.
     if (ctx.category && strcmp(ctx.category, "default") != 0) {
         errout << "[" << ctx.category << "] ";
     }
+
+    // Optional prefix.
+    errout << prefix;
+
+    // Optional debugging aids.
     if (debug_level > 0) {
         if (debug_level > 1 && ctx.file) {
             errout << ctx.file;
@@ -58,8 +69,11 @@ static void msgHandler(QtMsgType type, const QMessageLogContext &ctx, const QStr
             errout << ctx.function << ": ";
         }
     }
+
+    // The message.
     errout << msg << endl;
 
+    // Fatal messages shall be fatal to the program execution.
     if (is_fatal_msg) {
         if (debug_level > 0)
             abort();
