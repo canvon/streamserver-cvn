@@ -4,6 +4,8 @@
 #include <QDebug>
 #include <QCoreApplication>
 
+#include "tspacket.h"
+
 StreamServer::StreamServer(std::unique_ptr<QFile> &&inputFilePtr, quint16 listenPort, QObject *parent) :
     QObject(parent), _listenPort(listenPort), _inputFileReopenTimer(this)
 {
@@ -98,5 +100,6 @@ void StreamServer::processInput()
         throw std::runtime_error("Desync: Read packet should be size " + std::to_string(_tsPacketSize) +
                                  ", but was " + std::to_string(packetBytes.length()));
 
-    // TODO: Actually process the read data.
+    // Actually process the read data.
+    TSPacket packet(packetBytes, this);
 }
