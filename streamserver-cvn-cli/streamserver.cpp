@@ -33,7 +33,7 @@ const QFile &StreamServer::inputFile() const
 
 void StreamServer::initInput()
 {
-    qInfo() << Q_FUNC_INFO << "Initializing input";
+    qDebug() << Q_FUNC_INFO << "Initializing input";
 
     if (!_inputFilePtr->isOpen()) {
         const QString fileName = _inputFilePtr->fileName();
@@ -60,15 +60,31 @@ void StreamServer::initInput()
         inputFileHandle, QSocketNotifier::Read, this);
     connect(_inputFileNotifierPtr.get(), &QSocketNotifier::activated, this, &StreamServer::processInput);
 
-    qInfo() << Q_FUNC_INFO << "Successfully initialized input";
+    qDebug() << Q_FUNC_INFO << "Successfully initialized input";
+}
+
+void StreamServer::finalizeInput()
+{
+    qDebug() << Q_FUNC_INFO << "Finalizing input";
+
+    qInfo() << Q_FUNC_INFO << "Closing input...";
+    _inputFilePtr->close();
+
+    // Stop notifier gracefully, otherwise it outputs error messages from the event loop.
+    if (_inputFileNotifierPtr) {
+        _inputFileNotifierPtr->setEnabled(false);
+        _inputFileNotifierPtr.reset();
+    }
+
+    qDebug() << Q_FUNC_INFO << "Successfully finalized input";
 }
 
 void StreamServer::processInput()
 {
     QByteArray packetBytes = _inputFilePtr->read(_tsPacketSize);
     if (packetBytes.isNull()) {
-        qInfo() << Q_FUNC_INFO << "EOF on input, closing...";
-        _inputFilePtr->close();
+        qInfo() << Q_FUNC_INFO << "EOF on input, finalizing...";
+        finalizeInput();
 
         qInfo() << Q_FUNC_INFO << "Setting up timer to open input again";
         _inputFileReopenTimer.singleShot(_inputFileReopenTimeoutMillisec,

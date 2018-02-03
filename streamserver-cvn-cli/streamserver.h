@@ -27,6 +27,7 @@ public:
     const QFile &inputFile() const;
 
     void initInput();
+    void finalizeInput();
 
 signals:
 
