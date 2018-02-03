@@ -7,9 +7,26 @@
 #include "tspacket.h"
 
 StreamServer::StreamServer(std::unique_ptr<QFile> &&inputFilePtr, quint16 listenPort, QObject *parent) :
-    QObject(parent), _listenPort(listenPort), _inputFileReopenTimer(this)
+    QObject(parent),
+    _listenPort(listenPort), _listenSocket(this),
+    _inputFileReopenTimer(this),
+    _clientDisconnectedMapper(this)
 {
+    connect(&_listenSocket, &QTcpServer::newConnection, this, &StreamServer::clientConnected);
+
+    qInfo() << Q_FUNC_INFO << "Listening on port" << _listenPort << "...";
+    if (!_listenSocket.listen(QHostAddress::Any, _listenPort)) {
+        qCritical() << Q_FUNC_INFO << "Error listening on port" << _listenPort
+                    << "due to" << _listenSocket.errorString();
+        throw std::runtime_error("Listening on network port failed");
+    }
+
+
     _inputFilePtr = std::move(inputFilePtr);
+
+
+    connect(&_clientDisconnectedMapper, static_cast<void(QSignalMapper::*)(QObject *)>(&QSignalMapper::mapped),
+            this, &StreamServer::clientDisconnected);
 }
 
 quint16 StreamServer::listenPort() const
@@ -31,6 +48,48 @@ const QFile &StreamServer::inputFile() const
         throw std::runtime_error("No input file object in stream server");
 
     return *_inputFilePtr;
+}
+
+void StreamServer::clientConnected()
+{
+    std::unique_ptr<QTcpSocket> socketPtr(_listenSocket.nextPendingConnection());
+    if (!socketPtr) {
+        qDebug() << Q_FUNC_INFO << "No next pending connection";
+        return;
+    }
+    qInfo() << Q_FUNC_INFO << "Client connected:"
+            << "From" << socketPtr->peerAddress()
+            << "port" << socketPtr->peerPort();
+
+    // Set up client object and signal mapping.
+    auto client = std::make_shared<StreamClient>(std::move(socketPtr), this);
+    _clientDisconnectedMapper.setMapping(&client->socket(), client.get());
+    connect(&client->socket(), &QTcpSocket::disconnected,
+            &_clientDisconnectedMapper, static_cast<void(QSignalMapper::*)()>(&QSignalMapper::map));
+
+    // Store client object in list.
+    _clients.push_back(client);
+}
+
+void StreamServer::clientDisconnected(QObject *objPtr)
+{
+    if (!objPtr) {
+        qDebug() << Q_FUNC_INFO << "No object specified";
+        return;
+    }
+
+    auto *clientPtr = dynamic_cast<StreamClient *>(objPtr);
+    if (!clientPtr) {
+        qDebug() << Q_FUNC_INFO << "Not a StreamClient";
+        return;
+    }
+
+    QTcpSocket &socket(clientPtr->socket());
+    qInfo() << Q_FUNC_INFO << "Client disconnected:"
+            << "From" << socket.peerAddress()
+            << "port" << socket.peerPort();
+
+    // FIXME: Remove client object from list.
 }
 
 void StreamServer::initInput()
