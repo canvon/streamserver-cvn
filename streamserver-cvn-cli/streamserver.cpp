@@ -6,6 +6,8 @@
 
 #include "tspacket.h"
 
+extern int verbose;
+
 StreamServer::StreamServer(std::unique_ptr<QFile> &&inputFilePtr, quint16 listenPort, QObject *parent) :
     QObject(parent),
     _listenPort(listenPort), _listenSocket(this),
@@ -151,7 +153,8 @@ void StreamServer::processInput()
 
         return;
     }
-    qDebug() << "Read data:" << packetBytes;
+    if (verbose >= 3)
+        qDebug() << "Read data:" << packetBytes;
 
     if (packetBytes.length() != _tsPacketSize)
         throw std::runtime_error("Desync: Read packet should be size " + std::to_string(_tsPacketSize) +
