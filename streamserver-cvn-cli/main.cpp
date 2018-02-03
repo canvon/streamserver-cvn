@@ -5,7 +5,7 @@
 #include <QTextStream>
 #include <QCommandLineParser>
 
-int verbose = 6;  // Everything but debug messages.
+int verbose = 0;  // Normal output.
 
 namespace {
     QTextStream out(stdout), errout(stderr);
@@ -13,10 +13,15 @@ namespace {
 
 static void msgHandler(QtMsgType type, const QMessageLogContext &ctx, const QString &msg) {
     int sd_info = 5;  // SD_NOTICE
+    bool is_debug = (verbose >= 3);
+    bool is_fatal_msg = false;
 
     switch (type) {
     case QtDebugMsg:
         sd_info = 7;  // SD_DEBUG
+        // Only at -vvv.
+        if (!is_debug)
+            return;
         break;
     case QtInfoMsg:
         sd_info = 6;  // SD_INFO
@@ -29,6 +34,7 @@ static void msgHandler(QtMsgType type, const QMessageLogContext &ctx, const QStr
         break;
     case QtFatalMsg:
         sd_info = 2;  // SD_CRIT
+        is_fatal_msg = true;
         break;
     default:
         errout << "<4>Warning: Log message handler got unrecognized message type " << type << endl;
@@ -39,7 +45,7 @@ static void msgHandler(QtMsgType type, const QMessageLogContext &ctx, const QStr
     if (ctx.category && strcmp(ctx.category, "default") != 0) {
         errout << "[" << ctx.category << "] ";
     }
-    if (verbose >= 7) {
+    if (is_debug) {
         if (ctx.file) {
             errout << ctx.file;
             if (ctx.line) {
@@ -52,6 +58,13 @@ static void msgHandler(QtMsgType type, const QMessageLogContext &ctx, const QStr
         }
     }
     errout << msg << endl;
+
+    if (is_fatal_msg) {
+        if (is_debug)
+            abort();
+
+        exit(3);
+    }
 }
 
 int main(int argc, char *argv[])
