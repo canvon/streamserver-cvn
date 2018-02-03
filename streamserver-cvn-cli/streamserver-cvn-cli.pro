@@ -10,10 +10,12 @@ CONFIG -= app_bundle
 TEMPLATE = app
 
 SOURCES += main.cpp \
-    streamserver.cpp
+    streamserver.cpp \
+    tspacket.cpp
 
 HEADERS += \
-    streamserver.h
+    streamserver.h \
+    tspacket.h
 
 CONFIG(debug, debug|release) {
     message("Building with debug messages")
