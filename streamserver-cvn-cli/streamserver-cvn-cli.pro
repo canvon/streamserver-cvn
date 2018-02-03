@@ -12,12 +12,16 @@ TEMPLATE = app
 SOURCES += main.cpp \
     streamserver.cpp \
     tspacket.cpp \
-    streamclient.cpp
+    streamclient.cpp \
+    httprequest.cpp \
+    httpreply.cpp
 
 HEADERS += \
     streamserver.h \
     tspacket.h \
-    streamclient.h
+    streamclient.h \
+    httprequest.h \
+    httpreply.h
 
 CONFIG(debug, debug|release) {
     message("Building with debug messages")
