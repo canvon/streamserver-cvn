@@ -124,8 +124,6 @@ int main(int argc, char *argv[])
         return 2;
     }
 
-    out << "Listen port number: " << listenPort << endl;
-
 
     QStringList args = parser.positionalArguments();
     if (args.length() != 1) {
@@ -135,7 +133,6 @@ int main(int argc, char *argv[])
     }
 
     QString inputFilePath = args.at(0);
-    out << "Input file path: " << inputFilePath << endl;
 
 
     StreamServer server(std::make_unique<QFile>(inputFilePath), listenPort);
