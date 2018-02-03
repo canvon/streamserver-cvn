@@ -7,6 +7,8 @@
 
 int verbose = 0;  // Normal output.
 
+int debug_level = 0;  // No debugging.
+
 namespace {
     QTextStream out(stdout), errout(stderr);
 }
@@ -78,6 +80,7 @@ int main(int argc, char *argv[])
     parser.addOptions({
         { { "v", "verbose" }, "Increase verbose level" },
         { { "q", "quiet"   }, "Decrease verbose level" },
+        { { "d", "debug"   }, "Enable debugging. (Increase debug level.)" },
         { { "l", "listen" }, "Port to listen on for HTTP streaming client connections",
           "listen_port", "8000" },
     });
@@ -90,6 +93,12 @@ int main(int argc, char *argv[])
             verbose++;
         else if (opt == "q" || opt == "quiet")
             verbose--;
+        else if (opt == "d" || opt == "debug")
+#ifdef QT_NO_DEBUG_OUTPUT
+            qFatal("No debug output compiled in, can't enable debugging!");
+#else
+            debug_level++;
+#endif
     }
 
 
