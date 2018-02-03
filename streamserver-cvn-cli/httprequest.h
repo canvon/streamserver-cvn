@@ -3,6 +3,7 @@
 
 #include <QByteArray>
 
+// An HTTP request from the wire.
 class HTTPRequest
 {
     QByteArray  _buf;

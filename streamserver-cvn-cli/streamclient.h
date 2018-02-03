@@ -8,6 +8,7 @@
 #include <QTcpSocket>
 
 #include "httprequest.h"
+#include "httpreply.h"
 #include "tspacket.h"
 
 class StreamClient : public QObject
@@ -16,8 +17,10 @@ class StreamClient : public QObject
 
     std::unique_ptr<QTcpSocket>  _socketPtr;
     HTTPRequest                  _httpRequest;
-    bool                         _headerSent = false;
+    std::unique_ptr<HTTPReply>   _httpReplyPtr;
+    bool                         _replyHeaderSent = false;
     QList<TSPacket>              _queue;
+    QByteArray                   _sendBuf;
 
 public:
     explicit StreamClient(std::unique_ptr<QTcpSocket> &&socketPtr, QObject *parent = 0);
@@ -25,9 +28,11 @@ public:
     QTcpSocket &socket();
     const QTcpSocket &socket() const;
     const HTTPRequest &httpRequest() const;
+    const HTTPReply   *httpReply()   const;
 
     void queuePacket(const TSPacket &packet);
     void sendData();
+    void processRequest();
 
 signals:
 

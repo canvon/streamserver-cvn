@@ -164,5 +164,6 @@ void StreamServer::processInput()
     TSPacket packet(packetBytes);
     for (auto client : _clients) {
         client->queuePacket(packet);
+        client->sendData();
     }
 }

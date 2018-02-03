@@ -11,6 +11,8 @@ public:
     explicit TSPacket(const QByteArray &bytes);
 
     static const char syncByte = '\x47';
+
+    const QByteArray &bytes() const;
 };
 
 #endif // TSPACKET_H

@@ -12,3 +12,8 @@ TSPacket::TSPacket(const QByteArray &bytes) :
         throw std::runtime_error("TS packet: Does not start with sync byte");
     }
 }
+
+const QByteArray &TSPacket::bytes() const
+{
+    return _bytes;
+}

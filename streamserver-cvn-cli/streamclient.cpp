@@ -8,6 +8,7 @@ StreamClient::StreamClient(std::unique_ptr<QTcpSocket> &&socketPtr, QObject *par
     _socketPtr = std::move(socketPtr);
 
     connect(_socketPtr.get(), &QTcpSocket::readyRead, this, &StreamClient::receiveData);
+    connect(_socketPtr.get(), &QTcpSocket::bytesWritten, this, &StreamClient::sendData);
 }
 
 QTcpSocket &StreamClient::socket()
@@ -31,9 +32,108 @@ const HTTPRequest &StreamClient::httpRequest() const
     return _httpRequest;
 }
 
+const HTTPReply *StreamClient::httpReply() const
+{
+    return _httpReplyPtr.get();
+}
+
 void StreamClient::queuePacket(const TSPacket &packet)
 {
+    if (verbose >= 2)
+        qDebug() << "Queueing packet";
+    if (verbose >= 3)
+        qDebug() << "Packet data:" << packet.bytes();
+
     _queue.append(packet);
+}
+
+void StreamClient::sendData()
+{
+    if (verbose >= 2)
+        qDebug() << "Begin send data";
+
+    if (!_httpReplyPtr)
+        // No reply generated, yet.
+        return;
+
+    if (!_replyHeaderSent) {
+        // Initially fill send buffer with HTTP reply.
+        _sendBuf.append(_httpReplyPtr->toBytes());
+        _replyHeaderSent = true;
+    }
+
+    while (!_sendBuf.isEmpty() || !_queue.isEmpty()) {
+        // Fill send buffer up to 1KiB.
+        while (!_queue.isEmpty() && _sendBuf.length() + _queue.front().bytes().length() <= 1024) {
+            if (verbose >= 2)
+                qDebug() << "Filling send buffer with" << _queue.front().bytes().length() << "bytes";
+
+            _sendBuf.append(_queue.front().bytes());
+            _queue.pop_front();
+        }
+
+        // Try to send.
+        qint64 count = _socketPtr->write(_sendBuf);
+        if (count < 0) {
+            qInfo() << "Write error:" << _socketPtr->errorString()
+                    << ", aborting connection";
+            _socketPtr->abort();
+            break;
+        }
+
+        if (verbose >= 2)
+            qDebug() << "Sent" << count << "bytes";
+
+        // No more send is possible.
+        if (count == 0)
+            break;
+
+        // Remove sent data from the send buffer.
+        _sendBuf.remove(0, count);
+    }
+
+    if (verbose >= 2)
+        qDebug() << "Finish send data";
+}
+
+void StreamClient::processRequest()
+{
+    qInfo() << "Processing client request:"
+            << "Method" << _httpRequest.method()
+            << "Path"   << _httpRequest.path()
+            << "HTTP version" << _httpRequest.httpVersion()
+            << "...";
+
+    const QByteArray httpVersion = _httpRequest.httpVersion();
+    if (!(httpVersion == "HTTP/1.0" || httpVersion == "HTTP/1.1")) {
+        qInfo() << "HTTP version not recognized:" << httpVersion;
+        _httpReplyPtr = std::make_unique<HTTPReply>(400, "Bad Request");
+        _httpReplyPtr->setHeader("Content-Type", "text/plain");
+        _httpReplyPtr->setBody("HTTP version not recognized.");
+        return;
+    }
+
+    const QByteArray method = _httpRequest.method();
+    if (!(method == "GET" || method == "HEAD")) {
+        qInfo() << "HTTP method not supported:" << method;
+        _httpReplyPtr = std::make_unique<HTTPReply>(400, "Bad Request");
+        _httpReplyPtr->setHeader("Content-Type", "text/plain");
+        _httpReplyPtr->setBody("HTTP method not supported.");
+        return;
+    }
+
+    const QByteArray path = _httpRequest.path();
+    if (!(path == "/" || path == "/stream.m2ts" || path == "/live.m2ts")) {
+        qInfo() << "Path not found:" << path;
+        _httpReplyPtr = std::make_unique<HTTPReply>(404, "Not Found");
+        _httpReplyPtr->setHeader("Content-Type", "text/plain");
+        _httpReplyPtr->setBody("Path not found.");
+        return;
+    }
+
+    qInfo() << "Request OK";
+    _httpReplyPtr = std::make_unique<HTTPReply>(200, "OK");
+    _httpReplyPtr->setHeader("Content-Type", "video/mp2t");
 }
 
 void StreamClient::receiveData()
@@ -62,10 +162,8 @@ void StreamClient::receiveData()
     //    ...;
 
     if (_httpRequest.receiveState() == HTTPRequest::ReceiveState::Ready) {
-        qInfo() << "Received client request header:"
-                << "Method" << _httpRequest.method()
-                << "Path"   << _httpRequest.path()
-                << "HTTP version" << _httpRequest.httpVersion();
+        qDebug() << "Received request; processing...";
+        processRequest();
     }
 
     qDebug() << "Finish receive data";
