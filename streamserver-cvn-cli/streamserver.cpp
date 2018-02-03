@@ -94,5 +94,9 @@ void StreamServer::processInput()
     }
     qDebug() << Q_FUNC_INFO << "Read data:" << packetBytes;
 
+    if (packetBytes.length() != _tsPacketSize)
+        throw std::runtime_error("Desync: Read packet should be size " + std::to_string(_tsPacketSize) +
+                                 ", but was " + std::to_string(packetBytes.length()));
+
     // TODO: Actually process the read data.
 }
