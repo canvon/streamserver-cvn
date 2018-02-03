@@ -5,10 +5,59 @@
 #include <QTextStream>
 #include <QCommandLineParser>
 
+int verbose = 6;  // Everything but debug messages.
+
+namespace {
+    QTextStream out(stdout), errout(stderr);
+}
+
+static void msgHandler(QtMsgType type, const QMessageLogContext &ctx, const QString &msg) {
+    int sd_info = 5;  // SD_NOTICE
+
+    switch (type) {
+    case QtDebugMsg:
+        sd_info = 7;  // SD_DEBUG
+        break;
+    case QtInfoMsg:
+        sd_info = 6;  // SD_INFO
+        break;
+    case QtWarningMsg:
+        sd_info = 4;  // SD_WARNING
+        break;
+    case QtCriticalMsg:
+        sd_info = 3;  // SD_ERR
+        break;
+    case QtFatalMsg:
+        sd_info = 2;  // SD_CRIT
+        break;
+    default:
+        errout << "<4>Warning: Log message handler got unrecognized message type " << type << endl;
+        break;
+    }
+
+    errout << "<" << sd_info << ">";
+    if (ctx.category && strcmp(ctx.category, "default") != 0) {
+        errout << "[" << ctx.category << "] ";
+    }
+    if (verbose >= 7) {
+        if (ctx.file) {
+            errout << ctx.file;
+            if (ctx.line) {
+                errout << ":" << ctx.line;
+            }
+            if (ctx.function) {
+                errout << ": " << ctx.function;
+            }
+            errout << ": ";
+        }
+    }
+    errout << msg << endl;
+}
+
 int main(int argc, char *argv[])
 {
+    qInstallMessageHandler(&msgHandler);
     QCoreApplication a(argc, argv);
-    QTextStream out(stdout), errout(stderr);
 
     QCommandLineParser parser;
     parser.setApplicationDescription("Media streaming server from MPEG-TS to HTTP clients");
