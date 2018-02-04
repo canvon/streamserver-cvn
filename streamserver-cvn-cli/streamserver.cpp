@@ -11,7 +11,7 @@ extern int verbose;
 StreamServer::StreamServer(std::unique_ptr<QFile> &&inputFilePtr, quint16 listenPort, QObject *parent) :
     QObject(parent),
     _listenPort(listenPort), _listenSocket(this),
-    _inputFileReopenTimer(this),
+    _inputFilePtr(std::move(inputFilePtr)), _inputFileReopenTimer(this),
     _clientDisconnectedMapper(this)
 {
     connect(&_listenSocket, &QTcpServer::newConnection, this, &StreamServer::clientConnected);
@@ -22,9 +22,6 @@ StreamServer::StreamServer(std::unique_ptr<QFile> &&inputFilePtr, quint16 listen
                     << "due to" << _listenSocket.errorString();
         throw std::runtime_error("Listening on network port failed");
     }
-
-
-    _inputFilePtr = std::move(inputFilePtr);
 
 
     connect(&_clientDisconnectedMapper, static_cast<void(QSignalMapper::*)(QObject *)>(&QSignalMapper::mapped),
