@@ -38,6 +38,15 @@ const HTTPReply *StreamClient::httpReply() const
 
 void StreamClient::queuePacket(const TSPacket &packet)
 {
+    if (_httpRequest.receiveState() > HTTPRequest::ReceiveState::RequestLine &&
+        _httpRequest.method() == "HEAD") {
+        if (verbose >= 2)
+            qDebug() << "Not queueing packet for HEAD request; clearing queue, instead";
+
+        _queue.clear();
+        return;
+    }
+
     if (verbose >= 2)
         qDebug() << "Queueing packet";
     if (verbose >= 3)
@@ -51,13 +60,31 @@ void StreamClient::sendData()
     if (verbose >= 2)
         qDebug() << "Begin send data";
 
-    if (!_httpReplyPtr)
-        // No reply generated, yet.
+    if (_socketPtr->state() == QTcpSocket::ClosingState) {
+        if (verbose >= 2)
+            qDebug() << "Socket in closing state, leaving send data early";
         return;
+    }
+
+    if (!_httpReplyPtr) {
+        if (verbose >= 2)
+            qDebug() << "No reply generated, yet, leaving send data early";
+        return;
+    }
 
     if (!_replyHeaderSent) {
         // Initially fill send buffer with HTTP reply.
-        _sendBuf.append(_httpReplyPtr->toBytes());
+
+        qInfo() << "Sending server reply:"
+                << "HTTP version"   << _httpReplyPtr->httpVersion()
+                << "Status code"    << _httpReplyPtr->statusCode()
+                << "Status message" << _httpReplyPtr->statusMsg();
+
+        const QByteArray reply = _httpReplyPtr->toBytes();
+        if (verbose >= 3)
+            qDebug() << "Filling send buffer with reply data:" << reply;
+
+        _sendBuf.append(reply);
         _replyHeaderSent = true;
     }
 
@@ -66,6 +93,8 @@ void StreamClient::sendData()
         while (!_queue.isEmpty() && _sendBuf.length() + _queue.front().bytes().length() <= 1024) {
             if (verbose >= 2)
                 qDebug() << "Filling send buffer with" << _queue.front().bytes().length() << "bytes";
+            if (verbose >= 3)
+                qDebug() << "Filling with data:" << _queue.front().bytes();
 
             _sendBuf.append(_queue.front().bytes());
             _queue.pop_front();
@@ -82,6 +111,8 @@ void StreamClient::sendData()
 
         if (verbose >= 2)
             qDebug() << "Sent" << count << "bytes";
+        if (verbose >= 3)
+            qDebug() << "Sent data:" << _sendBuf.left(count);
 
         // No more send is possible.
         if (count == 0)
@@ -89,6 +120,11 @@ void StreamClient::sendData()
 
         // Remove sent data from the send buffer.
         _sendBuf.remove(0, count);
+    }
+
+    if (_sendBuf.isEmpty() && _httpRequest.method() == "HEAD") {
+        qInfo() << "Closing client connection after HEAD reply";
+        _socketPtr->close();
     }
 
     if (verbose >= 2)
@@ -141,6 +177,11 @@ void StreamClient::receiveData()
 
     QByteArray buf;
     while (!(buf = _socketPtr->read(1024)).isEmpty()) {
+        if (verbose >= 2)
+            qInfo() << "Received" << buf.length() << "bytes of data";
+        if (verbose >= 3)
+            qDebug() << "Received data:" << buf;
+
         if (_httpRequest.receiveState() == HTTPRequest::ReceiveState::Ready) {
             qInfo() << "Unrecognized data after client request header, excepting.";
             if (verbose >= 3)
