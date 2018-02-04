@@ -1,6 +1,7 @@
 #include "streamserver.h"
 
 #include <stdexcept>
+#include <functional>
 #include <QDebug>
 #include <QCoreApplication>
 
@@ -51,7 +52,8 @@ const QFile &StreamServer::inputFile() const
 
 void StreamServer::clientConnected()
 {
-    std::unique_ptr<QTcpSocket> socketPtr(_listenSocket.nextPendingConnection());
+    StreamClient::socketPtr_type socketPtr(_listenSocket.nextPendingConnection(),
+                                           std::mem_fn(&QTcpSocket::deleteLater));
     if (!socketPtr) {
         qDebug() << "No next pending connection";
         return;
@@ -61,13 +63,17 @@ void StreamServer::clientConnected()
             << "port" << socketPtr->peerPort();
 
     // Set up client object and signal mapping.
-    auto client = std::make_shared<StreamClient>(std::move(socketPtr), this);
-    _clientDisconnectedMapper.setMapping(&client->socket(), client.get());
-    connect(&client->socket(), &QTcpSocket::disconnected,
+    std::shared_ptr<StreamClient> clientPtr(
+        new StreamClient(std::move(socketPtr), this),
+        std::mem_fn(&StreamClient::deleteLater));
+    _clientDisconnectedMapper.setMapping(&clientPtr->socket(), clientPtr.get());
+    connect(&clientPtr->socket(), &QTcpSocket::disconnected,
             &_clientDisconnectedMapper, static_cast<void(QSignalMapper::*)()>(&QSignalMapper::map));
 
     // Store client object in list.
-    _clients.push_back(client);
+    _clients.push_back(clientPtr);
+
+    qInfo() << "Client count:" << _clients.length();
 }
 
 void StreamServer::clientDisconnected(QObject *objPtr)
@@ -88,7 +94,13 @@ void StreamServer::clientDisconnected(QObject *objPtr)
             << "From" << socket.peerAddress()
             << "port" << socket.peerPort();
 
-    // FIXME: Remove client object from list.
+    // Clean up resources.
+    _clientDisconnectedMapper.removeMappings(&socket);
+
+    // Remove client object from list.
+    _clients.removeOne(std::shared_ptr<StreamClient>(clientPtr, std::mem_fn(&StreamClient::deleteLater)));
+
+    qInfo() << "Client count:" << _clients.length();
 }
 
 void StreamServer::initInput()
