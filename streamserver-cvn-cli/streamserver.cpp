@@ -8,7 +8,7 @@
 
 extern int verbose;
 
-StreamServer::StreamServer(std::unique_ptr<QFile> &&inputFilePtr, quint16 listenPort, QObject *parent) :
+StreamServer::StreamServer(std::unique_ptr<QFile> inputFilePtr, quint16 listenPort, QObject *parent) :
     QObject(parent),
     _listenPort(listenPort), _listenSocket(this),
     _inputFilePtr(std::move(inputFilePtr)), _inputFileReopenTimer(this),

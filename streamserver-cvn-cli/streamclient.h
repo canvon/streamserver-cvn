@@ -23,7 +23,7 @@ class StreamClient : public QObject
     QByteArray                   _sendBuf;
 
 public:
-    explicit StreamClient(std::unique_ptr<QTcpSocket> &&socketPtr, QObject *parent = 0);
+    explicit StreamClient(std::unique_ptr<QTcpSocket> socketPtr, QObject *parent = 0);
 
     QTcpSocket &socket();
     const QTcpSocket &socket() const;

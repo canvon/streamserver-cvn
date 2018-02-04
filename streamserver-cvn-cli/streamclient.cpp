@@ -2,7 +2,7 @@
 
 extern int verbose;
 
-StreamClient::StreamClient(std::unique_ptr<QTcpSocket> &&socketPtr, QObject *parent) :
+StreamClient::StreamClient(std::unique_ptr<QTcpSocket> socketPtr, QObject *parent) :
     QObject(parent), _socketPtr(std::move(socketPtr))
 {
     connect(_socketPtr.get(), &QTcpSocket::readyRead, this, &StreamClient::receiveData);

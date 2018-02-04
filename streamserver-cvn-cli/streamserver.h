@@ -29,7 +29,7 @@ class StreamServer : public QObject
     QSignalMapper                         _clientDisconnectedMapper;
 
 public:
-    explicit StreamServer(std::unique_ptr<QFile> &&inputFilePtr, quint16 listenPort = 8000, QObject *parent = 0);
+    explicit StreamServer(std::unique_ptr<QFile> inputFilePtr, quint16 listenPort = 8000, QObject *parent = 0);
 
     quint16      listenPort() const;
     QFile       &inputFile();
