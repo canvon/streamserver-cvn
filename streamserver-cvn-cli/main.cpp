@@ -2,6 +2,7 @@
 
 #include "streamserver.h"
 
+#include <QDateTime>
 #include <QTextStream>
 #include <QCommandLineParser>
 
@@ -10,10 +11,19 @@ int verbose = 0;  // Normal output.
 int debug_level = 0;  // No debugging.
 
 namespace {
+    enum class LogTimestamping {
+        None,
+        Date,
+        Time,
+    };
+    LogTimestamping logTs = LogTimestamping::Time;
+    QDateTime logLast;
+
     QTextStream out(stdout), errout(stderr);
 }
 
 static void msgHandler(QtMsgType type, const QMessageLogContext &ctx, const QString &msg) {
+    QDateTime now = QDateTime::currentDateTime();
     int sd_info = 5;  // SD_NOTICE
     bool is_fatal_msg = false;
     QString prefix;
@@ -45,8 +55,24 @@ static void msgHandler(QtMsgType type, const QMessageLogContext &ctx, const QStr
         break;
     }
 
+    // Output date once every day, if appropriate.
+    if (logTs >= LogTimestamping::Time && logLast.date() < now.date())
+        errout << "<6>" << now.date().toString() << endl;
+
     // systemd-compatible message severity.
     errout << "<" << sd_info << ">";
+
+    // Optional timestamp.
+    switch (logTs) {
+    case LogTimestamping::None:
+        break;
+    case LogTimestamping::Date:
+        errout << now.date().toString() << " ";
+        break;
+    case LogTimestamping::Time:
+        errout << now.time().toString() << " ";
+        break;
+    }
 
     // Optional category.
     if (ctx.category && strcmp(ctx.category, "default") != 0) {
@@ -72,6 +98,9 @@ static void msgHandler(QtMsgType type, const QMessageLogContext &ctx, const QStr
 
     // The message.
     errout << msg << endl;
+
+    // Save last logging timestamp for comparison on next logging.
+    logLast = now;
 
     // Fatal messages shall be fatal to the program execution.
     if (is_fatal_msg) {
