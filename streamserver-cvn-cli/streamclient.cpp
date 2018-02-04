@@ -38,12 +38,10 @@ const HTTPReply *StreamClient::httpReply() const
 
 void StreamClient::queuePacket(const TSPacket &packet)
 {
-    if (_httpRequest.receiveState() > HTTPRequest::ReceiveState::RequestLine &&
-        _httpRequest.method() == "HEAD") {
+    if (!_forwardPackets) {
         if (verbose >= 2)
-            qDebug() << "Not queueing packet for HEAD request; clearing queue, instead";
+            qDebug() << "Not queueing packet. Not set to forward packets (yet?)";
 
-        _queue.clear();
         return;
     }
 
@@ -122,8 +120,9 @@ void StreamClient::sendData()
         _sendBuf.remove(0, count);
     }
 
-    if (_sendBuf.isEmpty() && _httpRequest.method() == "HEAD") {
-        qInfo() << "Closing client connection after HEAD reply";
+    if (_sendBuf.isEmpty() && !_forwardPackets)
+    {
+        qInfo() << "Closing client connection after HTTP reply";
         _socketPtr->close();
     }
 
@@ -166,9 +165,15 @@ void StreamClient::processRequest()
         return;
     }
 
-    qInfo() << "Request OK";
     _httpReplyPtr = std::make_unique<HTTPReply>(200, "OK");
     _httpReplyPtr->setHeader("Content-Type", "video/mp2t");
+    if (_httpRequest.method() == "HEAD") {
+        qInfo() << "Request OK, HEAD only";
+    }
+    else {
+        qInfo() << "Request OK, start forwarding TS packets";
+        _forwardPackets = true;
+    }
 }
 
 void StreamClient::receiveData()

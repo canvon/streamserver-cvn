@@ -23,6 +23,7 @@ private:
     HTTPRequest                  _httpRequest;
     std::unique_ptr<HTTPReply>   _httpReplyPtr;
     bool                         _replyHeaderSent = false;
+    bool                         _forwardPackets = false;
     QList<TSPacket>              _queue;
     QByteArray                   _sendBuf;
 
