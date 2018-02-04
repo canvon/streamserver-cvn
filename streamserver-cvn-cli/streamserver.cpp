@@ -58,13 +58,13 @@ void StreamServer::clientConnected()
         qDebug() << "No next pending connection";
         return;
     }
-    qInfo() << "Client connected:"
+    qInfo() << "Client" << _nextClientID << "connected:"
             << "From" << socketPtr->peerAddress()
             << "port" << socketPtr->peerPort();
 
     // Set up client object and signal mapping.
     std::shared_ptr<StreamClient> clientPtr(
-        new StreamClient(std::move(socketPtr), this),
+        new StreamClient(std::move(socketPtr), _nextClientID++, this),
         std::mem_fn(&StreamClient::deleteLater));
     _clientDisconnectedMapper.setMapping(&clientPtr->socket(), clientPtr.get());
     connect(&clientPtr->socket(), &QTcpSocket::disconnected,
@@ -90,7 +90,7 @@ void StreamServer::clientDisconnected(QObject *objPtr)
     }
 
     QTcpSocket &socket(clientPtr->socket());
-    qInfo() << "Client disconnected:"
+    qInfo() << "Client" << clientPtr->id() << "disconnected:"
             << "From" << socket.peerAddress()
             << "port" << socket.peerPort();
 

@@ -6,6 +6,8 @@
 #include <memory>
 #include <functional>
 #include <QList>
+#include <QByteArray>
+#include <QString>
 #include <QTcpSocket>
 
 #include "httprequest.h"
@@ -19,6 +21,8 @@ class StreamClient : public QObject
 public:
     typedef std::unique_ptr<QTcpSocket, std::function<void(QTcpSocket *)>>  socketPtr_type;
 private:
+    quint64                      _id;
+    QString                      _logPrefix;
     socketPtr_type               _socketPtr;
     HTTPRequest                  _httpRequest;
     std::unique_ptr<HTTPReply>   _httpReplyPtr;
@@ -28,7 +32,9 @@ private:
     QByteArray                   _sendBuf;
 
 public:
-    explicit StreamClient(socketPtr_type socketPtr, QObject *parent = 0);
+    explicit StreamClient(socketPtr_type socketPtr, quint64 id = 0, QObject *parent = 0);
+
+    quint64 id() const;
 
     QTcpSocket &socket();
     const QTcpSocket &socket() const;

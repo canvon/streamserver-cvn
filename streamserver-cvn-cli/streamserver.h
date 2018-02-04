@@ -25,6 +25,7 @@ class StreamServer : public QObject
     int                     _inputFileReopenTimeoutMillisec = 1000;
     qint64                  _tsPacketSize = 188;
 
+    quint64                               _nextClientID = 1;
     QList<std::shared_ptr<StreamClient>>  _clients;
     QSignalMapper                         _clientDisconnectedMapper;
 
