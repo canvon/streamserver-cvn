@@ -113,10 +113,10 @@ QString TSPacket::toString() const
         << "TransportPriority=" << transportPrio() << " "
         << "PID="  << PID()  << " "
         << "TSC="  << TSC()  << " "
-        << "AdaptationFieldControl=" << adaptationFieldControl() << " "
-        << "ContinuityCounter="      << continuityCounter()      << " "
-        << "AdaptationField="        << adaptationField()        << " "
-        << "PayloadData="            << payloadData();
+        << "AdaptationFieldControl=" << adaptationFieldControl()  << " "
+        << "ContinuityCounter="      << continuityCounter()       << " "
+        << "AdaptationField="        << adaptationField().toHex() << " "
+        << "PayloadData="            << payloadData().toHex();
 
     return ret;
 }
