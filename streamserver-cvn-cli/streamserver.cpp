@@ -6,6 +6,7 @@
 #include <QCoreApplication>
 
 #include "tspacket.h"
+#include "humanreadable.h"
 
 extern int verbose;
 
@@ -103,8 +104,12 @@ void StreamServer::clientDisconnected(QObject *objPtr)
         qInfo() << "Client was connected for" << clientPtr->createdElapsed().elapsed() << "ms,"
                 << "since" << clientPtr->createdTimestamp();
 
-        qInfo() << "Client transfer statistics: Received from client" << clientPtr->socketBytesReceived() << "bytes,"
-                << "sent to client" << clientPtr->socketBytesSent() << "bytes";
+        quint64 received = clientPtr->socketBytesReceived(), sent = clientPtr->socketBytesSent();
+        qInfo() << "Client transfer statistics:"
+                << "Received from client" << received << "bytes"
+                << qPrintable("(" + HumanReadable::byteCount(received) + "),")
+                << "sent to client" << sent << "bytes"
+                << qPrintable("(" + HumanReadable::byteCount(sent) + ")");
     }
 
     // Clean up resources.
