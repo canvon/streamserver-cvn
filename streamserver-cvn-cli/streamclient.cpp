@@ -3,8 +3,10 @@
 extern int verbose;
 
 StreamClient::StreamClient(socketPtr_type socketPtr, quint64 id, QObject *parent) :
-    QObject(parent), _id(id), _socketPtr(std::move(socketPtr))
+    QObject(parent), _id(id), _createdTimestamp(QDateTime::currentDateTime()),
+    _socketPtr(std::move(socketPtr))
 {
+    _createdElapsed.start();
     _logPrefix = "Client " + QString::number(_id);
     _socketPtr->setParent(this);
     connect(_socketPtr.get(), &QTcpSocket::readyRead, this, &StreamClient::receiveData);
@@ -14,6 +16,16 @@ StreamClient::StreamClient(socketPtr_type socketPtr, quint64 id, QObject *parent
 quint64 StreamClient::id() const
 {
     return _id;
+}
+
+QDateTime StreamClient::createdTimestamp() const
+{
+    return _createdTimestamp;
+}
+
+const QElapsedTimer &StreamClient::createdElapsed() const
+{
+    return _createdElapsed;
 }
 
 QTcpSocket &StreamClient::socket()

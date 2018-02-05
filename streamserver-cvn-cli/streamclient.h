@@ -7,7 +7,9 @@
 #include <functional>
 #include <QList>
 #include <QByteArray>
+#include <QDateTime>
 #include <QString>
+#include <QElapsedTimer>
 #include <QTcpSocket>
 
 #include "httprequest.h"
@@ -23,6 +25,8 @@ public:
 private:
     quint64                      _id;
     QString                      _logPrefix;
+    QDateTime                    _createdTimestamp;
+    QElapsedTimer                _createdElapsed;
     socketPtr_type               _socketPtr;
     bool                         _isReceiving = true;
     HTTPRequest                  _httpRequest;
@@ -36,6 +40,8 @@ public:
     explicit StreamClient(socketPtr_type socketPtr, quint64 id = 0, QObject *parent = 0);
 
     quint64 id() const;
+    QDateTime createdTimestamp() const;
+    const QElapsedTimer &createdElapsed() const;
 
     QTcpSocket &socket();
     const QTcpSocket &socket() const;

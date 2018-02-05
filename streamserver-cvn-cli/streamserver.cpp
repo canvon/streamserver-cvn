@@ -90,9 +90,15 @@ void StreamServer::clientDisconnected(QObject *objPtr)
     }
 
     QTcpSocket &socket(clientPtr->socket());
-    qInfo() << "Client" << clientPtr->id() << "disconnected:"
-            << "From" << socket.peerAddress()
-            << "port" << socket.peerPort();
+
+    if (verbose >= -1) {
+        qInfo() << "Client" << clientPtr->id() << "disconnected:"
+                << "From" << socket.peerAddress()
+                << "port" << socket.peerPort();
+
+        qInfo() << "Client was connected for" << clientPtr->createdElapsed().elapsed() << "ms,"
+                << "since" << clientPtr->createdTimestamp();
+    }
 
     // Clean up resources.
     _clientDisconnectedMapper.removeMappings(&socket);
