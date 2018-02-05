@@ -126,8 +126,7 @@ void StreamClient::sendData()
         _sendBuf.remove(0, count);
     }
 
-    if (_sendBuf.isEmpty() && !_forwardPackets)
-    {
+    if (_sendBuf.isEmpty() && !_forwardPackets) {
         qInfo() << _logPrefix << "Closing client connection after HTTP reply";
         _socketPtr->close();
     }
