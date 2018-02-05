@@ -101,7 +101,9 @@ void StreamServer::clientDisconnected(QObject *objPtr)
                 << "From" << socket.peerAddress()
                 << "port" << socket.peerPort();
 
-        qInfo() << "Client was connected for" << clientPtr->createdElapsed().elapsed() << "ms,"
+        qint64 elapsed = clientPtr->createdElapsed().elapsed();
+        qInfo() << "Client was connected for" << elapsed << "ms"
+                << qPrintable("(" + HumanReadable::timeDuration(elapsed) + "),")
                 << "since" << clientPtr->createdTimestamp();
 
         quint64 received = clientPtr->socketBytesReceived(), sent = clientPtr->socketBytesSent();
