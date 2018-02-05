@@ -42,6 +42,7 @@ public:
     explicit StreamClient(socketPtr_type socketPtr, quint64 id = 0, QObject *parent = 0);
 
     quint64 id() const;
+    const QString &logPrefix() const;
     QDateTime createdTimestamp() const;
     const QElapsedTimer &createdElapsed() const;
 

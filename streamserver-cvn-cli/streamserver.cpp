@@ -95,19 +95,23 @@ void StreamServer::clientDisconnected(QObject *objPtr)
     }
 
     QTcpSocket &socket(clientPtr->socket());
+    const QString logPrefix = clientPtr->logPrefix();
 
     if (verbose >= -1) {
-        qInfo() << "Client" << clientPtr->id() << "disconnected:"
+        qInfo() << qPrintable(logPrefix)
+                << "Client" << clientPtr->id() << "disconnected:"
                 << "From" << socket.peerAddress()
                 << "port" << socket.peerPort();
 
         qint64 elapsed = clientPtr->createdElapsed().elapsed();
-        qInfo() << "Client was connected for" << elapsed << "ms"
+        qInfo() << qPrintable(logPrefix)
+                << "Client was connected for" << elapsed << "ms"
                 << qPrintable("(" + HumanReadable::timeDuration(elapsed) + "),")
                 << "since" << clientPtr->createdTimestamp();
 
         quint64 received = clientPtr->socketBytesReceived(), sent = clientPtr->socketBytesSent();
-        qInfo() << "Client transfer statistics:"
+        qInfo() << qPrintable(logPrefix)
+                << "Client transfer statistics:"
                 << "Received from client" << received << "bytes"
                 << qPrintable("(" + HumanReadable::byteCount(received) + "),")
                 << "sent to client" << sent << "bytes"
@@ -209,7 +213,8 @@ void StreamServer::processInput()
                 client->sendData();
             }
             catch (std::exception &ex) {
-                qWarning() << "Error sending TS packet to client" << client->id() << ":" << QString(ex.what());
+                qWarning() << qPrintable(client->logPrefix())
+                           << "Error sending TS packet to client" << client->id() << ":" << QString(ex.what());
                 continue;
             }
         }

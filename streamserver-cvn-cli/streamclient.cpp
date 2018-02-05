@@ -18,6 +18,11 @@ quint64 StreamClient::id() const
     return _id;
 }
 
+const QString &StreamClient::logPrefix() const
+{
+    return _logPrefix;
+}
+
 QDateTime StreamClient::createdTimestamp() const
 {
     return _createdTimestamp;
