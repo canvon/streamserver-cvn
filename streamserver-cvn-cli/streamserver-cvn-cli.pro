@@ -14,14 +14,16 @@ SOURCES += main.cpp \
     tspacket.cpp \
     streamclient.cpp \
     httprequest.cpp \
-    httpreply.cpp
+    httpreply.cpp \
+    humanreadable.cpp
 
 HEADERS += \
     streamserver.h \
     tspacket.h \
     streamclient.h \
     httprequest.h \
-    httpreply.h
+    httpreply.h \
+    humanreadable.h
 
 CONFIG(debug, debug|release) {
     message("Building with debug messages")
