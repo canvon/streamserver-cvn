@@ -102,6 +102,9 @@ void StreamServer::clientDisconnected(QObject *objPtr)
 
         qInfo() << "Client was connected for" << clientPtr->createdElapsed().elapsed() << "ms,"
                 << "since" << clientPtr->createdTimestamp();
+
+        qInfo() << "Client transfer statistics: Received from client" << clientPtr->socketBytesReceived() << "bytes,"
+                << "sent to client" << clientPtr->socketBytesSent() << "bytes";
     }
 
     // Clean up resources.

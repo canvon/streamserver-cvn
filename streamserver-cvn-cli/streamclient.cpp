@@ -44,6 +44,16 @@ const QTcpSocket &StreamClient::socket() const
     return *_socketPtr;
 }
 
+quint64 StreamClient::socketBytesReceived() const
+{
+    return _socketBytesReceived;
+}
+
+quint64 StreamClient::socketBytesSent() const
+{
+    return _socketBytesSent;
+}
+
 const HTTPRequest &StreamClient::httpRequest() const
 {
     return _httpRequest;
@@ -127,8 +137,10 @@ void StreamClient::sendData()
             break;
         }
 
+        _socketBytesSent += count;
         if (verbose >= 2)
-            qDebug() << _logPrefix << "Sent" << count << "bytes";
+            qDebug() << _logPrefix << "Sent" << count << "bytes,"
+                     << "total sent" << _socketBytesSent;
         if (verbose >= 3)
             qDebug() << _logPrefix << "Sent data:" << _sendBuf.left(count);
 
@@ -210,8 +222,10 @@ void StreamClient::receiveData()
 
     QByteArray buf;
     while (!(buf = _socketPtr->read(1024)).isEmpty()) {
+        _socketBytesReceived += buf.length();
         if (verbose >= 2)
-            qInfo() << _logPrefix << "Received" << buf.length() << "bytes of data";
+            qInfo() << _logPrefix << "Received" << buf.length() << "bytes of data,"
+                    << "total received" << _socketBytesReceived;
         if (verbose >= 3)
             qDebug() << _logPrefix << "Received data:" << buf;
 

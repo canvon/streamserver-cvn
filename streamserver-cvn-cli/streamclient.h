@@ -28,6 +28,8 @@ private:
     QDateTime                    _createdTimestamp;
     QElapsedTimer                _createdElapsed;
     socketPtr_type               _socketPtr;
+    quint64                      _socketBytesReceived = 0;
+    quint64                      _socketBytesSent = 0;
     bool                         _isReceiving = true;
     HTTPRequest                  _httpRequest;
     std::unique_ptr<HTTPReply>   _httpReplyPtr;
@@ -45,6 +47,8 @@ public:
 
     QTcpSocket &socket();
     const QTcpSocket &socket() const;
+    quint64 socketBytesReceived() const;
+    quint64 socketBytesSent() const;
     const HTTPRequest &httpRequest() const;
     const HTTPReply   *httpReply()   const;
 
