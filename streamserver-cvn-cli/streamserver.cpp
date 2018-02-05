@@ -58,9 +58,11 @@ void StreamServer::clientConnected()
         qDebug() << "No next pending connection";
         return;
     }
-    qInfo() << "Client" << _nextClientID << "connected:"
-            << "From" << socketPtr->peerAddress()
-            << "port" << socketPtr->peerPort();
+    if (verbose >= -1) {
+        qInfo() << "Client" << _nextClientID << "connected:"
+                << "From" << socketPtr->peerAddress()
+                << "port" << socketPtr->peerPort();
+    }
 
     // Set up client object and signal mapping.
     std::shared_ptr<StreamClient> clientPtr(
@@ -73,7 +75,8 @@ void StreamServer::clientConnected()
     // Store client object in list.
     _clients.push_back(clientPtr);
 
-    qInfo() << "Client count:" << _clients.length();
+    if (verbose >= 0)
+        qInfo() << "Client count:" << _clients.length();
 }
 
 void StreamServer::clientDisconnected(QObject *objPtr)
@@ -106,7 +109,8 @@ void StreamServer::clientDisconnected(QObject *objPtr)
     // Remove client object from list.
     _clients.removeOne(std::shared_ptr<StreamClient>(clientPtr, std::mem_fn(&StreamClient::deleteLater)));
 
-    qInfo() << "Client count:" << _clients.length();
+    if (verbose >= 0)
+        qInfo() << "Client count:" << _clients.length();
 }
 
 void StreamServer::initInput()
