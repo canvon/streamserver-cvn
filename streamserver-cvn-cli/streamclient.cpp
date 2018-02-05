@@ -193,15 +193,26 @@ void StreamClient::receiveData()
         if (verbose >= 3)
             qDebug() << _logPrefix << "Received data:" << buf;
 
-        if (_httpRequest.receiveState() == HTTPRequest::ReceiveState::Ready) {
-            qInfo() << _logPrefix << "Unrecognized data after client request header, excepting.";
+        if (!_isReceiving) {
+            qInfo() << _logPrefix << "Unrecognized client data, aborting connection.";
             if (verbose >= 3)
-                qInfo() << _logPrefix << "Unrecognized data was:" << buf;
+                qInfo() << _logPrefix << "Unrecognized client data was:" << buf;
 
-            throw std::runtime_error("Stream client: Unrecognized data after client request header");
+            _socketPtr->abort();
+            return;
         }
 
-        _httpRequest.processChunk(buf);
+        try {
+            _httpRequest.processChunk(buf);
+        }
+        catch (std::exception &ex) {
+            _isReceiving = false;
+            qInfo() << _logPrefix << "Unable to parse network bytes as HTTP request:" << QString(ex.what());
+            _httpReplyPtr = std::make_unique<HTTPReply>(400, "Bad Request");
+            _httpReplyPtr->setHeader("Content-Type", "text/plain");
+            _httpReplyPtr->setBody("Unable to parse HTTP request.");
+            return;
+        }
     }
 
     // TODO: How to handle error?
@@ -213,6 +224,7 @@ void StreamClient::receiveData()
     //    ...;
 
     if (_httpRequest.receiveState() == HTTPRequest::ReceiveState::Ready) {
+        _isReceiving = false;
         qDebug() << _logPrefix << "Received request; processing...";
         processRequest();
     }

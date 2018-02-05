@@ -24,6 +24,7 @@ private:
     quint64                      _id;
     QString                      _logPrefix;
     socketPtr_type               _socketPtr;
+    bool                         _isReceiving = true;
     HTTPRequest                  _httpRequest;
     std::unique_ptr<HTTPReply>   _httpReplyPtr;
     bool                         _replyHeaderSent = false;
