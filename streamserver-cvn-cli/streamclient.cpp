@@ -149,7 +149,7 @@ void StreamClient::processRequest()
         qInfo() << _logPrefix << "HTTP version not recognized:" << httpVersion;
         _httpReplyPtr = std::make_unique<HTTPReply>(400, "Bad Request");
         _httpReplyPtr->setHeader("Content-Type", "text/plain");
-        _httpReplyPtr->setBody("HTTP version not recognized.");
+        _httpReplyPtr->setBody("HTTP version not recognized.\n");
         return;
     }
 
@@ -158,7 +158,7 @@ void StreamClient::processRequest()
         qInfo() << _logPrefix << "HTTP method not supported:" << method;
         _httpReplyPtr = std::make_unique<HTTPReply>(400, "Bad Request");
         _httpReplyPtr->setHeader("Content-Type", "text/plain");
-        _httpReplyPtr->setBody("HTTP method not supported.");
+        _httpReplyPtr->setBody("HTTP method not supported.\n");
         return;
     }
 
@@ -167,7 +167,7 @@ void StreamClient::processRequest()
         qInfo() << _logPrefix << "Path not found:" << path;
         _httpReplyPtr = std::make_unique<HTTPReply>(404, "Not Found");
         _httpReplyPtr->setHeader("Content-Type", "text/plain");
-        _httpReplyPtr->setBody("Path not found.");
+        _httpReplyPtr->setBody("Path not found.\n");
         return;
     }
 
@@ -210,7 +210,7 @@ void StreamClient::receiveData()
             qInfo() << _logPrefix << "Unable to parse network bytes as HTTP request:" << QString(ex.what());
             _httpReplyPtr = std::make_unique<HTTPReply>(400, "Bad Request");
             _httpReplyPtr->setHeader("Content-Type", "text/plain");
-            _httpReplyPtr->setBody("Unable to parse HTTP request.");
+            _httpReplyPtr->setBody("Unable to parse HTTP request.\n");
             return;
         }
     }
