@@ -165,14 +165,28 @@ void StreamServer::processInput()
     if (verbose >= 3)
         qDebug() << "Read data:" << packetBytes;
 
-    if (packetBytes.length() != _tsPacketSize)
-        throw std::runtime_error("Desync: Read packet should be size " + std::to_string(_tsPacketSize) +
-                                 ", but was " + std::to_string(packetBytes.length()));
+    if (packetBytes.length() != _tsPacketSize) {
+        qWarning() << "Desync: Read packet should be size" << _tsPacketSize
+                   << ", but was" << packetBytes.length();
+        return;
+    }
 
     // Actually process the read data.
-    TSPacket packet(packetBytes);
-    for (auto client : _clients) {
-        client->queuePacket(packet);
-        client->sendData();
+    try {
+        TSPacket packet(packetBytes);
+        for (auto client : _clients) {
+            try {
+                client->queuePacket(packet);
+                client->sendData();
+            }
+            catch (std::exception &ex) {
+                qWarning() << "Error sending TS packet to client" << client->id() << ":" << QString(ex.what());
+                continue;
+            }
+        }
+    }
+    catch (std::exception &ex) {
+        qWarning() << "Error processing input bytes as TS packet & sending to clients:" << QString(ex.what());
+        return;
     }
 }
