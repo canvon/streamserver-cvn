@@ -110,7 +110,43 @@ TSPacket::AdaptationField::AdaptationField(const QByteArray &bytes) :
                                  std::to_string(_length) + " + 1 does not match byte array length " +
                                  std::to_string(_bytes.length()));
 
-    // TODO: Implement
+    {
+        quint8 byte = _bytes.at(byteIdx++);
+        _discontinuityIndicator   = byte & 0x80;
+        _randomAccessIndicator    = byte & 0x40;
+        _ESPrioIndicator          = byte & 0x20;
+        _PCRFlag                  = byte & 0x10;
+        _OPCRFlag                 = byte & 0x08;
+        _splicingPointFlag        = byte & 0x04;
+        _transportPrivateDataFlag = byte & 0x02;
+        _extensionFlag            = byte & 0x01;
+    }
+
+    if (_PCRFlag) {
+        // FIXME: Implement PCR decoding
+        // Until then, just skip the field.
+        byteIdx += 6;
+    }
+
+    if (_OPCRFlag) {
+        // FIXME: As above
+        byteIdx += 6;
+    }
+
+    if (_splicingPointFlag)
+        _spliceCountdown = _bytes.at(byteIdx++);
+
+    if (_transportPrivateDataFlag) {
+        _iTransportPrivateData = byteIdx;
+        _transportPrivateDataLength = _bytes.at(byteIdx++);
+        _transportPrivateData = _bytes.mid(_iTransportPrivateData, 1 + _transportPrivateDataLength);
+        byteIdx += _transportPrivateDataLength;
+    }
+
+    // FIXME: Handle Adaptation Field extension
+
+    _iStuffingBytes = byteIdx;
+    _stuffingBytes = _bytes.mid(_iStuffingBytes);
 }
 
 const QByteArray &TSPacket::AdaptationField::bytes() const
@@ -121,6 +157,61 @@ const QByteArray &TSPacket::AdaptationField::bytes() const
 quint8 TSPacket::AdaptationField::length() const
 {
     return _length;
+}
+
+bool TSPacket::AdaptationField::discontinuityIndicator() const
+{
+    return _discontinuityIndicator;
+}
+
+bool TSPacket::AdaptationField::randomAccessIndicator() const
+{
+    return _randomAccessIndicator;
+}
+
+bool TSPacket::AdaptationField::ESPrioIndicator() const
+{
+    return _ESPrioIndicator;
+}
+
+bool TSPacket::AdaptationField::PCRFlag() const
+{
+    return _PCRFlag;
+}
+
+bool TSPacket::AdaptationField::OPCRFlag() const
+{
+    return _OPCRFlag;
+}
+
+bool TSPacket::AdaptationField::splicingPointFlag() const
+{
+    return _splicingPointFlag;
+}
+
+bool TSPacket::AdaptationField::transportPrivateDataFlag() const
+{
+    return _transportPrivateDataFlag;
+}
+
+bool TSPacket::AdaptationField::extensionFlag() const
+{
+    return _extensionFlag;
+}
+
+qint8 TSPacket::AdaptationField::spliceCountdown() const
+{
+    return _spliceCountdown;
+}
+
+const QByteArray &TSPacket::AdaptationField::transportPrivateData() const
+{
+    return _transportPrivateData;
+}
+
+const QByteArray &TSPacket::AdaptationField::stuffingBytes() const
+{
+    return _stuffingBytes;
 }
 
 QDebug operator<<(QDebug debug, const TSPacket &packet)
@@ -151,11 +242,40 @@ QDebug operator<<(QDebug debug, const TSPacket &packet)
 QDebug operator<<(QDebug debug, const TSPacket::AdaptationField &af)
 {
     QDebugStateSaver saver(debug);
-    debug.nospace()
-        << "AdaptationField("
-        << "Length=" << af.length() << " "
-        << "Data="   << af.bytes().toHex()
-        << ")";
+    debug.nospace() << "AdaptationField(";
+
+    debug
+        << "Length="                 << af.length()                 << " "
+        << "DiscontinuityIndicator=" << af.discontinuityIndicator() << " "
+        << "RandomAccessIndicator="  << af.randomAccessIndicator()  << " "
+        << "ElementaryStreamPriorityIndicator=" << af.ESPrioIndicator() << " "
+        << "PCRFlag="                << af.PCRFlag()                << " "
+        << "OPCRFlag="               << af.OPCRFlag()               << " "
+        << "SplicingPointFlag="      << af.splicingPointFlag()      << " "
+        << "TransportPrivateDataFlag=" << af.transportPrivateDataFlag() << " "
+        << "ExtensionFlag="          << af.extensionFlag();
+
+    // FIXME: Implement
+    if (af.PCRFlag())
+        debug << " " << "PCR=<not_implemented>";
+    if (af.OPCRFlag())
+        debug << " " << "OPCR=<not_implemented>";
+
+    if (af.splicingPointFlag())
+        debug << " " << "SpliceCountdown=" << af.spliceCountdown();
+
+    if (af.transportPrivateDataFlag())
+        debug << " " << "TransportPrivateData=" << af.transportPrivateData().toHex();
+
+    // FIXME: Implement showing "Extension"(s)
+    if (af.extensionFlag())
+        debug << " " << "Extension=<not_implemented>";
+
+    const QByteArray &stuffingBytes(af.stuffingBytes());
+    if (!stuffingBytes.isEmpty())
+        debug << " " << "StuffingBytes=" << stuffingBytes.toHex();
+
+    debug << ")";
 
     return debug;
 }
