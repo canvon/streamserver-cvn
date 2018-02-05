@@ -125,9 +125,24 @@ int main(int argc, char *argv[])
         { { "d", "debug"   }, "Enable debugging. (Increase debug level.)" },
         { { "l", "listen" }, "Port to listen on for HTTP streaming client connections",
           "listen_port", "8000" },
+        { { "logts", "log-timestamping" }, "How to timestamp log messages",
+          "mode" },
     });
     parser.addPositionalArgument("input", "Input file name");
     parser.process(a);
+
+    // Set up log timestamping mode.
+    const QString logTsStr = parser.value("logts");
+    if (!logTsStr.isNull()) {
+        if (logTsStr == "none")
+            logTs = LogTimestamping::None;
+        else if (logTsStr == "date")
+            logTs = LogTimestamping::Date;
+        else if (logTsStr == "time")
+            logTs = LogTimestamping::Time;
+        else
+            qFatal("Invalid log timestamping mode \"%s\"", qPrintable(logTsStr));
+    }
 
     // Apply incremental options.
     for (QString opt : parser.optionNames()) {
