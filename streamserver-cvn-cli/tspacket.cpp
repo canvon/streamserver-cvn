@@ -1,7 +1,6 @@
 #include "tspacket.h"
 
 #include <stdexcept>
-#include <QDebug>
 
 extern int verbose;
 
@@ -36,14 +35,13 @@ TSPacket::TSPacket(const QByteArray &bytes) :
     if (_adaptationFieldControl == AdaptationFieldControlType::AdaptationFieldOnly ||
         _adaptationFieldControl == AdaptationFieldControlType::AdaptationFieldThenPayload)
     {
-        quint8 byte = _bytes.at(byteIdx++);
-        _adaptationFieldLen = byte;
+        quint8 len = _bytes.at(byteIdx++);
 
-        // TODO: Parse adaptation field
-        byteIdx += _adaptationFieldLen;
+        // Parse adaptation field
+        const QByteArray data = _bytes.mid(_iAdaptationField, 1 + len);
+        _adaptationField = std::make_shared<AdaptationField>(data);
+        byteIdx += len;
     }
-    else
-        _adaptationFieldLen = 0;
 
     _iPayloadData = byteIdx;
 }
@@ -88,13 +86,9 @@ quint8 TSPacket::continuityCounter() const
     return _continuityCounter;
 }
 
-QByteArray TSPacket::adaptationField() const
+std::shared_ptr<const TSPacket::AdaptationField> TSPacket::adaptationField() const
 {
-    if (!(_adaptationFieldControl == AdaptationFieldControlType::AdaptationFieldOnly ||
-          _adaptationFieldControl == AdaptationFieldControlType::AdaptationFieldThenPayload))
-        return QByteArray();
-
-    return _bytes.mid(_iAdaptationField, 1 + _adaptationFieldLen);
+    return _adaptationField;
 }
 
 QByteArray TSPacket::payloadData() const
@@ -102,21 +96,66 @@ QByteArray TSPacket::payloadData() const
     return _bytes.mid(_iPayloadData);
 }
 
-QString TSPacket::toString() const
+TSPacket::AdaptationField::AdaptationField(const QByteArray &bytes) :
+    _bytes(bytes)
 {
-    QString ret;
-    QDebug out(&ret);
+    if (_bytes.isEmpty())
+        throw std::runtime_error("TS packet, Adaptation Field: Can't parse an empty byte array as Adaptation Field");
 
-    out.nospace()
-        << "TEI="  << TEI()  << " "
-        << "PUSI=" << PUSI() << " "
-        << "TransportPriority=" << transportPrio() << " "
-        << "PID="  << PID()  << " "
-        << "TSC="  << TSC()  << " "
-        << "AdaptationFieldControl=" << adaptationFieldControl()  << " "
-        << "ContinuityCounter="      << continuityCounter()       << " "
-        << "AdaptationField="        << adaptationField().toHex() << " "
-        << "PayloadData="            << payloadData().toHex();
+    int byteIdx = 0;
 
-    return ret;
+    _length = _bytes.at(byteIdx++);
+    if (_bytes.length() != 1 + _length)
+        throw std::runtime_error("TS packet, Adaptation Field: Adaptation Field Length " +
+                                 std::to_string(_length) + " + 1 does not match byte array length " +
+                                 std::to_string(_bytes.length()));
+
+    // TODO: Implement
+}
+
+const QByteArray &TSPacket::AdaptationField::bytes() const
+{
+    return _bytes;
+}
+
+quint8 TSPacket::AdaptationField::length() const
+{
+    return _length;
+}
+
+QDebug operator<<(QDebug debug, const TSPacket &packet)
+{
+    QDebugStateSaver saver(debug);
+    debug.nospace() << "TSPacket(";
+
+    debug
+        << "TEI="  << packet.TEI()  << " "
+        << "PUSI=" << packet.PUSI() << " "
+        << "TransportPriority=" << packet.transportPrio() << " "
+        << "PID="  << packet.PID()  << " "
+        << "TSC="  << packet.TSC()  << " "
+        << "AdaptationFieldControl=" << packet.adaptationFieldControl() << " "
+        << "ContinuityCounter="      << packet.continuityCounter();
+
+    auto afPtr = packet.adaptationField();
+    if (afPtr)
+        debug << " " << "AdaptationField=" << *afPtr;
+
+    debug << " " << "PayloadData=" << packet.payloadData().toHex();
+
+    debug << ")";
+
+    return debug;
+}
+
+QDebug operator<<(QDebug debug, const TSPacket::AdaptationField &af)
+{
+    QDebugStateSaver saver(debug);
+    debug.nospace()
+        << "AdaptationField("
+        << "Length=" << af.length() << " "
+        << "Data="   << af.bytes().toHex()
+        << ")";
+
+    return debug;
 }

@@ -3,7 +3,9 @@
 
 #include <QObject>
 
+#include <memory>
 #include <QByteArray>
+#include <QDebug>
 
 class TSPacket
 {
@@ -36,7 +38,21 @@ private:
     AdaptationFieldControlType  _adaptationFieldControl;
     quint8      _continuityCounter;
     int         _iAdaptationField;
-    quint8      _adaptationFieldLen;
+public:
+    class AdaptationField {
+        QByteArray  _bytes;
+
+        quint8      _length;
+
+    public:
+        explicit AdaptationField(const QByteArray &bytes);
+
+        const QByteArray &bytes() const;
+
+        quint8 length() const;
+    };
+private:
+    std::shared_ptr<AdaptationField>  _adaptationField;
     int         _iPayloadData;
 
 public:
@@ -53,10 +69,11 @@ public:
     TSCType TSC() const;
     AdaptationFieldControlType adaptationFieldControl() const;
     quint8 continuityCounter() const;
-    QByteArray adaptationField() const;
+    std::shared_ptr<const AdaptationField> adaptationField() const;
     QByteArray payloadData() const;
-
-    QString toString() const;
 };
+
+QDebug operator<<(QDebug debug, const TSPacket &packet);
+QDebug operator<<(QDebug debug, const TSPacket::AdaptationField &af);
 
 #endif // TSPACKET_H

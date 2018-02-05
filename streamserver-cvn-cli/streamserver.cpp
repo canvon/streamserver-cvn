@@ -208,7 +208,7 @@ void StreamServer::processInput()
     try {
         TSPacket packet(packetBytes);
         if (verbose >= 3)
-            qInfo() << "TS packet contents:" << qPrintable(packet.toString());
+            qInfo() << "TS packet contents:" << packet;
 
         for (auto client : _clients) {
             try {
