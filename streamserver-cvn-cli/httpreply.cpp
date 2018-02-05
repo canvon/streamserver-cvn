@@ -48,7 +48,7 @@ const QString &HTTPReply::statusMsg() const
 
 void HTTPReply::setStatusMsg(const QString &msg)
 {
-    if (msg.contains(' ') || msg.contains('\r') || msg.contains('\n'))
+    if (msg.contains('\r') || msg.contains('\n'))
         throw std::invalid_argument("HTTP reply: Invalid characters found in to-be-set status message");
 
     _statusMsg = msg;
