@@ -7,7 +7,7 @@ StreamClient::StreamClient(socketPtr_type socketPtr, quint64 id, QObject *parent
     _socketPtr(std::move(socketPtr))
 {
     _createdElapsed.start();
-    _logPrefix = "Client " + QString::number(_id);
+    _logPrefix = "{Client " + QString::number(_id) + "}";
     _socketPtr->setParent(this);
     connect(_socketPtr.get(), &QTcpSocket::readyRead, this, &StreamClient::receiveData);
     connect(_socketPtr.get(), &QTcpSocket::bytesWritten, this, &StreamClient::sendData);
@@ -68,15 +68,15 @@ void StreamClient::queuePacket(const TSPacket &packet)
 {
     if (!_forwardPackets) {
         if (verbose >= 2)
-            qDebug() << _logPrefix << "Not queueing packet. Not set to forward packets (yet?)";
+            qDebug() << qPrintable(_logPrefix) << "Not queueing packet. Not set to forward packets (yet?)";
 
         return;
     }
 
     if (verbose >= 2)
-        qDebug() << _logPrefix << "Queueing packet";
+        qDebug() << qPrintable(_logPrefix) << "Queueing packet";
     if (verbose >= 3)
-        qDebug() << _logPrefix << "Packet data:" << packet.bytes();
+        qDebug() << qPrintable(_logPrefix) << "Packet data:" << packet.bytes();
 
     _queue.append(packet);
 }
@@ -84,17 +84,17 @@ void StreamClient::queuePacket(const TSPacket &packet)
 void StreamClient::sendData()
 {
     if (verbose >= 2)
-        qDebug() << _logPrefix << "Begin send data";
+        qDebug() << qPrintable(_logPrefix) << "Begin send data";
 
     if (_socketPtr->state() == QTcpSocket::ClosingState) {
         if (verbose >= 2)
-            qDebug() << _logPrefix << "Socket in closing state, leaving send data early";
+            qDebug() << qPrintable(_logPrefix) << "Socket in closing state, leaving send data early";
         return;
     }
 
     if (!_httpReplyPtr) {
         if (verbose >= 2)
-            qDebug() << _logPrefix << "No reply generated, yet, leaving send data early";
+            qDebug() << qPrintable(_logPrefix) << "No reply generated, yet, leaving send data early";
         return;
     }
 
@@ -102,7 +102,7 @@ void StreamClient::sendData()
         // Initially fill send buffer with HTTP reply.
 
         if (verbose >= 0) {
-            qInfo() << _logPrefix << "Sending server reply:"
+            qInfo() << qPrintable(_logPrefix) << "Sending server reply:"
                     << "HTTP version"   << _httpReplyPtr->httpVersion()
                     << "Status code"    << _httpReplyPtr->statusCode()
                     << "Status message" << _httpReplyPtr->statusMsg();
@@ -110,7 +110,7 @@ void StreamClient::sendData()
 
         const QByteArray reply = _httpReplyPtr->toBytes();
         if (verbose >= 3)
-            qDebug() << _logPrefix << "Filling send buffer with reply data:" << reply;
+            qDebug() << qPrintable(_logPrefix) << "Filling send buffer with reply data:" << reply;
 
         _sendBuf.append(reply);
         _replyHeaderSent = true;
@@ -120,9 +120,9 @@ void StreamClient::sendData()
         // Fill send buffer up to 1KiB.
         while (!_queue.isEmpty() && _sendBuf.length() + _queue.front().bytes().length() <= 1024) {
             if (verbose >= 2)
-                qDebug() << _logPrefix << "Filling send buffer with" << _queue.front().bytes().length() << "bytes";
+                qDebug() << qPrintable(_logPrefix) << "Filling send buffer with" << _queue.front().bytes().length() << "bytes";
             if (verbose >= 3)
-                qDebug() << _logPrefix << "Filling with data:" << _queue.front().bytes();
+                qDebug() << qPrintable(_logPrefix) << "Filling with data:" << _queue.front().bytes();
 
             _sendBuf.append(_queue.front().bytes());
             _queue.pop_front();
@@ -131,7 +131,7 @@ void StreamClient::sendData()
         // Try to send.
         qint64 count = _socketPtr->write(_sendBuf);
         if (count < 0) {
-            qInfo() << _logPrefix << "Write error:" << _socketPtr->errorString()
+            qInfo() << qPrintable(_logPrefix) << "Write error:" << _socketPtr->errorString()
                     << ", aborting connection";
             _socketPtr->abort();
             break;
@@ -139,10 +139,10 @@ void StreamClient::sendData()
 
         _socketBytesSent += count;
         if (verbose >= 2)
-            qDebug() << _logPrefix << "Sent" << count << "bytes,"
+            qDebug() << qPrintable(_logPrefix) << "Sent" << count << "bytes,"
                      << "total sent" << _socketBytesSent;
         if (verbose >= 3)
-            qDebug() << _logPrefix << "Sent data:" << _sendBuf.left(count);
+            qDebug() << qPrintable(_logPrefix) << "Sent data:" << _sendBuf.left(count);
 
         // No more send is possible.
         if (count == 0)
@@ -154,18 +154,18 @@ void StreamClient::sendData()
 
     if (_sendBuf.isEmpty() && !_forwardPackets) {
         if (verbose >= 0)
-            qInfo() << _logPrefix << "Closing client connection after HTTP reply";
+            qInfo() << qPrintable(_logPrefix) << "Closing client connection after HTTP reply";
         _socketPtr->close();
     }
 
     if (verbose >= 2)
-        qDebug() << _logPrefix << "Finish send data";
+        qDebug() << qPrintable(_logPrefix) << "Finish send data";
 }
 
 void StreamClient::processRequest()
 {
     if (verbose >= 0) {
-        qInfo() << _logPrefix << "Processing client request:"
+        qInfo() << qPrintable(_logPrefix) << "Processing client request:"
                 << "Method" << _httpRequest.method()
                 << "Path"   << _httpRequest.path()
                 << "HTTP version" << _httpRequest.httpVersion()
@@ -175,7 +175,7 @@ void StreamClient::processRequest()
     const QByteArray httpVersion = _httpRequest.httpVersion();
     if (!(httpVersion == "HTTP/1.0" || httpVersion == "HTTP/1.1")) {
         if (verbose >= 0)
-            qInfo() << _logPrefix << "HTTP version not recognized:" << httpVersion;
+            qInfo() << qPrintable(_logPrefix) << "HTTP version not recognized:" << httpVersion;
         _httpReplyPtr = std::make_unique<HTTPReply>(400, "Bad Request");
         _httpReplyPtr->setHeader("Content-Type", "text/plain");
         _httpReplyPtr->setBody("HTTP version not recognized.\n");
@@ -185,7 +185,7 @@ void StreamClient::processRequest()
     const QByteArray method = _httpRequest.method();
     if (!(method == "GET" || method == "HEAD")) {
         if (verbose >= 0)
-            qInfo() << _logPrefix << "HTTP method not supported:" << method;
+            qInfo() << qPrintable(_logPrefix) << "HTTP method not supported:" << method;
         _httpReplyPtr = std::make_unique<HTTPReply>(400, "Bad Request");
         _httpReplyPtr->setHeader("Content-Type", "text/plain");
         _httpReplyPtr->setBody("HTTP method not supported.\n");
@@ -195,7 +195,7 @@ void StreamClient::processRequest()
     const QByteArray path = _httpRequest.path();
     if (!(path == "/" || path == "/stream.m2ts" || path == "/live.m2ts")) {
         if (verbose >= 0)
-            qInfo() << _logPrefix << "Path not found:" << path;
+            qInfo() << qPrintable(_logPrefix) << "Path not found:" << path;
         _httpReplyPtr = std::make_unique<HTTPReply>(404, "Not Found");
         _httpReplyPtr->setHeader("Content-Type", "text/plain");
         _httpReplyPtr->setBody("Path not found.\n");
@@ -206,11 +206,11 @@ void StreamClient::processRequest()
     _httpReplyPtr->setHeader("Content-Type", "video/mp2t");
     if (_httpRequest.method() == "HEAD") {
         if (verbose >= -1)
-            qInfo() << _logPrefix << "Request OK, HEAD only";
+            qInfo() << qPrintable(_logPrefix) << "Request OK, HEAD only";
     }
     else {
         if (verbose >= -1)
-            qInfo() << _logPrefix << "Request OK, start forwarding TS packets";
+            qInfo() << qPrintable(_logPrefix) << "Request OK, start forwarding TS packets";
         _forwardPackets = true;
     }
 }
@@ -218,22 +218,22 @@ void StreamClient::processRequest()
 void StreamClient::receiveData()
 {
     if (verbose >= 2)
-        qDebug() << _logPrefix << "Begin receive data";
+        qDebug() << qPrintable(_logPrefix) << "Begin receive data";
 
     QByteArray buf;
     while (!(buf = _socketPtr->read(1024)).isEmpty()) {
         _socketBytesReceived += buf.length();
         if (verbose >= 2)
-            qInfo() << _logPrefix << "Received" << buf.length() << "bytes of data,"
+            qInfo() << qPrintable(_logPrefix) << "Received" << buf.length() << "bytes of data,"
                     << "total received" << _socketBytesReceived;
         if (verbose >= 3)
-            qDebug() << _logPrefix << "Received data:" << buf;
+            qDebug() << qPrintable(_logPrefix) << "Received data:" << buf;
 
         if (!_isReceiving) {
             if (verbose >= 0)
-                qInfo() << _logPrefix << "Unrecognized client data, aborting connection.";
+                qInfo() << qPrintable(_logPrefix) << "Unrecognized client data, aborting connection.";
             if (verbose >= 3)
-                qInfo() << _logPrefix << "Unrecognized client data was:" << buf;
+                qInfo() << qPrintable(_logPrefix) << "Unrecognized client data was:" << buf;
 
             _socketPtr->abort();
             return;
@@ -245,7 +245,7 @@ void StreamClient::receiveData()
         catch (std::exception &ex) {
             _isReceiving = false;
             if (verbose >= 0)
-                qInfo() << _logPrefix << "Unable to parse network bytes as HTTP request:" << QString(ex.what());
+                qInfo() << qPrintable(_logPrefix) << "Unable to parse network bytes as HTTP request:" << QString(ex.what());
             _httpReplyPtr = std::make_unique<HTTPReply>(400, "Bad Request");
             _httpReplyPtr->setHeader("Content-Type", "text/plain");
             _httpReplyPtr->setBody("Unable to parse HTTP request.\n");
@@ -264,10 +264,10 @@ void StreamClient::receiveData()
     if (_httpRequest.receiveState() == HTTPRequest::ReceiveState::Ready) {
         _isReceiving = false;
         if (verbose >= 2)
-            qDebug() << _logPrefix << "Received request; processing...";
+            qDebug() << qPrintable(_logPrefix) << "Received request; processing...";
         processRequest();
     }
 
     if (verbose >= 2)
-        qDebug() << _logPrefix << "Finish receive data";
+        qDebug() << qPrintable(_logPrefix) << "Finish receive data";
 }
