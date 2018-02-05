@@ -207,6 +207,9 @@ void StreamServer::processInput()
     // Actually process the read data.
     try {
         TSPacket packet(packetBytes);
+        if (verbose >= 3)
+            qInfo() << "TS packet contents:" << qPrintable(packet.toString());
+
         for (auto client : _clients) {
             try {
                 client->queuePacket(packet);
