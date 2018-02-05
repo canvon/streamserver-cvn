@@ -17,7 +17,8 @@ StreamServer::StreamServer(std::unique_ptr<QFile> inputFilePtr, quint16 listenPo
 {
     connect(&_listenSocket, &QTcpServer::newConnection, this, &StreamServer::clientConnected);
 
-    qInfo() << "Listening on port" << _listenPort << "...";
+    if (verbose >= -1)
+        qInfo() << "Listening on port" << _listenPort << "...";
     if (!_listenSocket.listen(QHostAddress::Any, _listenPort)) {
         qCritical() << "Error listening on port" << _listenPort
                     << "due to" << _listenSocket.errorString();
@@ -115,12 +116,14 @@ void StreamServer::clientDisconnected(QObject *objPtr)
 
 void StreamServer::initInput()
 {
-    qDebug() << "Initializing input";
+    if (verbose >= 1)
+        qInfo() << "Initializing input";
 
     if (!_inputFilePtr->isOpen()) {
         const QString fileName = _inputFilePtr->fileName();
 
-        qInfo() << "Opening input file" << fileName << "...";
+        if (verbose >= -1)
+            qInfo() << "Opening input file" << fileName << "...";
 
         if (!_inputFilePtr->open(QFile::ReadOnly)) {
             const QString err = _inputFilePtr->errorString();
@@ -140,14 +143,17 @@ void StreamServer::initInput()
         inputFileHandle, QSocketNotifier::Read, this);
     connect(_inputFileNotifierPtr.get(), &QSocketNotifier::activated, this, &StreamServer::processInput);
 
-    qDebug() << "Successfully initialized input";
+    if (verbose >= 1)
+        qInfo() << "Successfully initialized input";
 }
 
 void StreamServer::finalizeInput()
 {
-    qDebug() << "Finalizing input";
+    if (verbose >= 1)
+        qInfo() << "Finalizing input";
 
-    qInfo() << "Closing input...";
+    if (verbose >= -1)
+        qInfo() << "Closing input...";
     _inputFilePtr->close();
 
     // Stop notifier gracefully, otherwise it outputs error messages from the event loop.
@@ -156,17 +162,20 @@ void StreamServer::finalizeInput()
         _inputFileNotifierPtr.reset();
     }
 
-    qDebug() << "Successfully finalized input";
+    if (verbose >= 1)
+        qInfo() << "Successfully finalized input";
 }
 
 void StreamServer::processInput()
 {
     QByteArray packetBytes = _inputFilePtr->read(_tsPacketSize);
     if (packetBytes.isNull()) {
-        qInfo() << "EOF on input, finalizing...";
+        if (verbose >= 0)
+            qInfo() << "EOF on input, finalizing...";
         finalizeInput();
 
-        qInfo() << "Setting up timer to open input again";
+        if (verbose >= 1)
+            qInfo() << "Setting up timer to open input again";
         _inputFileReopenTimer.singleShot(_inputFileReopenTimeoutMillisec,
             this, &StreamServer::initInput);
 

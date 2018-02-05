@@ -3,11 +3,14 @@
 #include <stdexcept>
 #include <QDebug>
 
+extern int verbose;
+
 TSPacket::TSPacket(const QByteArray &bytes) :
     _bytes(bytes)
 {
     if (!_bytes.startsWith(syncByte)) {
-        qDebug() << "TS packet: Does not start with sync byte" << syncByte << "but" << _bytes.left(4);
+        if (verbose >= 1)
+            qInfo() << "TS packet: Does not start with sync byte" << syncByte << "but" << _bytes.left(4);
 
         throw std::runtime_error("TS packet: Does not start with sync byte");
     }

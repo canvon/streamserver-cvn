@@ -91,10 +91,12 @@ void StreamClient::sendData()
     if (!_replyHeaderSent) {
         // Initially fill send buffer with HTTP reply.
 
-        qInfo() << _logPrefix << "Sending server reply:"
-                << "HTTP version"   << _httpReplyPtr->httpVersion()
-                << "Status code"    << _httpReplyPtr->statusCode()
-                << "Status message" << _httpReplyPtr->statusMsg();
+        if (verbose >= 0) {
+            qInfo() << _logPrefix << "Sending server reply:"
+                    << "HTTP version"   << _httpReplyPtr->httpVersion()
+                    << "Status code"    << _httpReplyPtr->statusCode()
+                    << "Status message" << _httpReplyPtr->statusMsg();
+        }
 
         const QByteArray reply = _httpReplyPtr->toBytes();
         if (verbose >= 3)
@@ -139,7 +141,8 @@ void StreamClient::sendData()
     }
 
     if (_sendBuf.isEmpty() && !_forwardPackets) {
-        qInfo() << _logPrefix << "Closing client connection after HTTP reply";
+        if (verbose >= 0)
+            qInfo() << _logPrefix << "Closing client connection after HTTP reply";
         _socketPtr->close();
     }
 
@@ -149,15 +152,18 @@ void StreamClient::sendData()
 
 void StreamClient::processRequest()
 {
-    qInfo() << _logPrefix << "Processing client request:"
-            << "Method" << _httpRequest.method()
-            << "Path"   << _httpRequest.path()
-            << "HTTP version" << _httpRequest.httpVersion()
-            << "...";
+    if (verbose >= 0) {
+        qInfo() << _logPrefix << "Processing client request:"
+                << "Method" << _httpRequest.method()
+                << "Path"   << _httpRequest.path()
+                << "HTTP version" << _httpRequest.httpVersion()
+                << "...";
+    }
 
     const QByteArray httpVersion = _httpRequest.httpVersion();
     if (!(httpVersion == "HTTP/1.0" || httpVersion == "HTTP/1.1")) {
-        qInfo() << _logPrefix << "HTTP version not recognized:" << httpVersion;
+        if (verbose >= 0)
+            qInfo() << _logPrefix << "HTTP version not recognized:" << httpVersion;
         _httpReplyPtr = std::make_unique<HTTPReply>(400, "Bad Request");
         _httpReplyPtr->setHeader("Content-Type", "text/plain");
         _httpReplyPtr->setBody("HTTP version not recognized.\n");
@@ -166,7 +172,8 @@ void StreamClient::processRequest()
 
     const QByteArray method = _httpRequest.method();
     if (!(method == "GET" || method == "HEAD")) {
-        qInfo() << _logPrefix << "HTTP method not supported:" << method;
+        if (verbose >= 0)
+            qInfo() << _logPrefix << "HTTP method not supported:" << method;
         _httpReplyPtr = std::make_unique<HTTPReply>(400, "Bad Request");
         _httpReplyPtr->setHeader("Content-Type", "text/plain");
         _httpReplyPtr->setBody("HTTP method not supported.\n");
@@ -175,7 +182,8 @@ void StreamClient::processRequest()
 
     const QByteArray path = _httpRequest.path();
     if (!(path == "/" || path == "/stream.m2ts" || path == "/live.m2ts")) {
-        qInfo() << _logPrefix << "Path not found:" << path;
+        if (verbose >= 0)
+            qInfo() << _logPrefix << "Path not found:" << path;
         _httpReplyPtr = std::make_unique<HTTPReply>(404, "Not Found");
         _httpReplyPtr->setHeader("Content-Type", "text/plain");
         _httpReplyPtr->setBody("Path not found.\n");
@@ -185,17 +193,20 @@ void StreamClient::processRequest()
     _httpReplyPtr = std::make_unique<HTTPReply>(200, "OK");
     _httpReplyPtr->setHeader("Content-Type", "video/mp2t");
     if (_httpRequest.method() == "HEAD") {
-        qInfo() << _logPrefix << "Request OK, HEAD only";
+        if (verbose >= -1)
+            qInfo() << _logPrefix << "Request OK, HEAD only";
     }
     else {
-        qInfo() << _logPrefix << "Request OK, start forwarding TS packets";
+        if (verbose >= -1)
+            qInfo() << _logPrefix << "Request OK, start forwarding TS packets";
         _forwardPackets = true;
     }
 }
 
 void StreamClient::receiveData()
 {
-    qDebug() << _logPrefix << "Begin receive data";
+    if (verbose >= 2)
+        qDebug() << _logPrefix << "Begin receive data";
 
     QByteArray buf;
     while (!(buf = _socketPtr->read(1024)).isEmpty()) {
@@ -205,7 +216,8 @@ void StreamClient::receiveData()
             qDebug() << _logPrefix << "Received data:" << buf;
 
         if (!_isReceiving) {
-            qInfo() << _logPrefix << "Unrecognized client data, aborting connection.";
+            if (verbose >= 0)
+                qInfo() << _logPrefix << "Unrecognized client data, aborting connection.";
             if (verbose >= 3)
                 qInfo() << _logPrefix << "Unrecognized client data was:" << buf;
 
@@ -218,7 +230,8 @@ void StreamClient::receiveData()
         }
         catch (std::exception &ex) {
             _isReceiving = false;
-            qInfo() << _logPrefix << "Unable to parse network bytes as HTTP request:" << QString(ex.what());
+            if (verbose >= 0)
+                qInfo() << _logPrefix << "Unable to parse network bytes as HTTP request:" << QString(ex.what());
             _httpReplyPtr = std::make_unique<HTTPReply>(400, "Bad Request");
             _httpReplyPtr->setHeader("Content-Type", "text/plain");
             _httpReplyPtr->setBody("Unable to parse HTTP request.\n");
@@ -236,9 +249,11 @@ void StreamClient::receiveData()
 
     if (_httpRequest.receiveState() == HTTPRequest::ReceiveState::Ready) {
         _isReceiving = false;
-        qDebug() << _logPrefix << "Received request; processing...";
+        if (verbose >= 2)
+            qDebug() << _logPrefix << "Received request; processing...";
         processRequest();
     }
 
-    qDebug() << _logPrefix << "Finish receive data";
+    if (verbose >= 2)
+        qDebug() << _logPrefix << "Finish receive data";
 }
