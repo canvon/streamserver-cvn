@@ -335,18 +335,24 @@ QDebug operator<<(QDebug debug, const TSPacket::AdaptationField &af)
 
     const QByteArray &stuffingBytes(af.stuffingBytes());
     if (!stuffingBytes.isEmpty()) {
-        bool hasNonFF = false;
-        for (QChar c : stuffingBytes) {
-            if (c != '\xff') {
-                hasNonFF = true;
-                break;
+        auto hasOtherThan = [&](QChar compare) {
+            bool found = false;
+            for (QChar c : stuffingBytes) {
+                if (c != compare) {
+                    found = true;
+                    break;
+                }
             }
-        }
+            return found;
+        };
 
-        if (hasNonFF)
-            debug << " " << "StuffingBytes=" << stuffingBytes.toHex() << "/" << stuffingBytes;
-        else
+        if (!hasOtherThan('\xff'))
             debug << " " << "StuffingBytes=" << stuffingBytes.length() << "x\"ff\"";
+        else if (!hasOtherThan('\x00'))
+            debug << " " << "StuffingBytes=" << stuffingBytes.length() << "x\"00\"";
+        else
+            // Secret message for bored technicians..?
+            debug << " " << "StuffingBytes=" << stuffingBytes.toHex() << "/" << stuffingBytes;
     }
 
     debug << ")";
