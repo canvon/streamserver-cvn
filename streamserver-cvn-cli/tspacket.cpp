@@ -7,14 +7,39 @@ extern int verbose;
 TSPacket::TSPacket(const QByteArray &bytes) :
     _bytes(bytes)
 {
-    if (!_bytes.startsWith(syncByte)) {
-        if (verbose >= 1)
-            qInfo() << "TS packet: Does not start with sync byte" << syncByte << "but" << _bytes.left(4);
-
-        throw std::runtime_error("TS packet: Does not start with sync byte");
+    if (_bytes.length() < lengthBasic) {
+        QDebug(&_errorMessage)
+            << "Invalid packet length" << _bytes.length() << "bytes"
+            << "(which is less than basic length" << lengthBasic << "bytes)";
+        return;
     }
 
-    int byteIdx = 1;
+    int byteIdx = 0;
+    if (_bytes.length() == lengthBasic) {
+        _type = TypeType::Basic;
+    }
+    else if (_bytes.length() == 4 + lengthBasic) {
+        _type = TypeType::TimeCode;
+        byteIdx += 4;
+    }
+    else {
+        QDebug(&_errorMessage) << "Unrecognized packet length" << _bytes.length() << "bytes";
+        return;
+    }
+
+    {
+        _iSyncByte = byteIdx;
+        quint8 byte = _bytes.at(byteIdx++);
+        if (!(byte == syncByte)) {
+            QDebug(&_errorMessage)
+                << "No sync byte" << QByteArray(1, syncByte).toHex()
+                << "at offset" << _iSyncByte
+                << "-- starts with" << _bytes.left(8).toHex();
+            return;
+        }
+        _validity = ValidityType::SyncByte;
+    }
+
     {
         quint8 byte = _bytes.at(byteIdx++);
         _TEI  = byte & 0x80;
@@ -23,12 +48,17 @@ TSPacket::TSPacket(const QByteArray &bytes) :
 
         quint8 byte2 = _bytes.at(byteIdx++);
         _PID = (byte & 0x1f) << 8 | byte2;
+        _validity = ValidityType::PID;
     }
+    if (_PID == PIDNullPacket)
+        return;
+
     {
         quint8 byte = _bytes.at(byteIdx++);
         _TSC = static_cast<TSCType>((byte & 0xc0) >> 6);
         _adaptationFieldControl = static_cast<AdaptationFieldControlType>((byte & 0x30) >> 4);
         _continuityCounter = (byte & 0x0f);
+        _validity = ValidityType::ContinuityCounter;
     }
 
     _iAdaptationField = byteIdx;
@@ -41,14 +71,48 @@ TSPacket::TSPacket(const QByteArray &bytes) :
         const QByteArray data = _bytes.mid(_iAdaptationField, 1 + len);
         _adaptationField = std::make_shared<AdaptationField>(data);
         byteIdx += len;
+        if (byteIdx > _bytes.length()) {
+            QDebug(&_errorMessage).nospace()
+                << "Adaptation Field tries to extend to after packet end"
+                << " (offset after AF end would be " << byteIdx << ","
+                << " while packet length is " << _bytes.length() << ")";
+            return;
+        }
+        _validity = ValidityType::AdaptationField;
     }
 
     _iPayloadData = byteIdx;
+    if (_adaptationFieldControl == AdaptationFieldControlType::PayloadOnly ||
+        _adaptationFieldControl == AdaptationFieldControlType::AdaptationFieldThenPayload)
+    {
+        if (!(byteIdx <= _bytes.length())) {
+            QDebug(&_errorMessage)
+                << "Payload Data offset" << _iPayloadData
+                << "is larger than packet size" << _bytes.length();
+            return;
+        }
+        _validity = ValidityType::PayloadData;
+    }
 }
 
 const QByteArray &TSPacket::bytes() const
 {
     return _bytes;
+}
+
+TSPacket::ValidityType TSPacket::validity() const
+{
+    return _validity;
+}
+
+const QString &TSPacket::errorMessage() const
+{
+    return _errorMessage;
+}
+
+TSPacket::TypeType TSPacket::type() const
+{
+    return _type;
 }
 
 bool TSPacket::TEI() const
@@ -69,6 +133,11 @@ bool TSPacket::transportPrio() const
 quint16 TSPacket::PID() const
 {
     return _PID;
+}
+
+bool TSPacket::isNullPacket() const
+{
+    return _validity >= ValidityType::PID && _PID == PIDNullPacket;
 }
 
 TSPacket::TSCType TSPacket::TSC() const
@@ -270,18 +339,41 @@ QDebug operator<<(QDebug debug, const TSPacket &packet)
     QDebugStateSaver saver(debug);
     debug.nospace() << "TSPacket(";
 
-    debug
+    debug << packet.type();
+    if (packet.type() == TSPacket::TypeType::Unrecognized)
+        return debug << ")";
+
+    debug << " " << packet.validity();
+    if (packet.validity() < TSPacket::ValidityType::PID)
+        return debug << ")";
+
+    debug << " "
         << "TEI="  << packet.TEI()  << " "
         << "PUSI=" << packet.PUSI() << " "
         << "TransportPriority=" << packet.transportPrio() << " "
-        << "PID="  << packet.PID()  << " "
-        << "TSC="  << packet.TSC()  << " "
-        << "AdaptationFieldControl=" << packet.adaptationFieldControl() << " "
-        << "ContinuityCounter="      << packet.continuityCounter();
+        << "PID="  << packet.PID();
+    if (packet.isNullPacket()) {
+        debug << " NullPacket";
+
+        // TODO: Dump Null Packet if "interesting" (cf. Adaptation Field stuffing bytes)
+
+        return debug << ")";
+    }
+    if (packet.validity() < TSPacket::ValidityType::ContinuityCounter)
+        return debug << ")";
+
+    debug << " "
+        << packet.TSC()                    << " "
+        << packet.adaptationFieldControl() << " "
+        << "ContinuityCounter="            << packet.continuityCounter();
+    if (packet.validity() < TSPacket::ValidityType::AdaptationField)
+        return debug << ")";
 
     auto afPtr = packet.adaptationField();
     if (afPtr)
-        debug << " " << "AdaptationField=" << *afPtr;
+        debug << " " << *afPtr;
+    if (packet.validity() < TSPacket::ValidityType::PayloadData)
+        return debug << ")";
 
     debug << " " << "PayloadData=" << packet.payloadData().toHex();
 

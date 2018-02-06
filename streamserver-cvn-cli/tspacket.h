@@ -12,6 +12,29 @@ class TSPacket
     Q_GADGET
 
     QByteArray  _bytes;
+    QString     _errorMessage;
+public:
+    enum class TypeType {
+        Unrecognized,
+        Basic,
+        TimeCode,
+    };
+    Q_ENUM(TypeType)
+private:
+    TypeType    _type = TypeType::Unrecognized;
+public:
+    enum class ValidityType {
+        None,
+        SyncByte,
+        PID,
+        ContinuityCounter,
+        AdaptationField,
+        PayloadData,
+    };
+    Q_ENUM(ValidityType)
+private:
+    ValidityType  _validity = ValidityType::None;
+    int           _iSyncByte;
 
     // MPEG-TS packet contents:
     bool        _TEI, _PUSI, _transportPrio;
@@ -104,14 +127,20 @@ private:
 public:
     explicit TSPacket(const QByteArray &bytes);
 
+    static const int lengthBasic = 188;
     static const char syncByte = '\x47';
+    static const quint16 PIDNullPacket = 0x1fff;
 
     const QByteArray &bytes() const;
+    const QString &errorMessage() const;
+    TypeType type() const;
+    ValidityType validity() const;
 
     bool TEI() const;
     bool PUSI() const;
     bool transportPrio() const;
     quint16 PID() const;
+    bool isNullPacket() const;
     TSCType TSC() const;
     AdaptationFieldControlType adaptationFieldControl() const;
     quint8 continuityCounter() const;
