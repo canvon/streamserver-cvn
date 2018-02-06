@@ -43,6 +43,7 @@ public:
         QByteArray  _bytes;
 
         quint8      _length;
+        bool        _flagsValid = false;
         bool        _discontinuityIndicator;
         bool        _randomAccessIndicator;
         bool        _ESPrioIndicator;
@@ -54,12 +55,15 @@ public:
 
         //quint64     _PCR;
         //quint64     _OPCR;
+        bool        _spliceCountdownValid = false;
         qint8       _spliceCountdown;
 
+        bool        _transportPrivateDataValid = false;
         int         _iTransportPrivateData;
         quint8      _transportPrivateDataLength;
         QByteArray  _transportPrivateData;
 
+        bool        _extensionValid = false;
         int         _iExtension;
         quint8      _extensionLength;
         QByteArray  _extensionBytes;
@@ -73,6 +77,7 @@ public:
         const QByteArray &bytes() const;
 
         quint8 length() const;
+        bool flagsValid() const;
         bool discontinuityIndicator() const;
         bool randomAccessIndicator() const;
         bool ESPrioIndicator() const;
@@ -84,8 +89,11 @@ public:
 
         //PCR
         //OPCR
+        bool spliceCountdownValid() const;
         qint8 spliceCountdown() const;
+        bool transportPrivateDataValid() const;
         const QByteArray &transportPrivateData() const;
+        bool extensionValid() const;
         const QByteArray &extensionBytes() const;
         const QByteArray &stuffingBytes() const;
     };
