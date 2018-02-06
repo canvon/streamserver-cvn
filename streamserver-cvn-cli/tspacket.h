@@ -55,10 +55,15 @@ public:
         //quint64     _PCR;
         //quint64     _OPCR;
         qint8       _spliceCountdown;
+
         int         _iTransportPrivateData;
         quint8      _transportPrivateDataLength;
         QByteArray  _transportPrivateData;
-        //extension
+
+        int         _iExtension;
+        quint8      _extensionLength;
+        QByteArray  _extensionBytes;
+
         int         _iStuffingBytes;
         QByteArray  _stuffingBytes;
 
@@ -81,7 +86,7 @@ public:
         //OPCR
         qint8 spliceCountdown() const;
         const QByteArray &transportPrivateData() const;
-        //extension
+        const QByteArray &extensionBytes() const;
         const QByteArray &stuffingBytes() const;
     };
 private:

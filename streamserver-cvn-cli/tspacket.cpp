@@ -143,7 +143,12 @@ TSPacket::AdaptationField::AdaptationField(const QByteArray &bytes) :
         byteIdx += _transportPrivateDataLength;
     }
 
-    // FIXME: Handle Adaptation Field extension
+    if (_extensionFlag) {
+        _iExtension = byteIdx;
+        _extensionLength = _bytes.at(byteIdx++);
+        _extensionBytes = _bytes.mid(_iExtension, 1 + _extensionLength);
+        byteIdx += _extensionLength;
+    }
 
     _iStuffingBytes = byteIdx;
     _stuffingBytes = _bytes.mid(_iStuffingBytes);
@@ -209,6 +214,11 @@ const QByteArray &TSPacket::AdaptationField::transportPrivateData() const
     return _transportPrivateData;
 }
 
+const QByteArray &TSPacket::AdaptationField::extensionBytes() const
+{
+    return _extensionBytes;
+}
+
 const QByteArray &TSPacket::AdaptationField::stuffingBytes() const
 {
     return _stuffingBytes;
@@ -267,9 +277,8 @@ QDebug operator<<(QDebug debug, const TSPacket::AdaptationField &af)
     if (af.transportPrivateDataFlag())
         debug << " " << "TransportPrivateData=" << af.transportPrivateData().toHex();
 
-    // FIXME: Implement showing "Extension"(s)
     if (af.extensionFlag())
-        debug << " " << "Extension=<not_implemented>";
+        debug << " " << "ExtensionBytes=" << af.extensionBytes().toHex();
 
     const QByteArray &stuffingBytes(af.stuffingBytes());
     if (!stuffingBytes.isEmpty())
