@@ -334,8 +334,20 @@ QDebug operator<<(QDebug debug, const TSPacket::AdaptationField &af)
     }
 
     const QByteArray &stuffingBytes(af.stuffingBytes());
-    if (!stuffingBytes.isEmpty())
-        debug << " " << "StuffingBytes=" << stuffingBytes.toHex();
+    if (!stuffingBytes.isEmpty()) {
+        bool hasNonFF = false;
+        for (QChar c : stuffingBytes) {
+            if (c != '\xff') {
+                hasNonFF = true;
+                break;
+            }
+        }
+
+        if (hasNonFF)
+            debug << " " << "StuffingBytes=" << stuffingBytes.toHex();
+        else
+            debug << " " << "StuffingBytes=" << stuffingBytes.length() << "x\"ff\"";
+    }
 
     debug << ")";
 
