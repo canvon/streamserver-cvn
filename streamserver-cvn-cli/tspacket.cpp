@@ -344,7 +344,7 @@ QDebug operator<<(QDebug debug, const TSPacket::AdaptationField &af)
         }
 
         if (hasNonFF)
-            debug << " " << "StuffingBytes=" << stuffingBytes.toHex();
+            debug << " " << "StuffingBytes=" << stuffingBytes.toHex() << "/" << stuffingBytes;
         else
             debug << " " << "StuffingBytes=" << stuffingBytes.length() << "x\"ff\"";
     }
