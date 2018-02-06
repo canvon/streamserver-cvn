@@ -165,6 +165,11 @@ QByteArray TSPacket::payloadData() const
     return _bytes.mid(_iPayloadData);
 }
 
+QByteArray TSPacket::toBasicPacketBytes() const
+{
+    return _bytes.mid(_iSyncByte, lengthBasic);
+}
+
 TSPacket::AdaptationField::AdaptationField(const QByteArray &bytes) :
     _bytes(bytes)
 {

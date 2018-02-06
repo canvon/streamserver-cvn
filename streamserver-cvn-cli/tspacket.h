@@ -146,6 +146,8 @@ public:
     quint8 continuityCounter() const;
     std::shared_ptr<const AdaptationField> adaptationField() const;
     QByteArray payloadData() const;
+
+    QByteArray toBasicPacketBytes() const;
 };
 
 QDebug operator<<(QDebug debug, const TSPacket &packet);
