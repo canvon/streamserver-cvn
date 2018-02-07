@@ -72,6 +72,11 @@ TSPacket::TSPacket(const QByteArray &bytes) :
         // Parse adaptation field
         const QByteArray data = _bytes.mid(_iAdaptationField, 1 + len);
         _adaptationField = std::make_shared<AdaptationField>(data);
+        const QString &errmsg(_adaptationField->errorMessage());
+        if (!errmsg.isNull()) {
+            _errorMessage = "Error parsing Adaptation Field: " + errmsg;
+            return;
+        }
         byteIdx += len;
         if (byteIdx > _bytes.length()) {
             QDebug(&_errorMessage).nospace()
@@ -175,16 +180,20 @@ QByteArray TSPacket::toBasicPacketBytes() const
 TSPacket::AdaptationField::AdaptationField(const QByteArray &bytes) :
     _bytes(bytes)
 {
-    if (_bytes.isEmpty())
-        throw std::runtime_error("TS packet, Adaptation Field: Can't parse an empty byte array as Adaptation Field");
+    if (_bytes.isEmpty()) {
+        _errorMessage = "Can't parse an empty byte array as Adaptation Field";
+        return;
+    }
 
     int byteIdx = 0;
 
     _length = _bytes.at(byteIdx++);
-    if (_bytes.length() != 1 + _length)
-        throw std::runtime_error("TS packet, Adaptation Field: Adaptation Field Length " +
-                                 std::to_string(_length) + " + 1 does not match byte array length " +
-                                 std::to_string(_bytes.length()));
+    if (_bytes.length() != 1 + _length) {
+        QDebug(&_errorMessage)
+            << "Adaptation Field Length" << _length << "+ 1 does not match"
+            << "byte array length" << _bytes.length();
+        return;
+    }
 
     if (!(byteIdx < _bytes.length())) {
         return;
@@ -214,36 +223,58 @@ TSPacket::AdaptationField::AdaptationField(const QByteArray &bytes) :
     }
 
     if (_splicingPointFlag) {
-        if (!(byteIdx < _bytes.length()))
+        if (!(byteIdx < _bytes.length())) {
+            QDebug(&_errorMessage)
+                << "Can't read SpliceCountdown, as offset" << byteIdx
+                << "is already past the" << _bytes.length() << "bytes of Adaptation Field";
             return;
+        }
 
         _spliceCountdown = _bytes.at(byteIdx++);
         _spliceCountdownValid = true;
     }
 
     if (_transportPrivateDataFlag) {
-        if (!(byteIdx < _bytes.length()))
+        if (!(byteIdx < _bytes.length())) {
+            QDebug(&_errorMessage)
+                << "Can't read TransportPrivateData, as start offset" << byteIdx
+                << "is already past the" << _bytes.length() << "bytes of Adaptation Field";
             return;
+        }
 
         _iTransportPrivateData = byteIdx;
         _transportPrivateDataLength = _bytes.at(byteIdx++);
         _transportPrivateData = _bytes.mid(_iTransportPrivateData, 1 + _transportPrivateDataLength);
         byteIdx += _transportPrivateDataLength;
-        if (byteIdx > _bytes.length())
+        if (byteIdx > _bytes.length()) {
+            QDebug(&_errorMessage)
+                << "Can't finish reading TransportPrivateData, as post-offset" << byteIdx
+                << "is such that part of the data would have to be outside of the"
+                << _bytes.length() << "bytes of Adaptation Field";
             return;
+        }
         _transportPrivateDataValid = true;
     }
 
     if (_extensionFlag) {
-        if (!(byteIdx < _bytes.length()))
+        if (!(byteIdx < _bytes.length())) {
+            QDebug(&_errorMessage)
+                << "Can't read Extension, as start offset" << byteIdx
+                << "is already past the" << _bytes.length() << "bytes of Adaptation Field";
             return;
+        }
 
         _iExtension = byteIdx;
         _extensionLength = _bytes.at(byteIdx++);
         _extensionBytes = _bytes.mid(_iExtension, 1 + _extensionLength);
         byteIdx += _extensionLength;
-        if (byteIdx > _bytes.length())
+        if (byteIdx > _bytes.length()) {
+            QDebug(&_errorMessage)
+                << "Can't finish reading Extension, as post-offset" << byteIdx
+                << "is such that part of the data would have to be outside of the"
+                << _bytes.length() << "bytes of Adaptation Field";
             return;
+        }
         _extensionValid = true;
     }
 
@@ -254,6 +285,11 @@ TSPacket::AdaptationField::AdaptationField(const QByteArray &bytes) :
 const QByteArray &TSPacket::AdaptationField::bytes() const
 {
     return _bytes;
+}
+
+const QString &TSPacket::AdaptationField::errorMessage() const
+{
+    return _errorMessage;
 }
 
 quint8 TSPacket::AdaptationField::length() const
@@ -400,7 +436,10 @@ QDebug operator<<(QDebug debug, const TSPacket &packet)
 QDebug operator<<(QDebug debug, const TSPacket::AdaptationField &af)
 {
     QDebugStateSaver saver(debug);
-    debug.nospace() << "AdaptationField(";
+    debug.nospace() << "TSPacket::AdaptationField(";
+
+    if (!af.errorMessage().isNull())
+        debug << "HasError ";
 
     debug << "Length=" << af.length();
 

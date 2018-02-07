@@ -64,6 +64,7 @@ private:
 public:
     class AdaptationField {
         QByteArray  _bytes;
+        QString     _errorMessage;
 
         quint8      _length;
         bool        _flagsValid = false;
@@ -98,6 +99,7 @@ public:
         explicit AdaptationField(const QByteArray &bytes);
 
         const QByteArray &bytes() const;
+        const QString &errorMessage() const;
 
         quint8 length() const;
         bool flagsValid() const;
