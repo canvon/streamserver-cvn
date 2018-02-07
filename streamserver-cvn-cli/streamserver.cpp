@@ -209,6 +209,9 @@ void StreamServer::processInput()
         TSPacket packet(packetBytes);
         if (verbose >= 3)
             qInfo() << "TS packet contents:" << packet;
+        const QString &errmsg(packet.errorMessage());
+        if (verbose >= 0 && !errmsg.isNull())
+            qWarning() << "TS packet error:" << qPrintable(errmsg);
 
         for (auto client : _clients) {
             try {
