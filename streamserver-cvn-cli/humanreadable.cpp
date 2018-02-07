@@ -4,6 +4,22 @@
 #include <stdexcept>
 #include <QList>
 
+namespace {
+
+bool hasOtherThan(QChar hay, const QByteArray &haystack)
+{
+    bool found = false;
+    for (QChar c : haystack) {
+        if (c != hay) {
+            found = true;
+            break;
+        }
+    }
+    return found;
+}
+
+}  // namespace
+
 #if 0
 HumanReadable::HumanReadable()
 {
@@ -85,4 +101,42 @@ QString HumanReadable::timeDuration(qint64 msec, bool exact)
         ret = "0ms";
 
     return ret;
+}
+
+HumanReadable::Hexdump &HumanReadable::Hexdump::enableAll()
+{
+    hex = true;
+    ascii = true;
+    byteCount = true;
+    compressAllOneBits = true;
+    compressAllZeroBits = true;
+    compressTrailing = true;
+
+    return *this;
+}
+
+QDebug operator<<(QDebug debug, const HumanReadable::Hexdump &dump)
+{
+    QDebugStateSaver saver(debug);
+    debug.nospace();
+
+    // TODO: Support compressTrailing. (Currently silently ignored...)
+
+    if (dump.compressAllOneBits && !hasOtherThan('\xff', dump.data))
+        debug << dump.data.length() << "x\"ff\"";
+    else if (dump.compressAllZeroBits && !hasOtherThan('\x00', dump.data))
+        debug << dump.data.length() << "x\"00\"";
+    else {
+        if (dump.byteCount)
+            debug << "(" << dump.data.length() << ")";
+
+        if (dump.hex)
+            debug << dump.data.toHex();
+        if (dump.hex && dump.ascii)
+            debug << "/";
+        if (dump.ascii)
+            debug << dump.data;
+    }
+
+    return debug;
 }

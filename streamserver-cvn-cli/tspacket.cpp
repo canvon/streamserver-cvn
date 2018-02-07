@@ -2,23 +2,9 @@
 
 #include <stdexcept>
 
+#include "humanreadable.h"
+
 extern int verbose;
-
-namespace {
-
-bool hasOtherThan(QChar hay, const QByteArray &haystack)
-{
-    bool found = false;
-    for (QChar c : haystack) {
-        if (c != hay) {
-            found = true;
-            break;
-        }
-    }
-    return found;
-}
-
-}  // namespace
 
 TSPacket::TSPacket(const QByteArray &bytes) :
     _bytes(bytes)
@@ -380,13 +366,7 @@ QDebug operator<<(QDebug debug, const TSPacket &packet)
         debug << " NullPacket";
     if (packet.validity() < TSPacket::ValidityType::ContinuityCounter) {
         const QByteArray rest = packet.toBasicPacketBytes().mid(3);
-
-        if (!hasOtherThan('\xff', rest))
-            debug << " RemainingInnerBytes=" << rest.length() << "x\"ff\"";
-        else if (!hasOtherThan('\x00', rest))
-            debug << " RemainingInnerBytes=" << rest.length() << "x\"00\"";
-        else
-            debug << " RemainingInnerBytes=" << rest.toHex() << "/" << rest;
+        debug << " RemainingInnerBytes=" << HumanReadable::Hexdump { rest }.enableAll();
 
         return debug << ")";
     }
@@ -456,13 +436,8 @@ QDebug operator<<(QDebug debug, const TSPacket::AdaptationField &af)
 
     const QByteArray &stuffingBytes(af.stuffingBytes());
     if (!stuffingBytes.isEmpty()) {
-        if (!hasOtherThan('\xff', stuffingBytes))
-            debug << " StuffingBytes=" << stuffingBytes.length() << "x\"ff\"";
-        else if (!hasOtherThan('\x00', stuffingBytes))
-            debug << " StuffingBytes=" << stuffingBytes.length() << "x\"00\"";
-        else
-            // Secret message for bored technicians..?
-            debug << " StuffingBytes=" << stuffingBytes.toHex() << "/" << stuffingBytes;
+        // If non-compressible: Secret message for bored technicians..?
+        debug << " StuffingBytes=" << HumanReadable::Hexdump { stuffingBytes }.enableAll();
     }
 
     debug << ")";
