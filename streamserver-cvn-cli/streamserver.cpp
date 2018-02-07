@@ -52,6 +52,19 @@ const QFile &StreamServer::inputFile() const
     return *_inputFilePtr;
 }
 
+qint64 StreamServer::tsPacketSize() const
+{
+    return _tsPacketSize;
+}
+
+void StreamServer::setTSPacketSize(qint64 size)
+{
+    if (!(size >= 0 && size <= TSPacket::lengthBasic * 2))
+        throw std::runtime_error("Stream server: Can't set TS packet size to invalid value " + std::to_string(size));
+
+    _tsPacketSize = size;
+}
+
 void StreamServer::clientConnected()
 {
     StreamClient::socketPtr_type socketPtr(_listenSocket.nextPendingConnection(),

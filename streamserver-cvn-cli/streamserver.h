@@ -35,6 +35,8 @@ public:
     quint16      listenPort() const;
     QFile       &inputFile();
     const QFile &inputFile() const;
+    qint64       tsPacketSize() const;
+    void         setTSPacketSize(qint64 size);
 
     void initInput();
     void finalizeInput();

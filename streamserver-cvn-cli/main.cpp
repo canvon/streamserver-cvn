@@ -2,6 +2,7 @@
 
 #include "streamserver.h"
 
+#include <memory>
 #include <QDateTime>
 #include <QTextStream>
 #include <QCommandLineParser>
@@ -127,6 +128,8 @@ int main(int argc, char *argv[])
           "listen_port", "8000" },
         { { "logts", "log-timestamping" }, "How to timestamp log messages",
           "mode" },
+        { { "s", "ts-packet-size" }, "MPEG-TS packet size (e.g., 188 bytes)",
+          "size" },
     });
     parser.addPositionalArgument("input", "Input file name");
     parser.process(a);
@@ -168,6 +171,20 @@ int main(int argc, char *argv[])
         return 2;
     }
 
+    std::unique_ptr<qint64> tsPacketSizePtr;
+    {
+        QString valueStr = parser.value("ts-packet-size");
+        if (!valueStr.isNull()) {
+            bool ok = false;
+            tsPacketSizePtr = std::make_unique<qint64>(valueStr.toLongLong(&ok));
+            if (!ok) {
+                tsPacketSizePtr.reset();
+                qWarning("TS packet size: Conversion to number failed for \"%s\"", qPrintable(valueStr));
+                return 2;
+            }
+        }
+    }
+
 
     QStringList args = parser.positionalArguments();
     if (args.length() != 1) {
@@ -182,10 +199,13 @@ int main(int argc, char *argv[])
     StreamServer server(std::make_unique<QFile>(inputFilePath), listenPort);
 
     try {
+        if (tsPacketSizePtr)
+            server.setTSPacketSize(*tsPacketSizePtr);
+
         server.initInput();
     }
     catch (std::exception &ex) {
-        errout << a.applicationName() << ": Error initializing stream server input"
+        errout << a.applicationName() << ": Error initializing stream server"
                << ": " << ex.what() << endl;
         return 1;
     }
