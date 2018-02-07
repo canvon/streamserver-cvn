@@ -59,10 +59,20 @@ qint64 StreamServer::tsPacketSize() const
 
 void StreamServer::setTSPacketSize(qint64 size)
 {
-    if (!(size >= 0 && size <= TSPacket::lengthBasic * 2))
+    if (!(TSPacket::lengthBasic <= size && size <= TSPacket::lengthBasic * 2))
         throw std::runtime_error("Stream server: Can't set TS packet size to invalid value " + std::to_string(size));
 
     _tsPacketSize = size;
+}
+
+bool StreamServer::tsPacketAutosize() const
+{
+    return _tsPacketAutosize;
+}
+
+void StreamServer::setTSPacketAutosize(bool autosize)
+{
+    _tsPacketAutosize = autosize;
 }
 
 void StreamServer::clientConnected()
@@ -195,7 +205,68 @@ void StreamServer::finalizeInput()
 
 void StreamServer::processInput()
 {
-    QByteArray packetBytes = _inputFilePtr->read(_tsPacketSize);
+    qint64 readSize = _tsPacketSize;
+    if (readSize == 0) {
+        if (!_tsPacketAutosize)
+            qFatal("TS packet autosize turned off but no fixed packet size set!");
+
+        if (verbose >= 1)
+            qInfo() << "Input TS packet size set to" << _tsPacketSize << "/ immediate automatic detection."
+                    << "Starting with basic length" << TSPacket::lengthBasic;
+        readSize = TSPacket::lengthBasic;
+    }
+
+    QByteArray packetBytes = _inputFilePtr->read(readSize);
+    if (_tsPacketSize == 0 && !packetBytes.isNull() && packetBytes.length() == readSize) {
+        if (packetBytes.startsWith(TSPacket::syncByte)) {
+            // If additional data is already available, try to detect formats with suffix after basic packet.
+            const QByteArray nextPacketBytes = _inputFilePtr->peek(readSize);
+            if (nextPacketBytes.startsWith(TSPacket::syncByte)) {
+                if (verbose >= 1)
+                    qInfo() << "Good; sync byte found in this and next packet";
+            }
+            else {
+                if (nextPacketBytes.length() <= 20) {
+                    if (verbose >= 1)
+                        qInfo() << "Sync byte found, but not enough further data available to detect packet length";
+                }
+                else {
+                    if (verbose >= 1)
+                        qInfo() << "Next packet does not start with sync byte";
+                    if (nextPacketBytes.length() > 16 && nextPacketBytes.at(16) == TSPacket::syncByte) {
+                        if (verbose >= 1)
+                            qInfo() << "Next packet offset 16 contains sync byte, assuming 16-byte suffix";
+                        packetBytes.append(_inputFilePtr->read(16));
+                        readSize += 16;
+                    }
+                    else if (nextPacketBytes.length() > 20 && nextPacketBytes.at(20) == TSPacket::syncByte) {
+                        if (verbose >= 1)
+                            qInfo() << "Next packet offset 20 contains sync byte, assuming 20-byte suffix";
+                        packetBytes.append(_inputFilePtr->read(20));
+                        readSize += 20;
+                    }
+                    else {
+                        // TODO: Do something other than forcibly end? E.g., ignore some packets?
+                        qFatal("TS packet sync byte not found in next packet of input");
+                    }
+                }
+            }
+        }
+        else {
+            if (verbose >= 1)
+                qInfo() << "Initial packet does not start with sync byte";
+            if (packetBytes.at(4) == TSPacket::syncByte) {
+                if (verbose >= 1)
+                    qInfo() << "Offset 4 contains sync byte, assuming 4-byte TimeCode prefix";
+                packetBytes.append(_inputFilePtr->read(4));
+                readSize += 4;
+            }
+            else {
+                // TODO: Do something other than forcibly end? E.g., ignore some packets?
+                qFatal("TS packet sync byte not found in input");
+            }
+        }
+    }
     if (packetBytes.isNull()) {
         if (verbose >= 0)
             qInfo() << "EOF on input, finalizing...";
@@ -211,9 +282,10 @@ void StreamServer::processInput()
     if (verbose >= 3)
         qDebug() << "Read data:" << packetBytes;
 
-    if (packetBytes.length() != _tsPacketSize) {
-        qWarning() << "Desync: Read packet should be size" << _tsPacketSize
+    if (packetBytes.length() != readSize) {
+        qWarning() << "Desync: Read packet should be size" << readSize
                    << ", but was" << packetBytes.length();
+        // TODO: Try a resync via TS packet sync byte?
         return;
     }
 
@@ -225,6 +297,24 @@ void StreamServer::processInput()
         const QString &errmsg(packet.errorMessage());
         if (verbose >= 0 && !errmsg.isNull())
             qWarning() << "TS packet error:" << qPrintable(errmsg);
+        if (!errmsg.isNull()) {
+            if (++_inputConsecutiveErrorCount >= 16 && _tsPacketAutosize) {
+                if (_tsPacketSize > 0) {
+                    // TODO: Rather try to re-sync...
+                    qWarning() << "Got" << _inputConsecutiveErrorCount << "consecutive errors, trying to re-detect TS packet size...";
+                    _tsPacketSize = 0;
+                }
+                _inputConsecutiveErrorCount = 0;
+            }
+        }
+        else {
+            _inputConsecutiveErrorCount = 0;
+            if (_tsPacketSize == 0) {
+                _tsPacketSize = readSize;
+                if (verbose >= 0)
+                    qInfo().nospace() << "Detected TS packet size of " << _tsPacketSize << ", which is basic length plus " << (_tsPacketSize - TSPacket::lengthBasic);
+            }
+        }
 
         for (auto client : _clients) {
             try {

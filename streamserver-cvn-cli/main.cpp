@@ -199,8 +199,10 @@ int main(int argc, char *argv[])
     StreamServer server(std::make_unique<QFile>(inputFilePath), listenPort);
 
     try {
-        if (tsPacketSizePtr)
+        if (tsPacketSizePtr) {
             server.setTSPacketSize(*tsPacketSizePtr);
+            server.setTSPacketAutosize(false);
+        }
 
         server.initInput();
     }

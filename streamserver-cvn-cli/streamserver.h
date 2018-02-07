@@ -23,7 +23,9 @@ class StreamServer : public QObject
     std::unique_ptr<QSocketNotifier>  _inputFileNotifierPtr;
     QTimer                  _inputFileReopenTimer;
     int                     _inputFileReopenTimeoutMillisec = 1000;
-    qint64                  _tsPacketSize = 188;
+    int                     _inputConsecutiveErrorCount = 0;
+    qint64                  _tsPacketSize = 0;  // Request immediate automatic detection.
+    bool                    _tsPacketAutosize = true;
 
     quint64                               _nextClientID = 1;
     QList<std::shared_ptr<StreamClient>>  _clients;
@@ -37,6 +39,8 @@ public:
     const QFile &inputFile() const;
     qint64       tsPacketSize() const;
     void         setTSPacketSize(qint64 size);
+    bool         tsPacketAutosize() const;
+    void         setTSPacketAutosize(bool autosize);
 
     void initInput();
     void finalizeInput();
