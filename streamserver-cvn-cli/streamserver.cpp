@@ -283,8 +283,9 @@ void StreamServer::processInput()
         qDebug() << "Read data:" << packetBytes;
 
     if (packetBytes.length() != readSize) {
-        qWarning() << "Desync: Read packet should be size" << readSize
-                   << ", but was" << packetBytes.length();
+        qWarning().nospace()
+            << "Desync: Read packet should be size " << readSize
+            << ", but was " << packetBytes.length();
         // TODO: Try a resync via TS packet sync byte?
         return;
     }
