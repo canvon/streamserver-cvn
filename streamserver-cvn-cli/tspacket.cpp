@@ -344,6 +344,9 @@ QDebug operator<<(QDebug debug, const TSPacket &packet)
     QDebugStateSaver saver(debug);
     debug.nospace() << "TSPacket(";
 
+    if (!packet.errorMessage().isNull())
+        debug << "HasError ";
+
     debug << packet.type();
     if (packet.type() == TSPacket::TypeType::Unrecognized)
         return debug << ")";
