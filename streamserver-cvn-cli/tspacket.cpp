@@ -351,11 +351,11 @@ QDebug operator<<(QDebug debug, const TSPacket &packet)
 
     debug << packet.type();
     if (packet.type() == TSPacket::TypeType::Unrecognized)
-        return debug << " Bytes=" << packet.bytes().toHex() << ")";
+        return debug << " Bytes=" << HumanReadable::Hexdump { packet.bytes() }.enableByteCount() << ")";
 
     debug << " " << packet.validity();
     if (packet.validity() < TSPacket::ValidityType::PID)
-        return debug << " Bytes=" << packet.bytes().toHex() << ")";
+        return debug << " Bytes=" << HumanReadable::Hexdump { packet.bytes() }.enableByteCount() << ")";
 
     debug << " "
         << "TEI="  << packet.TEI()  << " "
@@ -365,7 +365,7 @@ QDebug operator<<(QDebug debug, const TSPacket &packet)
     if (packet.isNullPacket())
         debug << " NullPacket";
     if (packet.validity() < TSPacket::ValidityType::ContinuityCounter) {
-        const QByteArray rest = packet.toBasicPacketBytes().mid(3);
+        const QByteArray rest = packet.toBasicPacketBytes().mid(3);  // TODO: How to consistenly compute the offset?, without recomputing byteIdx...
         debug << " RemainingInnerBytes=" << HumanReadable::Hexdump { rest }.enableAll();
 
         return debug << ")";
@@ -375,16 +375,22 @@ QDebug operator<<(QDebug debug, const TSPacket &packet)
         << packet.TSC()                    << " "
         << packet.adaptationFieldControl() << " "
         << "ContinuityCounter="            << packet.continuityCounter();
-    if (packet.validity() < TSPacket::ValidityType::AdaptationField)
+    if (packet.validity() < TSPacket::ValidityType::AdaptationField) {
+        const QByteArray rest = packet.toBasicPacketBytes().mid(4);  // TODO: (See above.)
+        debug << " RemainingInnerBytes=" << HumanReadable::Hexdump { rest }.enableAll();
         return debug << ")";
+    }
 
     auto afPtr = packet.adaptationField();
     if (afPtr)
         debug << " " << *afPtr;
-    if (packet.validity() < TSPacket::ValidityType::PayloadData)
+    if (packet.validity() < TSPacket::ValidityType::PayloadData) {
+        const QByteArray rest = packet.toBasicPacketBytes().mid(4 + afPtr->bytes().length());  // TODO: See above.)
+        debug << " RemainingInnerBytes=" << HumanReadable::Hexdump { rest }.enableAll();
         return debug << ")";
+    }
 
-    debug << " " << "PayloadData=" << packet.payloadData().toHex();
+    debug << " " << "PayloadData=" << HumanReadable::Hexdump { packet.payloadData() }.enableByteCount().enableCompressTrailing();
 
     debug << ")";
 

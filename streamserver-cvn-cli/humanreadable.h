@@ -22,6 +22,8 @@ public:
         bool compressAllZeroBits = true;
         bool compressTrailing    = false;
 
+        Hexdump &enableByteCount();
+        Hexdump &enableCompressTrailing();
         Hexdump &enableAll();
     };
 };

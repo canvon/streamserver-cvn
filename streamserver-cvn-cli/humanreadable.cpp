@@ -103,6 +103,18 @@ QString HumanReadable::timeDuration(qint64 msec, bool exact)
     return ret;
 }
 
+HumanReadable::Hexdump &HumanReadable::Hexdump::enableByteCount()
+{
+    byteCount = true;
+    return *this;
+}
+
+HumanReadable::Hexdump &HumanReadable::Hexdump::enableCompressTrailing()
+{
+    compressTrailing = true;
+    return *this;
+}
+
 HumanReadable::Hexdump &HumanReadable::Hexdump::enableAll()
 {
     hex = true;
