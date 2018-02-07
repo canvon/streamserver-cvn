@@ -36,7 +36,7 @@ TSPacket::TSPacket(const QByteArray &bytes) :
             QDebug(&_errorMessage)
                 << "No sync byte" << QByteArray(1, syncByte).toHex()
                 << "at offset" << _iSyncByte
-                << "-- starts with" << _bytes.left(8).toHex();
+                << "-- starts with" << HumanReadable::Hexdump { _bytes.left(8) }.enableAll();
             return;
         }
         _validity = ValidityType::SyncByte;
@@ -431,13 +431,13 @@ QDebug operator<<(QDebug debug, const TSPacket::AdaptationField &af)
     if (af.transportPrivateDataFlag()) {
         if (!af.transportPrivateDataValid())
             return debug << " DataMissingStartingFrom=TransportPrivateData)";
-        debug << " " << "TransportPrivateData=" << af.transportPrivateData().toHex();
+        debug << " " << "TransportPrivateData=" << HumanReadable::Hexdump { af.transportPrivateData() }.enableAll();
     }
 
     if (af.extensionFlag()) {
         if (!af.extensionValid())
             return debug << " DataMissingStartingFrom=Extension)";
-        debug << " " << "ExtensionBytes=" << af.extensionBytes().toHex();
+        debug << " " << "ExtensionBytes=" << HumanReadable::Hexdump { af.extensionBytes() }.enableByteCount().enableCompressTrailing();
     }
 
     const QByteArray &stuffingBytes(af.stuffingBytes());
