@@ -4,6 +4,22 @@
 
 extern int verbose;
 
+namespace {
+
+bool hasOtherThan(QChar hay, const QByteArray &haystack)
+{
+    bool found = false;
+    for (QChar c : haystack) {
+        if (c != hay) {
+            found = true;
+            break;
+        }
+    }
+    return found;
+}
+
+}  // namespace
+
 TSPacket::TSPacket(const QByteArray &bytes) :
     _bytes(bytes)
 {
@@ -349,26 +365,31 @@ QDebug operator<<(QDebug debug, const TSPacket &packet)
 
     debug << packet.type();
     if (packet.type() == TSPacket::TypeType::Unrecognized)
-        return debug << ")";
+        return debug << " Bytes=" << packet.bytes().toHex() << ")";
 
     debug << " " << packet.validity();
     if (packet.validity() < TSPacket::ValidityType::PID)
-        return debug << ")";
+        return debug << " Bytes=" << packet.bytes().toHex() << ")";
 
     debug << " "
         << "TEI="  << packet.TEI()  << " "
         << "PUSI=" << packet.PUSI() << " "
         << "TransportPriority=" << packet.transportPrio() << " "
         << "PID="  << packet.PID();
-    if (packet.isNullPacket()) {
+    if (packet.isNullPacket())
         debug << " NullPacket";
+    if (packet.validity() < TSPacket::ValidityType::ContinuityCounter) {
+        const QByteArray rest = packet.toBasicPacketBytes().mid(3);
 
-        // TODO: Dump Null Packet if "interesting" (cf. Adaptation Field stuffing bytes)
+        if (!hasOtherThan('\xff', rest))
+            debug << " RemainingInnerBytes=" << rest.length() << "x\"ff\"";
+        else if (!hasOtherThan('\x00', rest))
+            debug << " RemainingInnerBytes=" << rest.length() << "x\"00\"";
+        else
+            debug << " RemainingInnerBytes=" << rest.toHex() << "/" << rest;
 
         return debug << ")";
     }
-    if (packet.validity() < TSPacket::ValidityType::ContinuityCounter)
-        return debug << ")";
 
     debug << " "
         << packet.TSC()                    << " "
@@ -435,24 +456,13 @@ QDebug operator<<(QDebug debug, const TSPacket::AdaptationField &af)
 
     const QByteArray &stuffingBytes(af.stuffingBytes());
     if (!stuffingBytes.isEmpty()) {
-        auto hasOtherThan = [&](QChar compare) {
-            bool found = false;
-            for (QChar c : stuffingBytes) {
-                if (c != compare) {
-                    found = true;
-                    break;
-                }
-            }
-            return found;
-        };
-
-        if (!hasOtherThan('\xff'))
-            debug << " " << "StuffingBytes=" << stuffingBytes.length() << "x\"ff\"";
-        else if (!hasOtherThan('\x00'))
-            debug << " " << "StuffingBytes=" << stuffingBytes.length() << "x\"00\"";
+        if (!hasOtherThan('\xff', stuffingBytes))
+            debug << " StuffingBytes=" << stuffingBytes.length() << "x\"ff\"";
+        else if (!hasOtherThan('\x00', stuffingBytes))
+            debug << " StuffingBytes=" << stuffingBytes.length() << "x\"00\"";
         else
             // Secret message for bored technicians..?
-            debug << " " << "StuffingBytes=" << stuffingBytes.toHex() << "/" << stuffingBytes;
+            debug << " StuffingBytes=" << stuffingBytes.toHex() << "/" << stuffingBytes;
     }
 
     debug << ")";
