@@ -555,8 +555,8 @@ TSPacket::ProgramClockReference::ProgramClockReference(const QByteArray &PCRByte
 
     {
         quint8 byte = bytes.at(byteIdx++);
-        base      = base << 1 | (byte & 0x80 >> 7);  // 33 bit (+ 1 bit), ready.
-        reserved  =              byte & 0x7e >> 1;  // 6 bit, ready.
+        base      = base << 1 | (byte & 0x80) >> 7;  // 33 bit (+ 1 bit), ready.
+        reserved  =             (byte & 0x7e) >> 1;  // 6 bit, ready.
         extension =              byte & 0x01;  // 1 bit
     }
 
