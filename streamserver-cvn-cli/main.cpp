@@ -143,8 +143,10 @@ int main(int argc, char *argv[])
             logTs = LogTimestamping::Date;
         else if (logTsStr == "time")
             logTs = LogTimestamping::Time;
-        else
-            qFatal("Invalid log timestamping mode \"%s\"", qPrintable(logTsStr));
+        else {
+            qCritical() << "Invalid log timestamping mode" << logTsStr;
+            return 2;
+        }
     }
 
     // Apply incremental options.
@@ -166,8 +168,7 @@ int main(int argc, char *argv[])
     bool ok = false;
     qint16 listenPort = listenPortStr.toUShort(&ok);
     if (!ok) {
-        errout << a.applicationName() << ": Invalid port number \""
-               << listenPortStr << "\"" << endl;
+        qCritical() << "Invalid port number" << listenPortStr;
         return 2;
     }
 
@@ -179,7 +180,7 @@ int main(int argc, char *argv[])
             tsPacketSizePtr = std::make_unique<qint64>(valueStr.toLongLong(&ok));
             if (!ok) {
                 tsPacketSizePtr.reset();
-                qWarning("TS packet size: Conversion to number failed for \"%s\"", qPrintable(valueStr));
+                qCritical() << "TS packet size: Conversion to number failed for" << valueStr;
                 return 2;
             }
         }
@@ -188,8 +189,9 @@ int main(int argc, char *argv[])
 
     QStringList args = parser.positionalArguments();
     if (args.length() != 1) {
-        errout << a.applicationName() << ": Invalid number of arguments"
-               << ": Need exactly one positional argument, the input file" << endl;
+        qCritical().nospace()
+            << "Invalid number of arguments " << args.length()
+            << ": Need exactly one positional argument, the input file";
         return 2;
     }
 
@@ -207,8 +209,7 @@ int main(int argc, char *argv[])
         server.initInput();
     }
     catch (std::exception &ex) {
-        errout << a.applicationName() << ": Error initializing stream server"
-               << ": " << ex.what() << endl;
+        qCritical() << "Error initializing stream server:" << ex.what();
         return 1;
     }
 
