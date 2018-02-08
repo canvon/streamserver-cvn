@@ -132,8 +132,6 @@ QDebug operator<<(QDebug debug, const HumanReadable::Hexdump &dump)
     QDebugStateSaver saver(debug);
     debug.nospace();
 
-    // TODO: Support compressTrailing. (Currently silently ignored...)
-
     if (dump.compressAllOneBits && !hasOtherThan('\xff', dump.data))
         debug << dump.data.length() << "x\"ff\"";
     else if (dump.compressAllZeroBits && !hasOtherThan('\x00', dump.data))
@@ -142,12 +140,34 @@ QDebug operator<<(QDebug debug, const HumanReadable::Hexdump &dump)
         if (dump.byteCount)
             debug << "(" << dump.data.length() << ")";
 
-        if (dump.hex)
-            debug << dump.data.toHex();
+        QByteArray mainData = dump.data;
+        int mainDataLen = mainData.length();
+        int trailingCount = 0;
+        char trailingByte;
+        if (dump.compressTrailing && mainDataLen >= 3) {
+            trailingByte = mainData.at(mainDataLen - 1);
+            if (mainData.at(mainDataLen - 2) == trailingByte &&
+                mainData.at(mainDataLen - 3) == trailingByte)
+            {
+                while (mainData.endsWith(trailingByte)) {
+                    mainData.chop(1);
+                    trailingCount++;
+                }
+            }
+        }
+
+        if (dump.hex) {
+            debug << mainData.toHex();
+            if (trailingCount)
+                debug << "+" << trailingCount << "x" << QByteArray(1, trailingByte).toHex();
+        }
         if (dump.hex && dump.ascii)
             debug << "/";
-        if (dump.ascii)
-            debug << dump.data;
+        if (dump.ascii) {
+            debug << mainData;
+            if (trailingCount)
+                debug << "+" << trailingCount << "x" << QByteArray(1, trailingByte);
+        }
     }
 
     return debug;
