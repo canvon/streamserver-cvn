@@ -157,16 +157,20 @@ QDebug operator<<(QDebug debug, const HumanReadable::Hexdump &dump)
         }
 
         if (dump.hex) {
+            if (trailingCount)
+                debug << "(";
             debug << mainData.toHex();
             if (trailingCount)
-                debug << "+" << trailingCount << "x" << QByteArray(1, trailingByte).toHex();
+                debug << "+" << trailingCount << "x" << QByteArray(1, trailingByte).toHex() << ")";
         }
         if (dump.hex && dump.ascii)
             debug << "/";
         if (dump.ascii) {
+            if (trailingCount)
+                debug << "(";
             debug << mainData;
             if (trailingCount)
-                debug << "+" << trailingCount << "x" << QByteArray(1, trailingByte);
+                debug << "+" << trailingCount << "x" << QByteArray(1, trailingByte) << ")";
         }
     }
 
