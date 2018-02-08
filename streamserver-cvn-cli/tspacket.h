@@ -125,7 +125,7 @@ public:
         const QByteArray &stuffingBytes() const;
     };
 private:
-    std::shared_ptr<AdaptationField>  _adaptationField;
+    std::shared_ptr<AdaptationField>  _adaptationFieldPtr;
     int         _iPayloadData;
 
 public:

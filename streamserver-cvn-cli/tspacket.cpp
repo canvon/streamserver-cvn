@@ -72,8 +72,8 @@ TSPacket::TSPacket(const QByteArray &bytes) :
 
         // Parse adaptation field
         const QByteArray data = _bytes.mid(_iAdaptationField, 1 + len);
-        _adaptationField = std::make_shared<AdaptationField>(data);
-        const QString &errmsg(_adaptationField->errorMessage());
+        _adaptationFieldPtr = std::make_shared<AdaptationField>(data);
+        const QString &errmsg(_adaptationFieldPtr->errorMessage());
         if (!errmsg.isNull()) {
             _errorMessage = "Error parsing Adaptation Field: " + errmsg;
             return;
@@ -170,7 +170,7 @@ quint8 TSPacket::continuityCounter() const
 
 std::shared_ptr<const TSPacket::AdaptationField> TSPacket::adaptationField() const
 {
-    return _adaptationField;
+    return _adaptationFieldPtr;
 }
 
 QByteArray TSPacket::payloadData() const
