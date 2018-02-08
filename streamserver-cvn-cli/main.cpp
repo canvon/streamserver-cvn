@@ -2,6 +2,10 @@
 
 #include "streamserver.h"
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 #include <memory>
 #include <QDateTime>
 #include <QTextStream>
@@ -11,7 +15,12 @@ int verbose = 0;  // Normal output.
 
 int debug_level = 0;  // No debugging.
 
+bool isSystemdJournal_stdout = false;
+bool isSystemdJournal_stderr = false;
+const char systemdJournalEnvVarName[] = "JOURNAL_STREAM";
+
 namespace {
+    bool logStarting = true;
     enum class LogTimestamping {
         None,
         Date,
@@ -112,8 +121,55 @@ static void msgHandler(QtMsgType type, const QMessageLogContext &ctx, const QStr
     }
 }
 
+void updateIsSystemdJournal() {
+    if (!qEnvironmentVariableIsSet(systemdJournalEnvVarName))
+        return;
+
+    QByteArray deviceInodeBytes = qgetenv(systemdJournalEnvVarName);
+    auto list = deviceInodeBytes.split(':');
+    if (list.length() != 2)
+        return;
+
+    bool ok = false;
+    dev_t device = list.at(0).toULong(&ok);
+    if (!ok)
+        return;
+
+    ok = false;
+    ino_t inode = list.at(1).toULongLong(&ok);
+    if (!ok)
+        return;
+
+    struct ::stat buf;
+    int fd;
+    if ((fd = fileno(stdout)) >= 0 &&
+        fstat(fd, &buf) == 0 &&
+        buf.st_dev == device &&
+        buf.st_ino == inode)
+    {
+        isSystemdJournal_stdout = true;
+    }
+
+    if ((fd = fileno(stderr)) >= 0 &&
+        fstat(fd, &buf) == 0 &&
+        buf.st_dev == device &&
+        buf.st_ino == inode)
+    {
+        isSystemdJournal_stderr = true;
+    }
+}
+
 int main(int argc, char *argv[])
 {
+    updateIsSystemdJournal();
+    if (isSystemdJournal_stderr) {
+        // With systemd journal, always use fancy output.
+        logStarting = false;
+
+        // ..but don't duplicate timestamps.
+        logTs = LogTimestamping::None;
+    }
+
     qInstallMessageHandler(&msgHandler);
     QCoreApplication a(argc, argv);
 
