@@ -18,11 +18,9 @@ TSPacket::TSPacket(const QByteArray &bytes) :
 
     int byteIdx = 0;
     if (_bytes.length() == lengthBasic) {
-        _type = TypeType::Basic;
         _additionalInfoLength = AdditionalInfoLengthType::None;
     }
     else if (_bytes.length() == static_cast<int>(AdditionalInfoLengthType::TimeCodePrefix) + lengthBasic) {
-        _type = TypeType::TimeCode;
         _additionalInfoLength = AdditionalInfoLengthType::TimeCodePrefix;
         _timeCode = _bytes.mid(byteIdx, static_cast<int>(_additionalInfoLength));
         byteIdx += static_cast<int>(_additionalInfoLength);
@@ -118,11 +116,6 @@ TSPacket::ValidityType TSPacket::validity() const
 const QString &TSPacket::errorMessage() const
 {
     return _errorMessage;
-}
-
-TSPacket::TypeType TSPacket::type() const
-{
-    return _type;
 }
 
 TSPacket::AdditionalInfoLengthType TSPacket::additionalInfoLength() const
@@ -398,10 +391,9 @@ QDebug operator<<(QDebug debug, const TSPacket &packet)
     if (!packet.errorMessage().isNull())
         debug << "HasError ";
 
-    debug << packet.type();
-    if (packet.type() == TSPacket::TypeType::Unrecognized)
-        return debug << " Bytes=" << HumanReadable::Hexdump { packet.bytes() }.enableByteCount() << ")";
-    else if (packet.type() == TSPacket::TypeType::TimeCode)
+    TSPacket::AdditionalInfoLengthType addInfoLen = packet.additionalInfoLength();
+    debug << addInfoLen << "(" << static_cast<int>(addInfoLen) << ")";
+    if (addInfoLen == TSPacket::AdditionalInfoLengthType::TimeCodePrefix)
         debug << " TimeCode=" << HumanReadable::Hexdump { packet.timeCode() };
 
     debug << " " << packet.validity();

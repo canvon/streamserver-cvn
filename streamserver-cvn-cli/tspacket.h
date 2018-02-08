@@ -14,15 +14,6 @@ class TSPacket
     QByteArray  _bytes;
     QString     _errorMessage;
 public:
-    enum class TypeType {
-        Unrecognized,
-        Basic,
-        TimeCode,
-    };
-    Q_ENUM(TypeType)
-private:
-    TypeType    _type = TypeType::Unrecognized;
-public:
     enum class AdditionalInfoLengthType {
         None = 0,
         TimeCodePrefix = 4,
@@ -146,7 +137,6 @@ public:
 
     const QByteArray &bytes() const;
     const QString &errorMessage() const;
-    TypeType type() const;
     AdditionalInfoLengthType additionalInfoLength() const;
     const QByteArray &timeCode() const;
     ValidityType validity() const;
