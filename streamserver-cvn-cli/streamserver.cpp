@@ -301,8 +301,41 @@ void StreamServer::processInput()
         if (!errmsg.isNull()) {
             if (++_inputConsecutiveErrorCount >= 16 && _tsPacketAutosize) {
                 if (_tsPacketSize > 0) {
-                    // TODO: Rather try to re-sync...
-                    qWarning() << "Got" << _inputConsecutiveErrorCount << "consecutive errors, trying to re-detect TS packet size...";
+                    qWarning() << "Got" << _inputConsecutiveErrorCount << "consecutive errors, trying to re-sync and re-detect TS packet size...";
+
+                    int iSyncByte, pass = 0;
+                    while (++pass <= TSPacket::lengthBasic + 20 &&
+                           (iSyncByte = packetBytes.indexOf(TSPacket::syncByte)) > 0)
+                    {
+                        packetBytes.remove(0, iSyncByte);
+                        packetBytes.append(_inputFilePtr->read(TSPacket::lengthBasic - packetBytes.length()));
+                        if (packetBytes.length() < TSPacket::lengthBasic)
+                            qFatal("Not enough data available for read during re-sync");
+
+                        const QByteArray followingBytes = _inputFilePtr->peek(21);
+                        if (followingBytes.isEmpty()) {
+                            if (verbose >= 1)
+                                qInfo() << "Re-sync: Sync byte found, but not enough further data available. The synchronization is just a guess";
+                            break;
+                        }
+                        else if (followingBytes.startsWith(TSPacket::syncByte)) {
+                            if (verbose >= 1)
+                                qInfo() << "Re-sync: Good; sync byte found in this and next packet";
+                            break;
+                        }
+                        else if (followingBytes.length() > 4 && followingBytes.at(4) == TSPacket::syncByte) {
+                            if (verbose >= 1)
+                                qInfo() << "Re-sync: Sync byte found in this packet, and at offset 4 in following bytes;"
+                                        << "next read will probably get a 4-byte TimeCode prefix style packet";
+                            break;
+                        }
+
+                        if (verbose >= 1)
+                            qInfo() << "Re-sync: Not good, found a sync byte but no related other sync byte in pass" << pass;
+                    }
+                    if (!packetBytes.startsWith(TSPacket::syncByte))
+                        qFatal("Giving up resync after %d passes", pass);
+
                     _tsPacketSize = 0;
                 }
                 _inputConsecutiveErrorCount = 0;
