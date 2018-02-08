@@ -307,8 +307,14 @@ void StreamServer::processInput()
                     while (++pass <= TSPacket::lengthBasic + 20 &&
                            (iSyncByte = packetBytes.indexOf(TSPacket::syncByte)) > 0)
                     {
+                        if (verbose >= 1)
+                            qInfo() << "Throwing away" << iSyncByte << "bytes";
                         packetBytes.remove(0, iSyncByte);
-                        packetBytes.append(_inputFilePtr->read(TSPacket::lengthBasic - packetBytes.length()));
+
+                        qint64 fillUp = TSPacket::lengthBasic - packetBytes.length();
+                        if (verbose >= 1)
+                            qInfo() << "Reading in" << fillUp << "additional bytes to fill up buffer...";
+                        packetBytes.append(_inputFilePtr->read(fillUp));
                         if (packetBytes.length() < TSPacket::lengthBasic)
                             qFatal("Not enough data available for read during re-sync");
 
@@ -327,6 +333,24 @@ void StreamServer::processInput()
                             if (verbose >= 1)
                                 qInfo() << "Re-sync: Sync byte found in this packet, and at offset 4 in following bytes;"
                                         << "next read will probably get a 4-byte TimeCode prefix style packet";
+                            break;
+                        }
+                        else if (followingBytes.length() > 16 && followingBytes.at(16) == TSPacket::syncByte) {
+                            if (verbose >= 1) {
+                                qInfo() << "Re-sync: Sync byte found in this packet, and at offset 16 in following bytes";
+                                qInfo() << "Need to read & discard 16 additional bytes...";
+                            }
+                            if (_inputFilePtr->read(16).length() != 16)
+                                qFatal("Failed to read & discard 16 bytes during re-sync");
+                            break;
+                        }
+                        else if (followingBytes.length() > 20 && followingBytes.at(20) == TSPacket::syncByte) {
+                            if (verbose >= 1) {
+                                qInfo() << "Re-sync: Sync byte found in this packet, and at offset 20 in following bytes";
+                                qInfo() << "Need to read & discard 20 additional bytes...";
+                            }
+                            if (_inputFilePtr->read(16).length() != 20)
+                                qFatal("Failed to read & discard 20 bytes during re-sync");
                             break;
                         }
 
