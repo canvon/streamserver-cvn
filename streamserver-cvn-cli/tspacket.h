@@ -23,6 +23,17 @@ public:
 private:
     TypeType    _type = TypeType::Unrecognized;
 public:
+    enum class AdditionalInfoLengthType {
+        None = 0,
+        TimeCodePrefix = 4,
+        ForwardErrorCorrection1 = 16,
+        ForwardErrorCorrection2 = 20,
+    };
+    Q_ENUM(AdditionalInfoLengthType)
+private:
+    AdditionalInfoLengthType  _additionalInfoLength = AdditionalInfoLengthType::None;
+    QByteArray  _timeCode;
+public:
     enum class ValidityType {
         None,
         SyncByte,
@@ -136,6 +147,8 @@ public:
     const QByteArray &bytes() const;
     const QString &errorMessage() const;
     TypeType type() const;
+    AdditionalInfoLengthType additionalInfoLength() const;
+    const QByteArray &timeCode() const;
     ValidityType validity() const;
 
     bool TEI() const;

@@ -19,10 +19,13 @@ TSPacket::TSPacket(const QByteArray &bytes) :
     int byteIdx = 0;
     if (_bytes.length() == lengthBasic) {
         _type = TypeType::Basic;
+        _additionalInfoLength = AdditionalInfoLengthType::None;
     }
-    else if (_bytes.length() == 4 + lengthBasic) {
+    else if (_bytes.length() == static_cast<int>(AdditionalInfoLengthType::TimeCodePrefix) + lengthBasic) {
         _type = TypeType::TimeCode;
-        byteIdx += 4;
+        _additionalInfoLength = AdditionalInfoLengthType::TimeCodePrefix;
+        _timeCode = _bytes.mid(byteIdx, static_cast<int>(_additionalInfoLength));
+        byteIdx += static_cast<int>(_additionalInfoLength);
     }
     else {
         QDebug(&_errorMessage) << "Unrecognized packet length" << _bytes.length() << "bytes";
@@ -120,6 +123,16 @@ const QString &TSPacket::errorMessage() const
 TSPacket::TypeType TSPacket::type() const
 {
     return _type;
+}
+
+TSPacket::AdditionalInfoLengthType TSPacket::additionalInfoLength() const
+{
+    return _additionalInfoLength;
+}
+
+const QByteArray &TSPacket::timeCode() const
+{
+    return _timeCode;
 }
 
 bool TSPacket::TEI() const
@@ -388,6 +401,8 @@ QDebug operator<<(QDebug debug, const TSPacket &packet)
     debug << packet.type();
     if (packet.type() == TSPacket::TypeType::Unrecognized)
         return debug << " Bytes=" << HumanReadable::Hexdump { packet.bytes() }.enableByteCount() << ")";
+    else if (packet.type() == TSPacket::TypeType::TimeCode)
+        debug << " TimeCode=" << HumanReadable::Hexdump { packet.timeCode() };
 
     debug << " " << packet.validity();
     if (packet.validity() < TSPacket::ValidityType::PID)
