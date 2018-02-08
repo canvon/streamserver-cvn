@@ -65,23 +65,30 @@ static void msgHandler(QtMsgType type, const QMessageLogContext &ctx, const QStr
         break;
     }
 
-    // Output date once every day, if appropriate.
-    if (logTs >= LogTimestamping::Time && logLast.date() < now.date())
-        errout << "<6>" << now.date().toString() << endl;
+    if (logStarting) {
+        // During startup, use application name as prefix (if available).
+        if (qApp)
+            errout << qApp->applicationName() << ": ";
+    }
+    else {
+        // Output date once every day, if appropriate.
+        if (logTs >= LogTimestamping::Time && logLast.date() < now.date())
+            errout << "<6>" << now.date().toString() << endl;
 
-    // systemd-compatible message severity.
-    errout << "<" << sd_info << ">";
+        // systemd-compatible message severity.
+        errout << "<" << sd_info << ">";
 
-    // Optional timestamp.
-    switch (logTs) {
-    case LogTimestamping::None:
-        break;
-    case LogTimestamping::Date:
-        errout << now.date().toString() << " ";
-        break;
-    case LogTimestamping::Time:
-        errout << now.time().toString() << " ";
-        break;
+        // Optional timestamp.
+        switch (logTs) {
+        case LogTimestamping::None:
+            break;
+        case LogTimestamping::Date:
+            errout << now.date().toString() << " ";
+            break;
+        case LogTimestamping::Time:
+            errout << now.time().toString() << " ";
+            break;
+        }
     }
 
     // Optional category.
@@ -109,8 +116,10 @@ static void msgHandler(QtMsgType type, const QMessageLogContext &ctx, const QStr
     // The message.
     errout << msg << endl;
 
-    // Save last logging timestamp for comparison on next logging.
-    logLast = now;
+    if (!logStarting) {
+        // Save last logging timestamp for comparison on next logging.
+        logLast = now;
+    }
 
     // Fatal messages shall be fatal to the program execution.
     if (is_fatal_msg) {
@@ -252,6 +261,9 @@ int main(int argc, char *argv[])
     }
 
     QString inputFilePath = args.at(0);
+
+
+    logStarting = false;
 
 
     StreamServer server(std::make_unique<QFile>(inputFilePath), listenPort);
