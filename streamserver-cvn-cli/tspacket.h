@@ -64,6 +64,18 @@ private:
     quint8      _continuityCounter;
     int         _iAdaptationField;
 public:
+    struct ProgramClockReference {
+        QByteArray  bytes;
+
+        quint64     base = 0;
+        quint8      reserved = 0;
+        quint16     extension = 0;
+        quint64     value = 0;
+
+        explicit ProgramClockReference(const QByteArray &PCRBytes);
+
+        static const int lengthPCR = 6;
+    };
     class AdaptationField {
         QByteArray  _bytes;
         QString     _errorMessage;
@@ -79,8 +91,8 @@ public:
         bool        _transportPrivateDataFlag;
         bool        _extensionFlag;
 
-        //quint64     _PCR;
-        //quint64     _OPCR;
+        std::unique_ptr<ProgramClockReference>  _PCRPtr, _OPCRPtr;
+
         bool        _spliceCountdownValid = false;
         qint8       _spliceCountdown;
 
@@ -114,8 +126,8 @@ public:
         bool transportPrivateDataFlag() const;
         bool extensionFlag() const;
 
-        //PCR
-        //OPCR
+        const ProgramClockReference *PCR() const;
+        const ProgramClockReference *OPCR() const;
         bool spliceCountdownValid() const;
         qint8 spliceCountdown() const;
         bool transportPrivateDataValid() const;
@@ -157,5 +169,6 @@ public:
 
 QDebug operator<<(QDebug debug, const TSPacket &packet);
 QDebug operator<<(QDebug debug, const TSPacket::AdaptationField &af);
+QDebug operator<<(QDebug debug, const TSPacket::ProgramClockReference &pcr);
 
 #endif // TSPACKET_H

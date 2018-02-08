@@ -217,15 +217,41 @@ TSPacket::AdaptationField::AdaptationField(const QByteArray &bytes) :
         _flagsValid = true;
     }
 
-    if (_PCRFlag) {
-        // FIXME: Implement PCR decoding
-        // Until then, just skip the field.
-        byteIdx += 6;
-    }
+    auto parsePCR = [&](const char *name, std::unique_ptr<ProgramClockReference> *ptrPtr) {
+        if (!(byteIdx < _bytes.length())) {
+            QDebug(&_errorMessage).nospace()
+                << "Can't read " << name << ", as start offset " << byteIdx
+                << " is already past the " << _bytes.length() << " bytes of Adaptation Field";
+            return false;
+        }
 
+        int iStart = byteIdx;
+        byteIdx += ProgramClockReference::lengthPCR;
+        if (byteIdx > _bytes.length()) {
+            QDebug(&_errorMessage).nospace()
+                << "Can't finish reading " << name << ", as post-offset " << byteIdx
+                << " is such that part of the data would have to be outside of the "
+                << _bytes.length() << " bytes of Adaptation Field";
+            return false;
+        }
+
+        try {
+            *ptrPtr = std::make_unique<ProgramClockReference>(_bytes.mid(iStart, ProgramClockReference::lengthPCR));
+        }
+        catch (std::exception &ex) {
+            QDebug(&_errorMessage).nospace() << "Error parsing " << name << ": " << ex.what();
+            return false;
+        }
+
+        return true;
+    };
+    if (_PCRFlag) {
+        if (!parsePCR("ProgramClockReference", &_PCRPtr))
+            return;
+    }
     if (_OPCRFlag) {
-        // FIXME: As above
-        byteIdx += 6;
+        if (!parsePCR("OriginalProgramClockReference", &_OPCRPtr))
+            return;
     }
 
     if (_splicingPointFlag) {
@@ -348,6 +374,16 @@ bool TSPacket::AdaptationField::extensionFlag() const
     return _extensionFlag;
 }
 
+const TSPacket::ProgramClockReference *TSPacket::AdaptationField::PCR() const
+{
+    return _PCRPtr.get();
+}
+
+const TSPacket::ProgramClockReference *TSPacket::AdaptationField::OPCR() const
+{
+    return _OPCRPtr.get();
+}
+
 bool TSPacket::AdaptationField::spliceCountdownValid() const
 {
     return _spliceCountdownValid;
@@ -462,11 +498,18 @@ QDebug operator<<(QDebug debug, const TSPacket::AdaptationField &af)
         << "TransportPrivateDataFlag=" << af.transportPrivateDataFlag() << " "
         << "ExtensionFlag="          << af.extensionFlag();
 
-    // FIXME: Implement
-    if (af.PCRFlag())
-        debug << " " << "PCR=<not_implemented>";
-    if (af.OPCRFlag())
-        debug << " " << "OPCR=<not_implemented>";
+    if (af.PCRFlag()) {
+        auto pcrPtr = af.PCR();
+        if (!pcrPtr)
+            return debug << " DataMissingStartingFrom=PCR)";
+        debug << " PCR=" << *pcrPtr;
+    }
+    if (af.OPCRFlag()) {
+        auto opcrPtr = af.OPCR();
+        if (!opcrPtr)
+            return debug << " DataMissingStartingFrom=OPCR)";
+        debug << " OPCR=" << *opcrPtr;
+    }
 
     if (af.splicingPointFlag()) {
         if (!af.spliceCountdownValid())
@@ -495,4 +538,49 @@ QDebug operator<<(QDebug debug, const TSPacket::AdaptationField &af)
     debug << ")";
 
     return debug;
+}
+
+TSPacket::ProgramClockReference::ProgramClockReference(const QByteArray &PCRBytes) :
+    bytes(PCRBytes)
+{
+    if (bytes.length() != lengthPCR)
+        throw std::runtime_error("TS packet, ProgramClockReference: Invalid number of bytes " + std::to_string(bytes.length()) +
+                                 ", expected " + std::to_string(lengthPCR));
+
+    int byteIdx = 0;
+    base =             (quint8)bytes.at(byteIdx++);  //  8 bit
+    base = base << 8 | (quint8)bytes.at(byteIdx++);  // 16 bit (+ 8 bit)
+    base = base << 8 | (quint8)bytes.at(byteIdx++);  // 24 bit (+ 8 bit)
+    base = base << 8 | (quint8)bytes.at(byteIdx++);  // 32 bit (+ 8 bit)
+
+    {
+        quint8 byte = bytes.at(byteIdx++);
+        base      = base << 1 | (byte & 0x80 >> 7);  // 33 bit (+ 1 bit), ready.
+        reserved  =              byte & 0x7e >> 1;  // 6 bit, ready.
+        extension =              byte & 0x01;  // 1 bit
+    }
+
+    extension = extension << 8 | (quint8)bytes.at(byteIdx++);  // 9 bit (+ 8 bit), ready.
+
+    if (byteIdx != bytes.length())
+        throw std::runtime_error("TS packet, ProgramClockReference: Number of bytes read " + std::to_string(byteIdx) + " bytes"
+                                 " differs from data present " + std::to_string(bytes.length()));
+
+    value = base * 300 + extension;
+}
+
+QDebug operator<<(QDebug debug, const TSPacket::ProgramClockReference &pcr)
+{
+    QDebugStateSaver saver(debug);
+    debug.nospace() << "TSPacket::ProgramClockReference(";
+
+    // FIXME: Show only parsed results?
+    debug << "Bytes=" << HumanReadable::Hexdump { pcr.bytes } << " ";
+
+    debug << "Base="       << QString::number(pcr.base,      16)
+          << " Reserved="  << QString::number(pcr.reserved,  16)
+          << " Extension=" << QString::number(pcr.extension, 16)
+          << " Value="     << pcr.value;
+
+    return debug << ")";
 }
