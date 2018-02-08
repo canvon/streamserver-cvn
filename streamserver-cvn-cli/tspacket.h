@@ -75,6 +75,11 @@ public:
         explicit ProgramClockReference(const QByteArray &PCRBytes);
 
         static const int lengthPCR = 6;
+        static const quint64 baseResolutionHz = 90000;  // 90 kHz
+        static const quint64 extensionResolutionHz = 27000000;  // 27 MHz
+
+        quint64 toNanosecs() const;
+        double toSecs() const;
     };
     class AdaptationField {
         QByteArray  _bytes;

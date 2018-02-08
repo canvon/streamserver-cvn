@@ -566,7 +566,17 @@ TSPacket::ProgramClockReference::ProgramClockReference(const QByteArray &PCRByte
         throw std::runtime_error("TS packet, ProgramClockReference: Number of bytes read " + std::to_string(byteIdx) + " bytes"
                                  " differs from data present " + std::to_string(bytes.length()));
 
-    value = base * 300 + extension;
+    value = base * (extensionResolutionHz / baseResolutionHz) + extension;
+}
+
+quint64 TSPacket::ProgramClockReference::toNanosecs() const
+{
+    return value * 1000000000LL / extensionResolutionHz;
+}
+
+double TSPacket::ProgramClockReference::toSecs() const
+{
+    return static_cast<double>(value) / static_cast<double>(extensionResolutionHz);
 }
 
 QDebug operator<<(QDebug debug, const TSPacket::ProgramClockReference &pcr)
@@ -581,6 +591,8 @@ QDebug operator<<(QDebug debug, const TSPacket::ProgramClockReference &pcr)
           << " Reserved="  << QString::number(pcr.reserved,  16)
           << " Extension=" << QString::number(pcr.extension, 16)
           << " Value="     << pcr.value;
+
+    debug << " Seconds=" << pcr.toSecs();
 
     return debug << ")";
 }
