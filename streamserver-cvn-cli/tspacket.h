@@ -167,6 +167,7 @@ public:
     TSCType TSC() const;
     AdaptationFieldControlType adaptationFieldControl() const;
     quint8 continuityCounter() const;
+    std::shared_ptr<      AdaptationField> adaptationField();
     std::shared_ptr<const AdaptationField> adaptationField() const;
     QByteArray payloadData() const;
 

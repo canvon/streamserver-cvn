@@ -168,6 +168,11 @@ quint8 TSPacket::continuityCounter() const
     return _continuityCounter;
 }
 
+std::shared_ptr<TSPacket::AdaptationField> TSPacket::adaptationField()
+{
+    return _adaptationFieldPtr;
+}
+
 std::shared_ptr<const TSPacket::AdaptationField> TSPacket::adaptationField() const
 {
     return _adaptationFieldPtr;
