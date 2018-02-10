@@ -3,6 +3,7 @@
 
 #include <QObject>
 
+#include <ctime>
 #include <memory>
 #include <QList>
 #include <QFile>
@@ -26,6 +27,8 @@ class StreamServer : public QObject
     int                     _inputConsecutiveErrorCount = 0;
     qint64                  _tsPacketSize = 0;  // Request immediate automatic detection.
     bool                    _tsPacketAutosize = true;
+    double                  _lastRealTime = 0;
+    double                  _lastPacketTime = 0;
 
     quint64                               _nextClientID = 1;
     QList<std::shared_ptr<StreamClient>>  _clients;

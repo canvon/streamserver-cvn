@@ -1,5 +1,6 @@
 #include "streamserver.h"
 
+#include <unistd.h>
 #include <stdexcept>
 #include <functional>
 #include <QDebug>
@@ -203,6 +204,16 @@ void StreamServer::finalizeInput()
         qInfo() << "Successfully finalized input";
 }
 
+static double time()
+{
+    double now;
+    struct timespec t;
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    now = t.tv_sec;
+    now += (double)(t.tv_nsec)/(double)1000000000;
+    return now;
+}
+
 void StreamServer::processInput()
 {
     qint64 readSize = _tsPacketSize;
@@ -372,6 +383,21 @@ void StreamServer::processInput()
                 if (verbose >= 0)
                     qInfo().nospace() << "Detected TS packet size of " << _tsPacketSize << ", which is basic length plus " << (_tsPacketSize - TSPacket::lengthBasic);
             }
+        }
+
+        auto af = packet.adaptationField();
+        if (af && af->PCRFlag() && af->PCR()) {
+            double pcr = af->PCR()->toSecs();
+            double now = time();
+            double dt = (pcr - _lastPacketTime) - (now - _lastRealTime);
+            if (_lastPacketTime + 1 < pcr || pcr < _lastPacketTime) {
+                // Discontinuity, just keep sending.
+            }
+            else if (dt > 0) {
+                usleep((unsigned int)(dt * 1000000.));
+            }
+            _lastPacketTime = pcr;
+            _lastRealTime = now;
         }
 
         for (auto client : _clients) {
