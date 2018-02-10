@@ -11,6 +11,16 @@
 
 extern int verbose;
 
+static double timenow()
+{
+    double now;
+    struct timespec t;
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    now = t.tv_sec;
+    now += (double)(t.tv_nsec)/(double)1000000000;
+    return now;
+}
+
 StreamServer::StreamServer(std::unique_ptr<QFile> inputFilePtr, quint16 listenPort, QObject *parent) :
     QObject(parent),
     _listenPort(listenPort), _listenSocket(this),
@@ -160,6 +170,7 @@ void StreamServer::initInput()
     if (!_inputFilePtr->isOpen()) {
         const QString fileName = _inputFilePtr->fileName();
 
+        _openRealTime = timenow();
         if (verbose >= -1)
             qInfo() << "Opening input file" << fileName << "...";
 
@@ -202,16 +213,6 @@ void StreamServer::finalizeInput()
 
     if (verbose >= 1)
         qInfo() << "Successfully finalized input";
-}
-
-static double time()
-{
-    double now;
-    struct timespec t;
-    clock_gettime(CLOCK_MONOTONIC, &t);
-    now = t.tv_sec;
-    now += (double)(t.tv_nsec)/(double)1000000000;
-    return now;
 }
 
 void StreamServer::processInput()
@@ -388,16 +389,22 @@ void StreamServer::processInput()
         auto af = packet.adaptationField();
         if (af && af->PCRFlag() && af->PCR()) {
             double pcr = af->PCR()->toSecs();
-            double now = time();
+            double now = timenow() - _openRealTime;
             double dt = (pcr - _lastPacketTime) - (now - _lastRealTime);
             if (_lastPacketTime + 1 < pcr || pcr < _lastPacketTime) {
                 // Discontinuity, just keep sending.
+                qDebug() << "Discontinuity detected, resetting _openRealTime.";
+                _openRealTime = timenow() - pcr;
             }
-            else if (dt > 0) {
+            else if (dt > 0 && pcr >= now) {
+                qDebug() << "Sleeping: " << dt << " = (" << pcr << " - " << _lastPacketTime << ") - (" << now << " - " << _lastRealTime << ")";
                 usleep((unsigned int)(dt * 1000000.));
             }
+            else {
+                qDebug() << "Passing.";
+            }
             _lastPacketTime = pcr;
-            _lastRealTime = now;
+            _lastRealTime = timenow() - _openRealTime;
         }
 
         for (auto client : _clients) {
