@@ -25,6 +25,7 @@ namespace {
         None,
         Date,
         Time,
+        TimeSubsecond,
     };
     LogTimestamping logTs = LogTimestamping::Time;
     QDateTime logLast;
@@ -87,6 +88,9 @@ static void msgHandler(QtMsgType type, const QMessageLogContext &ctx, const QStr
             break;
         case LogTimestamping::Time:
             errout << now.time().toString() << " ";
+            break;
+        case LogTimestamping::TimeSubsecond:
+            errout << now.time().toString("HH:mm:ss.zzz") << " ";
             break;
         }
     }
@@ -191,7 +195,8 @@ int main(int argc, char *argv[])
         { { "d", "debug"   }, "Enable debugging. (Increase debug level.)" },
         { { "l", "listen" }, "Port to listen on for HTTP streaming client connections",
           "listen_port", "8000" },
-        { { "logts", "log-timestamping" }, "How to timestamp log messages: none, date, time",
+        { { "logts", "log-timestamping" }, "How to timestamp log messages: "
+          "none, date, time, timess/timesubsecond",
           "mode" },
         { { "s", "ts-packet-size" }, "MPEG-TS packet size (e.g., 188 bytes)",
           "size" },
@@ -208,8 +213,11 @@ int main(int argc, char *argv[])
             logTs = LogTimestamping::Date;
         else if (logTsStr == "time")
             logTs = LogTimestamping::Time;
+        else if (logTsStr == "timess" || logTsStr == "timesubsecond")
+            logTs = LogTimestamping::TimeSubsecond;
         else if (logTsStr == "help") {
-            qInfo() << "Available log timestamping modes: none, date, time";
+            qInfo() << "Available log timestamping modes:"
+                    << "none, date, time, timess/timesubsecond";
             return 0;
         }
         else {
