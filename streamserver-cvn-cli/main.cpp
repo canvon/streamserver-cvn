@@ -191,7 +191,7 @@ int main(int argc, char *argv[])
         { { "d", "debug"   }, "Enable debugging. (Increase debug level.)" },
         { { "l", "listen" }, "Port to listen on for HTTP streaming client connections",
           "listen_port", "8000" },
-        { { "logts", "log-timestamping" }, "How to timestamp log messages",
+        { { "logts", "log-timestamping" }, "How to timestamp log messages: none, date, time",
           "mode" },
         { { "s", "ts-packet-size" }, "MPEG-TS packet size (e.g., 188 bytes)",
           "size" },
@@ -208,6 +208,10 @@ int main(int argc, char *argv[])
             logTs = LogTimestamping::Date;
         else if (logTsStr == "time")
             logTs = LogTimestamping::Time;
+        else if (logTsStr == "help") {
+            qInfo() << "Available log timestamping modes: none, date, time";
+            return 0;
+        }
         else {
             qCritical() << "Invalid log timestamping mode" << logTsStr;
             return 2;
