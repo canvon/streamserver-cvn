@@ -339,6 +339,22 @@ bool TSPacket::AdaptationField::discontinuityIndicator() const
     return _discontinuityIndicator;
 }
 
+void TSPacket::AdaptationField::setDiscontinuityIndicator(bool discontinuity)
+{
+    int byteIdx = 0;
+    if (!(byteIdx < _bytes.length()))
+        throw std::runtime_error("TS packet, Adaptation Field: Can't set Discontinuity Indicator: "
+                                 "Byte index " + std::to_string(byteIdx) + " past end of Adaptation Field!");
+
+    quint8 byte = _bytes.at(byteIdx);
+    if (discontinuity)
+        byte |= 0x01 << 7;
+    else
+        byte &= 0x7f;
+    _bytes[byteIdx] = byte;
+    _discontinuityIndicator = discontinuity;
+}
+
 bool TSPacket::AdaptationField::randomAccessIndicator() const
 {
     return _randomAccessIndicator;

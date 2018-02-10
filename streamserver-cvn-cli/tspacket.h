@@ -123,6 +123,7 @@ public:
         quint8 length() const;
         bool flagsValid() const;
         bool discontinuityIndicator() const;
+        void setDiscontinuityIndicator(bool discontinuity);
         bool randomAccessIndicator() const;
         bool ESPrioIndicator() const;
         bool PCRFlag() const;
