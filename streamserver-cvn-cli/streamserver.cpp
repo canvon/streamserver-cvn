@@ -395,6 +395,7 @@ void StreamServer::processInput()
             double dt = (pcr - _lastPacketTime) - (now - _lastRealTime);
             if (_lastPacketTime + 1 < pcr || pcr < _lastPacketTime) {
                 // Discontinuity, just keep sending.
+                af->setDiscontinuityIndicator(true);
                 qDebug() << "Discontinuity detected, resetting _openRealTime.";
                 _openRealTime = timenow() - pcr;
             }
