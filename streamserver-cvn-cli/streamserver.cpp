@@ -15,7 +15,9 @@ static double timenow()
 {
     double now;
     struct timespec t;
-    clock_gettime(CLOCK_MONOTONIC, &t);
+    if (clock_gettime(CLOCK_MONOTONIC, &t) != 0)
+        throw std::system_error(errno, std::generic_category(),
+                                "Can't get time for monotonic clock");
     now = t.tv_sec;
     now += (double)(t.tv_nsec)/(double)1000000000;
     return now;
