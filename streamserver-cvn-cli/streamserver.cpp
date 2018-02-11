@@ -176,7 +176,8 @@ void StreamServer::initInput()
     if (!_inputFilePtr->isOpen()) {
         const QString fileName = _inputFilePtr->fileName();
 
-        _openRealTime = -1;
+        _openRealTimeValid = false;
+        _openRealTime = 0;
         if (verbose >= -1)
             qInfo() << "Opening input file" << fileName << "...";
 
@@ -395,8 +396,10 @@ void StreamServer::processInput()
         auto af = packet.adaptationField();
         if (af && af->PCRFlag() && af->PCR()) {
             double pcr = af->PCR()->toSecs();
-            if (_openRealTime < 0)
+            if (!_openRealTimeValid) {
                 _openRealTime = timenow() - pcr;
+                _openRealTimeValid = true;
+            }
             double now = timenow() - _openRealTime;
             double dt = (pcr - _lastPacketTime) - (now - _lastRealTime);
             if (_lastPacketTime + 1 < pcr || pcr < _lastPacketTime) {
