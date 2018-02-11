@@ -399,7 +399,8 @@ void StreamServer::processInput()
             if (!_openRealTimeValid) {
                 _openRealTime = timenow() - pcr;
                 _openRealTimeValid = true;
-                qDebug() << "Initialized _openRealTime to" << fixed << _openRealTime;
+                if (verbose >= 0)
+                    qDebug() << "Initialized _openRealTime to" << fixed << _openRealTime;
             }
             double now = timenow() - _openRealTime;
             double dt = (pcr - _lastPacketTime) - (now - _lastRealTime);
@@ -414,14 +415,17 @@ void StreamServer::processInput()
                         << af->discontinuityIndicator();
                 }
                 _openRealTime = timenow() - pcr;
-                qDebug() << "Reset _openRealTime to" << fixed << _openRealTime;
+                if (verbose >= 0)
+                    qDebug() << "Reset _openRealTime to" << fixed << _openRealTime;
             }
             else if (dt > 0 && pcr >= now) {
-                qDebug() << "Sleeping: " << dt << " = (" << pcr << " - " << _lastPacketTime << ") - (" << now << " - " << _lastRealTime << ")";
+                if (verbose >= 2)
+                    qDebug() << "Sleeping: " << dt << " = (" << pcr << " - " << _lastPacketTime << ") - (" << now << " - " << _lastRealTime << ")";
                 usleep((unsigned int)((pcr - now) * 1000000.));
             }
             else {
-                qDebug() << "Passing.";
+                if (verbose >= 2)
+                    qDebug() << "Passing.";
             }
             _lastPacketTime = pcr;
             _lastRealTime = timenow() - _openRealTime;
