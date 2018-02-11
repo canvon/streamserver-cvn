@@ -419,8 +419,13 @@ void StreamServer::processInput()
                     qDebug() << "Reset _openRealTime to" << fixed << _openRealTime;
             }
             else if (dt > 0 && pcr >= now) {
-                if (verbose >= 2)
-                    qDebug() << "Sleeping: " << dt << " = (" << pcr << " - " << _lastPacketTime << ") - (" << now << " - " << _lastRealTime << ")";
+                if (verbose >= 2) {
+                    qDebug().nospace()
+                        << "Sleeping: " << dt
+                        << " = (" << pcr << " - " << _lastPacketTime
+                        << ") - (" << now << " - " << _lastRealTime
+                        << ")";
+                }
                 usleep((unsigned int)((pcr - now) * 1000000.));
             }
             else {
