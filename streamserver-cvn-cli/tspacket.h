@@ -169,6 +169,7 @@ public:
     quint8 continuityCounter() const;
     std::shared_ptr<      AdaptationField> adaptationField();
     std::shared_ptr<const AdaptationField> adaptationField() const;
+    void updateAdaptationfieldBytes();
     QByteArray payloadData() const;
 
     QByteArray toBasicPacketBytes() const;

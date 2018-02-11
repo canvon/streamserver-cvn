@@ -394,6 +394,7 @@ void StreamServer::processInput()
         }
 
         auto af = packet.adaptationField();
+        bool afModified = false;
         if (af && af->PCRFlag() && af->PCR()) {
             double pcr = af->PCR()->toSecs();
             if (!_openRealTimeValid) {
@@ -408,6 +409,7 @@ void StreamServer::processInput()
                 // Discontinuity, just keep sending.
                 bool discontinuityBefore = af->discontinuityIndicator();
                 af->setDiscontinuityIndicator(true);
+                afModified = true;
                 if (verbose >= 0) {
                     qInfo().nospace()
                         << "Discontinuity detected; Discontinuity Indicator was "
@@ -435,6 +437,8 @@ void StreamServer::processInput()
             _lastPacketTime = pcr;
             _lastRealTime = timenow() - _openRealTime;
         }
+        if (afModified)
+            packet.updateAdaptationfieldBytes();
 
         for (auto client : _clients) {
             try {
