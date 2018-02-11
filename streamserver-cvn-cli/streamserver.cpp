@@ -421,7 +421,7 @@ void StreamServer::processInput()
             else if (dt > 0 && pcr >= now) {
                 if (verbose >= 2) {
                     qDebug().nospace()
-                        << "Sleeping: " << dt
+                        << "Sleeping: " << pcr - now << ", dt = " << dt
                         << " = (" << pcr << " - " << _lastPacketTime
                         << ") - (" << now << " - " << _lastRealTime
                         << ")";
