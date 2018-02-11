@@ -394,9 +394,9 @@ void StreamServer::processInput()
 
         auto af = packet.adaptationField();
         if (af && af->PCRFlag() && af->PCR()) {
-            if (_openRealTime < 0)
-                _openRealTime = timenow();
             double pcr = af->PCR()->toSecs();
+            if (_openRealTime < 0)
+                _openRealTime = timenow() - pcr;
             double now = timenow() - _openRealTime;
             double dt = (pcr - _lastPacketTime) - (now - _lastRealTime);
             if (_lastPacketTime + 1 < pcr || pcr < _lastPacketTime) {
