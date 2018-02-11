@@ -370,7 +370,7 @@ bool TSPacket::AdaptationField::discontinuityIndicator() const
 
 void TSPacket::AdaptationField::setDiscontinuityIndicator(bool discontinuity)
 {
-    int byteIdx = 0;
+    int byteIdx = 1;
     if (!(byteIdx < _bytes.length()))
         throw std::runtime_error("TS packet, Adaptation Field: Can't set Discontinuity Indicator: "
                                  "Byte index " + std::to_string(byteIdx) + " past end of Adaptation Field!");
