@@ -11,7 +11,9 @@
 
 extern int verbose;
 
-static double timenow()
+namespace {
+
+double timenow()
 {
     double now;
     struct timespec t;
@@ -19,9 +21,11 @@ static double timenow()
         throw std::system_error(errno, std::generic_category(),
                                 "Can't get time for monotonic clock");
     now = t.tv_sec;
-    now += (double)(t.tv_nsec)/(double)1000000000;
+    now += static_cast<double>(t.tv_nsec)/static_cast<double>(1000000000);
     return now;
 }
+
+}  // namespace
 
 StreamServer::StreamServer(std::unique_ptr<QFile> inputFilePtr, quint16 listenPort, QObject *parent) :
     QObject(parent),
