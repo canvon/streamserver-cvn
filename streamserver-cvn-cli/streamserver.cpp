@@ -92,6 +92,16 @@ void StreamServer::setTSPacketAutosize(bool autosize)
     _tsPacketAutosize = autosize;
 }
 
+StreamServer::BrakeType StreamServer::brakeType() const
+{
+    return _brakeType;
+}
+
+void StreamServer::setBrakeType(StreamServer::BrakeType type)
+{
+    _brakeType = type;
+}
+
 void StreamServer::clientConnected()
 {
     StreamClient::socketPtr_type socketPtr(_listenSocket.nextPendingConnection(),
@@ -420,19 +430,21 @@ void StreamServer::processInput()
                 if (verbose >= 0)
                     qDebug() << "Reset _openRealTime to" << fixed << _openRealTime;
             }
-            else if (dt > 0 && pcr >= now) {
-                if (verbose >= 1) {
-                    qDebug().nospace()
-                        << "Sleeping: " << pcr - now << ", dt = " << dt
-                        << " = (" << pcr << " - " << _lastPacketTime
-                        << ") - (" << now << " - " << _lastRealTime
-                        << ")";
+            else if (_brakeType == BrakeType::PCRSleep) {
+                if (dt > 0 && pcr >= now) {
+                    if (verbose >= 1) {
+                        qDebug().nospace()
+                            << "Sleeping: " << pcr - now << ", dt = " << dt
+                            << " = (" << pcr << " - " << _lastPacketTime
+                            << ") - (" << now << " - " << _lastRealTime
+                            << ")";
+                    }
+                    usleep((unsigned int)((pcr - now) * 1000000.));
                 }
-                usleep((unsigned int)((pcr - now) * 1000000.));
-            }
-            else {
-                if (verbose >= 1)
-                    qDebug() << "Passing.";
+                else {
+                    if (verbose >= 1)
+                        qDebug() << "Passing.";
+                }
             }
             _lastPacketTime = pcr;
             _lastRealTime = timenow() - _openRealTime;

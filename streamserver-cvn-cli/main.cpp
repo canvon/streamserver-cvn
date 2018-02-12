@@ -200,6 +200,9 @@ int main(int argc, char *argv[])
           "mode" },
         { { "s", "ts-packet-size" }, "MPEG-TS packet size (e.g., 188 bytes)",
           "size" },
+        { "brake", "Set brake type to use to slow down input that is coming in too fast: "
+          "none, pcrsleep (default)",
+          "type" },
     });
     parser.addPositionalArgument("input", "Input file name");
     parser.process(a);
@@ -263,6 +266,26 @@ int main(int argc, char *argv[])
         }
     }
 
+    std::shared_ptr<StreamServer::BrakeType> brakeTypePtr;
+    {
+        QString valueStr = parser.value("brake");
+        if (!valueStr.isNull()) {
+            if (valueStr == "none")
+                brakeTypePtr = std::make_shared<StreamServer::BrakeType>(StreamServer::BrakeType::None);
+            else if (valueStr == "pcrsleep")
+                brakeTypePtr = std::make_shared<StreamServer::BrakeType>(StreamServer::BrakeType::PCRSleep);
+            else if (valueStr == "help") {
+                qInfo() << "Available brake types:"
+                        << "none, pcrsleep (default)";
+                return 0;
+            }
+            else {
+                qCritical() << "Invalid brake type" << valueStr;
+                return 2;
+            }
+        }
+    }
+
 
     QStringList args = parser.positionalArguments();
     if (args.length() != 1) {
@@ -285,6 +308,9 @@ int main(int argc, char *argv[])
             server.setTSPacketSize(*tsPacketSizePtr);
             server.setTSPacketAutosize(false);
         }
+
+        if (brakeTypePtr)
+            server.setBrakeType(*brakeTypePtr);
 
         server.initInput();
     }

@@ -31,6 +31,13 @@ class StreamServer : public QObject
     double                  _openRealTime = 0;
     double                  _lastRealTime = 0;
     double                  _lastPacketTime = 0;
+public:
+    enum class BrakeType {
+        None,
+        PCRSleep,
+    };
+private:
+    BrakeType               _brakeType = BrakeType::PCRSleep;
 
     quint64                               _nextClientID = 1;
     QList<std::shared_ptr<StreamClient>>  _clients;
@@ -46,6 +53,8 @@ public:
     void         setTSPacketSize(qint64 size);
     bool         tsPacketAutosize() const;
     void         setTSPacketAutosize(bool autosize);
+    BrakeType    brakeType() const;
+    void         setBrakeType(BrakeType type);
 
     void initInput();
     void finalizeInput();
