@@ -1,5 +1,6 @@
 #include "streamserver.h"
 
+#include <unistd.h>
 #include <stdexcept>
 #include <functional>
 #include <QDebug>
@@ -9,6 +10,22 @@
 #include "humanreadable.h"
 
 extern int verbose;
+
+namespace {
+
+double timenow()
+{
+    double now;
+    struct timespec t;
+    if (clock_gettime(CLOCK_MONOTONIC, &t) != 0)
+        throw std::system_error(errno, std::generic_category(),
+                                "Can't get time for monotonic clock");
+    now = t.tv_sec;
+    now += static_cast<double>(t.tv_nsec)/static_cast<double>(1000000000);
+    return now;
+}
+
+}  // namespace
 
 StreamServer::StreamServer(std::unique_ptr<QFile> inputFilePtr, quint16 listenPort, QObject *parent) :
     QObject(parent),
@@ -73,6 +90,16 @@ bool StreamServer::tsPacketAutosize() const
 void StreamServer::setTSPacketAutosize(bool autosize)
 {
     _tsPacketAutosize = autosize;
+}
+
+StreamServer::BrakeType StreamServer::brakeType() const
+{
+    return _brakeType;
+}
+
+void StreamServer::setBrakeType(StreamServer::BrakeType type)
+{
+    _brakeType = type;
 }
 
 void StreamServer::clientConnected()
@@ -159,6 +186,8 @@ void StreamServer::initInput()
     if (!_inputFilePtr->isOpen()) {
         const QString fileName = _inputFilePtr->fileName();
 
+        _openRealTimeValid = false;
+        _openRealTime = 0;
         if (verbose >= -1)
             qInfo() << "Opening input file" << fileName << "...";
 
@@ -373,6 +402,55 @@ void StreamServer::processInput()
                     qInfo().nospace() << "Detected TS packet size of " << _tsPacketSize << ", which is basic length plus " << (_tsPacketSize - TSPacket::lengthBasic);
             }
         }
+
+        auto af = packet.adaptationField();
+        bool afModified = false;
+        if (af && af->PCRFlag() && af->PCR()) {
+            double pcr = af->PCR()->toSecs();
+            if (!_openRealTimeValid) {
+                _openRealTime = timenow() - pcr;
+                _openRealTimeValid = true;
+                if (verbose >= 0)
+                    qDebug() << "Initialized _openRealTime to" << fixed << _openRealTime;
+            }
+            double now = timenow() - _openRealTime;
+            double dt = (pcr - _lastPacketTime) - (now - _lastRealTime);
+            if (_lastPacketTime + 1 < pcr || pcr < _lastPacketTime) {
+                // Discontinuity, just keep sending.
+                bool discontinuityBefore = af->discontinuityIndicator();
+                af->setDiscontinuityIndicator(true);
+                afModified = true;
+                if (verbose >= 0) {
+                    qInfo().nospace()
+                        << "Discontinuity detected; Discontinuity Indicator was "
+                        << discontinuityBefore << ", now set to "
+                        << af->discontinuityIndicator();
+                }
+                _openRealTime = timenow() - pcr;
+                if (verbose >= 0)
+                    qDebug() << "Reset _openRealTime to" << fixed << _openRealTime;
+            }
+            else if (_brakeType == BrakeType::PCRSleep) {
+                if (dt > 0 && pcr >= now) {
+                    if (verbose >= 1) {
+                        qDebug().nospace()
+                            << "Sleeping: " << pcr - now << ", dt = " << dt
+                            << " = (" << pcr << " - " << _lastPacketTime
+                            << ") - (" << now << " - " << _lastRealTime
+                            << ")";
+                    }
+                    usleep((unsigned int)((pcr - now) * 1000000.));
+                }
+                else {
+                    if (verbose >= 1)
+                        qDebug() << "Passing.";
+                }
+            }
+            _lastPacketTime = pcr;
+            _lastRealTime = timenow() - _openRealTime;
+        }
+        if (afModified)
+            packet.updateAdaptationfieldBytes();
 
         for (auto client : _clients) {
             try {

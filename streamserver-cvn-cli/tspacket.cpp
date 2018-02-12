@@ -168,9 +168,38 @@ quint8 TSPacket::continuityCounter() const
     return _continuityCounter;
 }
 
+std::shared_ptr<TSPacket::AdaptationField> TSPacket::adaptationField()
+{
+    return _adaptationFieldPtr;
+}
+
 std::shared_ptr<const TSPacket::AdaptationField> TSPacket::adaptationField() const
 {
     return _adaptationFieldPtr;
+}
+
+void TSPacket::updateAdaptationfieldBytes()
+{
+    if (!(_adaptationFieldControl == AdaptationFieldControlType::AdaptationFieldOnly ||
+          _adaptationFieldControl == AdaptationFieldControlType::AdaptationFieldThenPayload))
+        throw std::runtime_error("TS packet: Can't update Adaptation Field bytes, "
+                                 "as there is no Adaptation Field in this packet");
+
+    if (!_adaptationFieldPtr)
+        throw std::runtime_error("TS packet: Can't update Adaptation Field bytes, "
+                                 "as there is no Adaptation field object in this object");
+
+    const QByteArray afBytes(_adaptationFieldPtr->bytes());
+    if (_iAdaptationField + afBytes.length() > _bytes.length())
+        throw std::runtime_error(
+            "TS packet: New Adaptation Field byte count " + std::to_string(afBytes.length()) +
+            " doesn't fit into packet size " + std::to_string(_bytes.length()) +
+            " at offset " + std::to_string(_iAdaptationField));
+
+    // Copy back a potentially modified Adaptation Field into the TS packet.
+    auto outIter = _bytes.begin() + _iAdaptationField;
+    for (auto inIter = afBytes.cbegin(); inIter != afBytes.cend(); inIter++)
+        *outIter++ = *inIter;
 }
 
 QByteArray TSPacket::payloadData() const
@@ -337,6 +366,22 @@ bool TSPacket::AdaptationField::flagsValid() const
 bool TSPacket::AdaptationField::discontinuityIndicator() const
 {
     return _discontinuityIndicator;
+}
+
+void TSPacket::AdaptationField::setDiscontinuityIndicator(bool discontinuity)
+{
+    int byteIdx = 1;
+    if (!(byteIdx < _bytes.length()))
+        throw std::runtime_error("TS packet, Adaptation Field: Can't set Discontinuity Indicator: "
+                                 "Byte index " + std::to_string(byteIdx) + " past end of Adaptation Field!");
+
+    quint8 byte = _bytes.at(byteIdx);
+    if (discontinuity)
+        byte |= 0x01 << 7;
+    else
+        byte &= 0x7f;
+    _bytes[byteIdx] = byte;
+    _discontinuityIndicator = discontinuity;
 }
 
 bool TSPacket::AdaptationField::randomAccessIndicator() const

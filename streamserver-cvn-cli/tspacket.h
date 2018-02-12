@@ -123,6 +123,7 @@ public:
         quint8 length() const;
         bool flagsValid() const;
         bool discontinuityIndicator() const;
+        void setDiscontinuityIndicator(bool discontinuity);
         bool randomAccessIndicator() const;
         bool ESPrioIndicator() const;
         bool PCRFlag() const;
@@ -166,7 +167,9 @@ public:
     TSCType TSC() const;
     AdaptationFieldControlType adaptationFieldControl() const;
     quint8 continuityCounter() const;
+    std::shared_ptr<      AdaptationField> adaptationField();
     std::shared_ptr<const AdaptationField> adaptationField() const;
+    void updateAdaptationfieldBytes();
     QByteArray payloadData() const;
 
     QByteArray toBasicPacketBytes() const;
