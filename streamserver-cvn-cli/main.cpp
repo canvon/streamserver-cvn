@@ -266,14 +266,14 @@ int main(int argc, char *argv[])
         }
     }
 
-    std::shared_ptr<StreamServer::BrakeType> brakeTypePtr;
+    std::unique_ptr<StreamServer::BrakeType> brakeTypePtr;
     {
         QString valueStr = parser.value("brake");
         if (!valueStr.isNull()) {
             if (valueStr == "none")
-                brakeTypePtr = std::make_shared<StreamServer::BrakeType>(StreamServer::BrakeType::None);
+                brakeTypePtr = std::make_unique<StreamServer::BrakeType>(StreamServer::BrakeType::None);
             else if (valueStr == "pcrsleep")
-                brakeTypePtr = std::make_shared<StreamServer::BrakeType>(StreamServer::BrakeType::PCRSleep);
+                brakeTypePtr = std::make_unique<StreamServer::BrakeType>(StreamServer::BrakeType::PCRSleep);
             else if (valueStr == "help") {
                 qInfo() << "Available brake types:"
                         << "none, pcrsleep (default)";
