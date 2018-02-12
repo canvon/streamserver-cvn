@@ -188,6 +188,8 @@ void StreamServer::initInput()
     if (!_inputFilePtr->isOpen()) {
         const QString fileName = _inputFilePtr->fileName();
 
+        if (_tsPacketAutosize)
+            _tsPacketSize = 0;  // Request immediate re-detection.
         _openRealTimeValid = false;
         _openRealTime = 0;
         if (verbose >= -1)
