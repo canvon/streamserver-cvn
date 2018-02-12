@@ -177,25 +177,46 @@ void updateIsSystemdJournal() {
     }
 }
 
+QString signalNumberToString(int signum)
+{
+    switch (signum) {
+    case SIGINT:
+        return "SIGINT/^C";
+    case SIGTERM:
+        return "SIGTERM/kill";
+    default:
+        return "(unrecognized signal number " + QString::number(signum) + ")";
+    }
+}
+
 static void handleSignal(int signum)
 {
     if (verbose >= 1)
-        qDebug() << "Got signal" << signum;
+        qDebug() << "Got signal number" << signum;
+
+    QString sigStr = signalNumberToString(signum);
 
     switch (signum) {
     case SIGINT:
     case SIGTERM:
         if (server) {
-            if (verbose >= -1)
-                qInfo() << "Calling stream server to shut down";
+            if (verbose >= -1) {
+                qInfo().nospace()
+                    << "Got signal " << qPrintable(sigStr) << "."
+                    << " Calling stream server to shut down...";
+            }
             server->shutdown();
         }
         else if (qApp) {
-            qCritical() << "No stream server! Calling application object to leave event loop";
+            qCritical().nospace()
+                << "Got signal " << qPrintable(sigStr) << ". (again?)"
+                << " No stream server! Calling application object to leave event loop";
             qApp->exit(1);
         }
         else {
-            qCritical() << "No stream server and no application object! Exiting";
+            qCritical().nospace()
+                << "Got signal " << qPrintable(sigStr) << ". (again?)"
+                << " No stream server and no application object! Exiting";
             exit(1);
         }
         break;
@@ -209,9 +230,9 @@ void setupSignals()
     act.sa_handler = &handleSignal;
 
     if (sigaction(SIGINT, &act, nullptr) != 0)
-        throw std::system_error(errno, std::generic_category(), "Can't set signal handler for SIGINT/^C");
+        throw std::system_error(errno, std::generic_category(), "Can't set signal handler for " + signalNumberToString(SIGINT).toStdString());
     if (sigaction(SIGTERM, &act, nullptr) != 0)
-        throw std::system_error(errno, std::generic_category(), "Can't set signal handler for SIGTERM/kill");
+        throw std::system_error(errno, std::generic_category(), "Can't set signal handler for " + signalNumberToString(SIGTERM).toStdString());
 }
 
 int main(int argc, char *argv[])
