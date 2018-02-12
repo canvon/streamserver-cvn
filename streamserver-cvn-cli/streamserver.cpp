@@ -99,6 +99,8 @@ StreamServer::BrakeType StreamServer::brakeType() const
 
 void StreamServer::setBrakeType(StreamServer::BrakeType type)
 {
+    if (verbose >= 1)
+        qInfo() << "Changing brake type from" << _brakeType << "to" << type;
     _brakeType = type;
 }
 

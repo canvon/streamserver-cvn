@@ -36,6 +36,7 @@ public:
         None,
         PCRSleep,
     };
+    Q_ENUM(BrakeType)
 private:
     BrakeType               _brakeType = BrakeType::PCRSleep;
 
