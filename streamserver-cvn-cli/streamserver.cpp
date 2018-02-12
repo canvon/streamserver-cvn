@@ -48,6 +48,11 @@ StreamServer::StreamServer(std::unique_ptr<QFile> inputFilePtr, quint16 listenPo
             this, &StreamServer::clientDisconnected);
 }
 
+bool StreamServer::isShuttingDown() const
+{
+    return _isShuttingDown;
+}
+
 quint16 StreamServer::listenPort() const
 {
     return _listenPort;
@@ -182,6 +187,15 @@ void StreamServer::clientDisconnected(QObject *objPtr)
 
     if (verbose >= 0)
         qInfo() << "Client count:" << _clients.length();
+
+    if (_isShuttingDown && _clients.length() == 0) {
+        if (verbose >= -1)
+            qInfo() << "Shutdown: Client count reached zero, exiting event loop";
+        if (qApp)
+            qApp->exit();
+        else
+            qFatal("Shutdown: No application object!");
+    }
 }
 
 void StreamServer::initInput()
@@ -475,5 +489,43 @@ void StreamServer::processInput()
     catch (std::exception &ex) {
         qWarning() << "Error processing input bytes as TS packet & sending to clients:" << QString(ex.what());
         return;
+    }
+}
+
+void StreamServer::shutdown()
+{
+    if (_isShuttingDown) {
+        qCritical() << "Shutdown called while already shutting down;"
+                    << "immediately exiting event loop";
+        if (qApp) {
+            qApp->exit();
+            return;
+        }
+        else
+            qFatal("Shutdown: Can't access application object to exit event loop");
+    }
+
+    if (verbose >= 0)
+        qInfo() << "Shutting down...";
+    _isShuttingDown = true;
+
+    if (verbose >= 1)
+        qInfo() << "Shutdown: Closing listening socket...";
+    _listenSocket.close();
+
+    if (_clients.length() > 0) {
+        if (verbose >= 0)
+            qInfo() << "Shutdown: Closing client connections...";
+        for (auto client : _clients)
+            client->close();
+        // Be sure to return to event loop after this!
+    }
+    else {
+        if (verbose >= -1)
+            qInfo() << "Shutdown: No clients, exiting event loop";
+        if (qApp)
+            qApp->exit();
+        else
+            qFatal("Shutdown: No application object!");
     }
 }

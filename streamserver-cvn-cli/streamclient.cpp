@@ -220,6 +220,17 @@ void StreamClient::processRequest()
     }
 }
 
+void StreamClient::close()
+{
+    // TODO: Respect current connection state,
+    //       and ensure that all proper requests
+    //       receive a proper reply...
+
+    if (verbose >= 0)
+        qInfo() << qPrintable(_logPrefix) << "Closing down... (programmatic request)";
+    _socketPtr->close();
+}
+
 void StreamClient::receiveData()
 {
     if (verbose >= 2)

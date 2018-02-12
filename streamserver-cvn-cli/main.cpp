@@ -9,6 +9,7 @@
 #include <signal.h>
 
 #include <memory>
+#include <QPointer>
 #include <QDateTime>
 #include <QTextStream>
 #include <QCommandLineParser>
@@ -20,6 +21,8 @@ int debug_level = 0;  // No debugging.
 bool isSystemdJournal_stdout = false;
 bool isSystemdJournal_stderr = false;
 const char systemdJournalEnvVarName[] = "JOURNAL_STREAM";
+
+QPointer<StreamServer> server;
 
 namespace {
     bool logStarting = true;
@@ -176,11 +179,25 @@ void updateIsSystemdJournal() {
 
 static void handleSignal(int signum)
 {
+    if (verbose >= 1)
+        qDebug() << "Got signal" << signum;
+
     switch (signum) {
     case SIGINT:
     case SIGTERM:
-        if (qApp)
-            qApp->exit();
+        if (server) {
+            if (verbose >= -1)
+                qInfo() << "Calling stream server to shut down";
+            server->shutdown();
+        }
+        else if (qApp) {
+            qCritical() << "No stream server! Calling application object to leave event loop";
+            qApp->exit(1);
+        }
+        else {
+            qCritical() << "No stream server and no application object! Exiting";
+            exit(1);
+        }
         break;
     }
 }
@@ -327,6 +344,7 @@ int main(int argc, char *argv[])
 
 
     StreamServer server(std::make_unique<QFile>(inputFilePath), listenPort);
+    ::server = &server;
 
     try {
         if (tsPacketSizePtr) {

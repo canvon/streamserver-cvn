@@ -57,6 +57,8 @@ public:
     void sendData();
     void processRequest();
 
+    void close();
+
 signals:
 
 public slots:

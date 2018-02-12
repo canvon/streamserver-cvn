@@ -18,6 +18,7 @@ class StreamServer : public QObject
 {
     Q_OBJECT
 
+    bool                    _isShuttingDown = false;
     quint16                 _listenPort;
     QTcpServer              _listenSocket;
     std::unique_ptr<QFile>  _inputFilePtr;
@@ -47,6 +48,7 @@ private:
 public:
     explicit StreamServer(std::unique_ptr<QFile> inputFilePtr, quint16 listenPort = 8000, QObject *parent = 0);
 
+    bool         isShuttingDown() const;
     quint16      listenPort() const;
     QFile       &inputFile();
     const QFile &inputFile() const;
@@ -64,6 +66,7 @@ signals:
 
 public slots:
     void processInput();
+    void shutdown();
 
 private slots:
     void clientConnected();
