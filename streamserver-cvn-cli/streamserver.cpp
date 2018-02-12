@@ -79,6 +79,8 @@ void StreamServer::setTSPacketSize(qint64 size)
     if (!(TSPacket::lengthBasic <= size && size <= TSPacket::lengthBasic * 2))
         throw std::runtime_error("Stream server: Can't set TS packet size to invalid value " + std::to_string(size));
 
+    if (verbose >= 1)
+        qInfo() << "Changing TS packet size from" << _tsPacketSize << "to" << size;
     _tsPacketSize = size;
 }
 
@@ -89,6 +91,8 @@ bool StreamServer::tsPacketAutosize() const
 
 void StreamServer::setTSPacketAutosize(bool autosize)
 {
+    if (verbose >= 1)
+        qInfo() << "Changing TS packet autosize from" << _tsPacketAutosize << "to" << autosize;
     _tsPacketAutosize = autosize;
 }
 
