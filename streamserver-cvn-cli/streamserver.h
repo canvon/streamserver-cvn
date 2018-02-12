@@ -28,6 +28,7 @@ class StreamServer : public QObject
     int                     _inputConsecutiveErrorCount = 0;
     qint64                  _tsPacketSize = 0;  // Request immediate automatic detection.
     bool                    _tsPacketAutosize = true;
+    bool                    _tsStripAdditionalInfoDefault = true;
     bool                    _openRealTimeValid = false;
     double                  _openRealTime = 0;
     double                  _lastRealTime = 0;
@@ -56,6 +57,8 @@ public:
     void         setTSPacketSize(qint64 size);
     bool         tsPacketAutosize() const;
     void         setTSPacketAutosize(bool autosize);
+    bool         tsStripAdditionalInfoDefault() const;
+    void         setTSStripAdditionalInfoDefault(bool strip);
     BrakeType    brakeType() const;
     void         setBrakeType(BrakeType type);
 

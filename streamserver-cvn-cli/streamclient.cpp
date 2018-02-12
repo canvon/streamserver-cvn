@@ -69,6 +69,18 @@ const HTTPReply *StreamClient::httpReply() const
     return _httpReplyPtr.get();
 }
 
+bool StreamClient::tsStripAdditionalInfo() const
+{
+    return _tsStripAdditionalInfo;
+}
+
+void StreamClient::setTSStripAdditionalInfo(bool strip)
+{
+    if (verbose >= 2)
+        qInfo() << qPrintable(_logPrefix) << "Changing TS strip additional info from" << _tsStripAdditionalInfo << "to" << strip;
+    _tsStripAdditionalInfo = strip;
+}
+
 void StreamClient::queuePacket(const TSPacket &packet)
 {
     if (!_forwardPackets) {
@@ -123,13 +135,20 @@ void StreamClient::sendData()
 
     while (!_sendBuf.isEmpty() || !_queue.isEmpty()) {
         // Fill send buffer up to 1KiB.
-        while (!_queue.isEmpty() && _sendBuf.length() + _queue.front().bytes().length() <= 1024) {
-            if (verbose >= 2)
-                qDebug() << qPrintable(_logPrefix) << "Filling send buffer with" << _queue.front().bytes().length() << "bytes";
-            if (verbose >= 3)
-                qDebug() << qPrintable(_logPrefix) << "Filling with data:" << _queue.front().bytes();
+        while (!_queue.isEmpty()) {
+            const TSPacket &packet(_queue.front());
+            const QByteArray bytes = _tsStripAdditionalInfo ?
+                packet.toBasicPacketBytes() :
+                packet.bytes();
+            if (!(_sendBuf.length() + bytes.length() <= 1024))
+                break;
 
-            _sendBuf.append(_queue.front().bytes());
+            if (verbose >= 2)
+                qDebug() << qPrintable(_logPrefix) << "Filling send buffer with" << bytes.length() << "bytes";
+            if (verbose >= 3)
+                qDebug() << qPrintable(_logPrefix) << "Filling with data:" << bytes;
+
+            _sendBuf.append(bytes);
             _queue.pop_front();
         }
 

@@ -101,6 +101,18 @@ void StreamServer::setTSPacketAutosize(bool autosize)
     _tsPacketAutosize = autosize;
 }
 
+bool StreamServer::tsStripAdditionalInfoDefault() const
+{
+    return _tsStripAdditionalInfoDefault;
+}
+
+void StreamServer::setTSStripAdditionalInfoDefault(bool strip)
+{
+    if (verbose >= 1)
+        qInfo() << "Changing TS strip additional info default from" << _tsStripAdditionalInfoDefault << "to" << strip;
+    _tsStripAdditionalInfoDefault = strip;
+}
+
 StreamServer::BrakeType StreamServer::brakeType() const
 {
     return _brakeType;
@@ -131,6 +143,7 @@ void StreamServer::clientConnected()
     std::shared_ptr<StreamClient> clientPtr(
         new StreamClient(std::move(socketPtr), _nextClientID++, this),
         std::mem_fn(&StreamClient::deleteLater));
+    clientPtr->setTSStripAdditionalInfo(_tsStripAdditionalInfoDefault);
     _clientDisconnectedMapper.setMapping(&clientPtr->socket(), clientPtr.get());
     connect(&clientPtr->socket(), &QTcpSocket::disconnected,
             &_clientDisconnectedMapper, static_cast<void(QSignalMapper::*)()>(&QSignalMapper::map));

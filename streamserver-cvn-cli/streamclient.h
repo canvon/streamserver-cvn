@@ -35,6 +35,7 @@ private:
     std::unique_ptr<HTTPReply>   _httpReplyPtr;
     bool                         _replyHeaderSent = false;
     bool                         _forwardPackets = false;
+    bool                         _tsStripAdditionalInfo = true;
     QList<TSPacket>              _queue;
     QByteArray                   _sendBuf;
 
@@ -52,6 +53,9 @@ public:
     quint64 socketBytesSent() const;
     const HTTPRequest &httpRequest() const;
     const HTTPReply   *httpReply()   const;
+
+    bool tsStripAdditionalInfo() const;
+    void setTSStripAdditionalInfo(bool strip);
 
     void queuePacket(const TSPacket &packet);
     void sendData();

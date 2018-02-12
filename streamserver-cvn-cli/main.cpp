@@ -263,6 +263,9 @@ int main(int argc, char *argv[])
           "mode" },
         { { "s", "ts-packet-size" }, "MPEG-TS packet size (e.g., 188 bytes)",
           "size" },
+        { "ts-strip-additional-info", "Strip additional info beyond 188 bytes basic packet size "
+          "from TS packets",
+          "flag" },
         { "brake", "Set brake type to use to slow down input that is coming in too fast: "
           "none, pcrsleep (default)",
           "type" },
@@ -328,6 +331,20 @@ int main(int argc, char *argv[])
             }
         }
     }
+    std::unique_ptr<bool> tsStripAdditionalInfoPtr;
+    {
+        QString valueStr = parser.value("ts-strip-additional-info");
+        if (!valueStr.isNull()) {
+            if (valueStr == "0" || valueStr == "false" || valueStr == "no")
+                tsStripAdditionalInfoPtr = std::make_unique<bool>(false);
+            else if (valueStr == "1" || valueStr == "true" || valueStr == "yes")
+                tsStripAdditionalInfoPtr = std::make_unique<bool>(true);
+            else {
+                qCritical() << "TS strip additional info: Invalid flag value" << valueStr;
+                return 2;
+            }
+        }
+    }
 
     std::unique_ptr<StreamServer::BrakeType> brakeTypePtr;
     {
@@ -372,6 +389,9 @@ int main(int argc, char *argv[])
             server.setTSPacketSize(*tsPacketSizePtr);
             server.setTSPacketAutosize(false);
         }
+
+        if (tsStripAdditionalInfoPtr)
+            server.setTSStripAdditionalInfoDefault(*tsStripAdditionalInfoPtr);
 
         if (brakeTypePtr)
             server.setBrakeType(*brakeTypePtr);
