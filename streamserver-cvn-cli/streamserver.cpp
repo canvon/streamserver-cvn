@@ -191,13 +191,13 @@ void StreamServer::initInput()
         _openRealTimeValid = false;
         _openRealTime = 0;
         if (verbose >= -1)
-            qInfo() << "Opening input file" << fileName << "...";
+            qInfo().nospace() << "Opening input file " << fileName << "...";
 
         if (!_inputFilePtr->open(QFile::ReadOnly)) {
             const QString err = _inputFilePtr->errorString();
-            qCritical() << "Can't open input file" << fileName
-                        << "due to" << err
-                        << ", excepting.";
+            qCritical().nospace()
+                << "Can't open input file " << fileName
+                << ": " << qPrintable(err);
             //qApp->exit(1);  // We can't always do this, as the main loop maybe has not started yet, so exiting it will have no effect!
             throw std::runtime_error("Can't open input file \"" + fileName.toStdString() + "\": " + err.toStdString());
         }
