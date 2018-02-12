@@ -2,9 +2,11 @@
 
 #include "streamserver.h"
 
+#include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <signal.h>
 
 #include <memory>
 #include <QDateTime>
@@ -172,6 +174,29 @@ void updateIsSystemdJournal() {
     }
 }
 
+static void handleSignal(int signum)
+{
+    switch (signum) {
+    case SIGINT:
+    case SIGTERM:
+        if (qApp)
+            qApp->exit();
+        break;
+    }
+}
+
+void setupSignals()
+{
+    struct ::sigaction act;
+    memset(&act, 0, sizeof(act));
+    act.sa_handler = &handleSignal;
+
+    if (sigaction(SIGINT, &act, nullptr) != 0)
+        throw std::system_error(errno, std::generic_category(), "Can't set signal handler for SIGINT/^C");
+    if (sigaction(SIGTERM, &act, nullptr) != 0)
+        throw std::system_error(errno, std::generic_category(), "Can't set signal handler for SIGTERM/kill");
+}
+
 int main(int argc, char *argv[])
 {
     updateIsSystemdJournal();
@@ -316,6 +341,14 @@ int main(int argc, char *argv[])
     }
     catch (std::exception &ex) {
         qCritical() << "Error initializing stream server:" << ex.what();
+        return 1;
+    }
+
+    try {
+        setupSignals();
+    }
+    catch (std::exception &ex) {
+        qCritical() << "Error setting up signals:" << ex.what();
         return 1;
     }
 
