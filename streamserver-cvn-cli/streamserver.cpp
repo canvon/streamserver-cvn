@@ -194,7 +194,7 @@ void StreamServer::clientDisconnected(QObject *objPtr)
         if (qApp)
             qApp->exit();
         else
-            qFatal("Shutdown: No application object!");
+            qFatal("Shutdown: Can't access application object to exit event loop");
     }
 }
 
@@ -526,6 +526,6 @@ void StreamServer::shutdown()
         if (qApp)
             qApp->exit();
         else
-            qFatal("Shutdown: No application object!");
+            qFatal("Shutdown: Can't access application object to exit event loop");
     }
 }
