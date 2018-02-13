@@ -260,6 +260,8 @@ int main(int argc, char *argv[])
         { "brake", "Set brake type to use to slow down input that is coming in too fast: "
           "none, pcrsleep (default)",
           "type" },
+        { "input-open-nonblock", "Open input in non-blocking mode",
+          "flag" },
         { "input-reopen-timeout", "Timeout before reopening input after EOF",
           "timeMillisec" },
     });
@@ -324,6 +326,7 @@ int main(int argc, char *argv[])
             }
         }
     }
+
     std::unique_ptr<bool> tsStripAdditionalInfoPtr;
     {
         QString valueStr = parser.value("ts-strip-additional-info");
@@ -354,6 +357,21 @@ int main(int argc, char *argv[])
             }
             else {
                 qCritical() << "Invalid brake type" << valueStr;
+                return 2;
+            }
+        }
+    }
+
+    std::unique_ptr<bool> inputFileOpenNonblockingPtr;
+    {
+        QString valueStr = parser.value("input-open-nonblock");
+        if (!valueStr.isNull()) {
+            if (valueStr == "0" || valueStr == "false" || valueStr == "no")
+                inputFileOpenNonblockingPtr = std::make_unique<bool>(false);
+            else if (valueStr == "1" || valueStr == "true" || valueStr == "yes")
+                inputFileOpenNonblockingPtr = std::make_unique<bool>(true);
+            else {
+                qCritical() << "Input open non-block: Invalid flag value" << valueStr;
                 return 2;
             }
         }
@@ -402,6 +420,9 @@ int main(int argc, char *argv[])
 
         if (brakeTypePtr)
             server.setBrakeType(*brakeTypePtr);
+
+        if (inputFileOpenNonblockingPtr)
+            server.setInputFileOpenNonblocking(*inputFileOpenNonblockingPtr);
 
         if (inputFileReopenTimeoutMillisecPtr)
             server.setInputFileReopenTimeoutMillisec(*inputFileReopenTimeoutMillisecPtr);

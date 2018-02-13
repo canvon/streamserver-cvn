@@ -23,6 +23,7 @@ class StreamServer : public QObject
     QTcpServer              _listenSocket;
     std::unique_ptr<QFile>  _inputFilePtr;
     QString                 _inputFileName;
+    bool                    _inputFileOpenNonblocking = true;
     std::unique_ptr<QSocketNotifier>  _inputFileNotifierPtr;
     QTimer                  _inputFileReopenTimer;
     int                     _inputFileReopenTimeoutMillisec = 1000;
@@ -54,6 +55,8 @@ public:
     quint16      listenPort() const;
     QFile       &inputFile();
     const QFile &inputFile() const;
+    bool         inputFileOpenNonblocking() const;
+    void         setInputFileOpenNonblocking(bool nonblock);
     int          inputFileReopenTimeoutMillisec() const;
     void         setInputFileReopenTimeoutMillisec(int timeoutMillisec);
     qint64       tsPacketSize() const;

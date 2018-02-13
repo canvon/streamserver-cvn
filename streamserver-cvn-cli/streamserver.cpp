@@ -78,6 +78,18 @@ const QFile &StreamServer::inputFile() const
     return *_inputFilePtr;
 }
 
+bool StreamServer::inputFileOpenNonblocking() const
+{
+    return _inputFileOpenNonblocking;
+}
+
+void StreamServer::setInputFileOpenNonblocking(bool nonblock)
+{
+    if (verbose >= 1)
+        qInfo() << "Changing input file open non-blocking from" << _inputFileOpenNonblocking << "to" << nonblock;
+    _inputFileOpenNonblocking = nonblock;
+}
+
 int StreamServer::inputFileReopenTimeoutMillisec() const
 {
     return _inputFileReopenTimeoutMillisec;
@@ -248,19 +260,31 @@ void StreamServer::initInput()
         if (verbose >= -1)
             qInfo().nospace() << "Opening input file " << fileName << "...";
 
-        int fd = open(QFile::encodeName(fileName).constData(), O_RDONLY | O_NONBLOCK);
-        if (fd < 0)
-            throw std::system_error(errno, std::generic_category(),
-                                    "Can't open input file \"" + fileName.toStdString() + "\"");
+        bool openSucceeded = false;
+        QString errMsgInfix;
+        if (_inputFileOpenNonblocking) {
+            int fd = open(QFile::encodeName(fileName).constData(), O_RDONLY | O_NONBLOCK);
+            if (fd < 0)
+                throw std::system_error(errno, std::generic_category(),
+                                        "Can't open input file \"" + fileName.toStdString() + "\"");
+            openSucceeded = _inputFilePtr->open(fd, QFile::ReadOnly, QFile::AutoCloseHandle);
+            if (!openSucceeded) {
+                errMsgInfix = " from fd " + QString::number(fd);
+                close(fd);
+            }
+        }
+        else {
+            openSucceeded = _inputFilePtr->open(QFile::ReadOnly);
+        }
 
-        if (!_inputFilePtr->open(fd, QFile::ReadOnly, QFile::AutoCloseHandle)) {
+        if (!openSucceeded) {
             const QString err = _inputFilePtr->errorString();
-            close(fd);
             qCritical().nospace()
                 << "Can't open input file " << fileName
-                << " from fd " << fd << ": " << qPrintable(err);
+                << qPrintable(errMsgInfix) << ": " << qPrintable(err);
             //qApp->exit(1);  // We can't always do this, as the main loop maybe has not started yet, so exiting it will have no effect!
-            throw std::runtime_error("Can't open input file \"" + fileName.toStdString() + "\" from fd: " + err.toStdString());
+            throw std::runtime_error("Can't open input file \"" + fileName.toStdString() + "\"" +
+                                     errMsgInfix.toStdString() + ": " + err.toStdString());
         }
     }
 
