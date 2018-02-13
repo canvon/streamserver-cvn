@@ -69,7 +69,7 @@ signals:
 
 public slots:
     void processInput();
-    void shutdown();
+    void shutdown(int sigNum = 0, const QString &sigStr = QString());
 
 private slots:
     void clientConnected();

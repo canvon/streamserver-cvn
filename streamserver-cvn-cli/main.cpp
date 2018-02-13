@@ -22,6 +22,8 @@ bool isSystemdJournal_stdout = false;
 bool isSystemdJournal_stderr = false;
 const char systemdJournalEnvVarName[] = "JOURNAL_STREAM";
 
+sig_atomic_t lastSigNum = 0;
+
 QPointer<StreamServer> server;
 
 namespace {
@@ -189,45 +191,34 @@ QString signalNumberToString(int signum)
     }
 }
 
-static void handleSignal(int signum)
+static void handleSignalShutdown(int sigNum)
 {
-    if (verbose >= 1)
-        qDebug() << "Got signal number" << signum;
+    const QString sigStr = signalNumberToString(sigNum);
 
-    QString sigStr = signalNumberToString(signum);
-
-    switch (signum) {
-    case SIGINT:
-    case SIGTERM:
-        if (server) {
-            if (verbose >= -1) {
-                qInfo().nospace()
-                    << "Got signal " << qPrintable(sigStr) << "."
-                    << " Calling stream server to shut down...";
-            }
-            server->shutdown();
-        }
-        else if (qApp) {
-            qCritical().nospace()
-                << "Got signal " << qPrintable(sigStr) << ". (again?)"
-                << " No stream server! Calling application object to leave event loop";
-            qApp->exit(1);
-        }
-        else {
-            qCritical().nospace()
-                << "Got signal " << qPrintable(sigStr) << ". (again?)"
-                << " No stream server and no application object! Exiting";
-            exit(1);
-        }
-        break;
+    int theLastSigNum = lastSigNum;
+    if (theLastSigNum) {
+        const QString lastSigStr = signalNumberToString(theLastSigNum);
+        qFatal("Handle signal %s: Already handling signal %s",
+               qPrintable(sigStr), qPrintable(lastSigStr));
     }
+    lastSigNum = sigNum;
+
+    StreamServer *theServer = ::server;
+    if (theServer) {
+        if (!QMetaObject::invokeMethod(theServer, "shutdown", Qt::QueuedConnection,
+                                       Q_ARG(int, sigNum), Q_ARG(QString, sigStr)))
+            qFatal("Handle signal %s: Invoking shutdown on stream server failed",
+                   qPrintable(sigStr));
+    }
+    else
+        qFatal("Handle signal %s: No stream server!", qPrintable(sigStr));
 }
 
 void setupSignals()
 {
     struct ::sigaction act;
     memset(&act, 0, sizeof(act));
-    act.sa_handler = &handleSignal;
+    act.sa_handler = &handleSignalShutdown;
 
     if (sigaction(SIGINT, &act, nullptr) != 0)
         throw std::system_error(errno, std::generic_category(), "Can't set signal handler for " + signalNumberToString(SIGINT).toStdString());

@@ -505,8 +505,17 @@ void StreamServer::processInput()
     }
 }
 
-void StreamServer::shutdown()
+void StreamServer::shutdown(int sigNum, const QString &sigStr)
 {
+    if (sigNum > 0) {
+        if (verbose >= -1) {
+            if (sigStr.isEmpty())
+                qInfo() << "Got signal number" << sigNum;
+            else
+                qInfo() << "Got signal" << qPrintable(sigStr);
+        }
+    }
+
     if (_isShuttingDown) {
         qCritical() << "Shutdown called while already shutting down;"
                     << "immediately exiting event loop";
