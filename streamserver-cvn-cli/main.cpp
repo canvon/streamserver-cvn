@@ -260,6 +260,8 @@ int main(int argc, char *argv[])
         { "brake", "Set brake type to use to slow down input that is coming in too fast: "
           "none, pcrsleep (default)",
           "type" },
+        { "input-reopen-timeout", "Timeout before reopening input after EOF",
+          "timeMillisec" },
     });
     parser.addPositionalArgument("input", "Input file name");
     parser.process(a);
@@ -357,6 +359,20 @@ int main(int argc, char *argv[])
         }
     }
 
+    std::unique_ptr<int> inputFileReopenTimeoutMillisecPtr;
+    {
+        QString valueStr = parser.value("input-reopen-timeout");
+        if (!valueStr.isNull()) {
+            bool ok = false;
+            inputFileReopenTimeoutMillisecPtr = std::make_unique<int>(valueStr.toUInt(&ok));
+            if (!ok) {
+                inputFileReopenTimeoutMillisecPtr.reset();
+                qCritical() << "Input reopen timeout: Conversion to number failed for" << valueStr;
+                return 2;
+            }
+        }
+    }
+
 
     QStringList args = parser.positionalArguments();
     if (args.length() != 1) {
@@ -386,6 +402,9 @@ int main(int argc, char *argv[])
 
         if (brakeTypePtr)
             server.setBrakeType(*brakeTypePtr);
+
+        if (inputFileReopenTimeoutMillisecPtr)
+            server.setInputFileReopenTimeoutMillisec(*inputFileReopenTimeoutMillisecPtr);
 
         server.initInput();
     }

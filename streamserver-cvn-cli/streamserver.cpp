@@ -74,6 +74,18 @@ const QFile &StreamServer::inputFile() const
     return *_inputFilePtr;
 }
 
+int StreamServer::inputFileReopenTimeoutMillisec() const
+{
+    return _inputFileReopenTimeoutMillisec;
+}
+
+void StreamServer::setInputFileReopenTimeoutMillisec(int timeoutMillisec)
+{
+    if (verbose >= 1)
+        qInfo() << "Changing input file reopen timeout from" << _inputFileReopenTimeoutMillisec << "ms to" << timeoutMillisec << "ms";
+    _inputFileReopenTimeoutMillisec = timeoutMillisec;
+}
+
 qint64 StreamServer::tsPacketSize() const
 {
     return _tsPacketSize;

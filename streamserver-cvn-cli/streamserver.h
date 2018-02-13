@@ -53,6 +53,8 @@ public:
     quint16      listenPort() const;
     QFile       &inputFile();
     const QFile &inputFile() const;
+    int          inputFileReopenTimeoutMillisec() const;
+    void         setInputFileReopenTimeoutMillisec(int timeoutMillisec);
     qint64       tsPacketSize() const;
     void         setTSPacketSize(qint64 size);
     bool         tsPacketAutosize() const;
