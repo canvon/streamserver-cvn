@@ -228,35 +228,46 @@ void setupSignals()
 
 namespace {
 void handleTerminate() {
-    auto exPtr = std::current_exception();
-    if (!exPtr) {
-        qDebug() << "Handle terminate called with no exception handling in progress";
-        return;
-    }
-
     try {
-        std::rethrow_exception(exPtr);
-    }
-    catch (const std::exception &ex) {
-        qCritical().nospace()
-            << "Uncaught exception of type " << typeid(ex).name()
-            << ": " << ex.what();
-    }
-    catch (...) {
-        qCritical() << "Uncaught exception of unknown type";
-    }
+        auto exPtr = std::current_exception();
+        if (!exPtr) {
+            qDebug() << "Handle terminate called with no exception handling in progress";
+            return;
+        }
 
-    if (server) {
-        if (!server->isShuttingDown()) {
-            if (verbose >= 0)
-                qInfo() << "Uncaught exception handling: Trying to shut down server gracefully...";
-            server->shutdown();
+        try {
+            std::rethrow_exception(exPtr);
+        }
+        catch (const std::exception &ex) {
+            qCritical().nospace()
+                << "Uncaught exception of type " << typeid(ex).name()
+                << ": " << ex.what();
+        }
+        catch (...) {
+            qCritical() << "Uncaught exception of unknown type";
+        }
+
+        if (server) {
+            if (!server->isShuttingDown()) {
+                if (verbose >= 0)
+                    qInfo() << "Uncaught exception handling: Trying to shut down server gracefully...";
+                server->shutdown();
+            }
+            else
+                qFatal("Uncaught exception handling: Server was already shutting down");
         }
         else
-            qFatal("Uncaught exception handling: Server was already shutting down");
+            qFatal("Uncaught exception handling: No stream server!");
     }
-    else
-        qFatal("Uncaught exception handling: No stream server!");
+    catch (const std::exception &ex) {
+        fprintf(stderr, "<3>Exception of type %s in uncaught exception handler: %s\n",
+                typeid(ex).name(), ex.what());
+        abort();
+    }
+    catch (...) {
+        fprintf(stderr, "<3>Exception in uncaught exception handler!\n");
+        abort();
+    }
 }
 }
 
