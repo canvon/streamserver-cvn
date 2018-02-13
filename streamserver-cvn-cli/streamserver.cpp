@@ -1,6 +1,10 @@
 #include "streamserver.h"
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <unistd.h>
+
 #include <stdexcept>
 #include <functional>
 #include <QDebug>
@@ -229,7 +233,13 @@ void StreamServer::initInput()
         qInfo() << "Initializing input";
 
     if (!_inputFilePtr->isOpen()) {
-        const QString fileName = _inputFilePtr->fileName();
+        if (_inputFileName.isNull()) {
+            _inputFileName = _inputFilePtr->fileName();
+            if (verbose >= 1)
+                qInfo() << "Initialized input file name from passed-in input file:"
+                        << _inputFileName;
+        }
+        const QString fileName = _inputFileName;
 
         if (_tsPacketAutosize)
             _tsPacketSize = 0;  // Request immediate re-detection.
@@ -238,13 +248,19 @@ void StreamServer::initInput()
         if (verbose >= -1)
             qInfo().nospace() << "Opening input file " << fileName << "...";
 
-        if (!_inputFilePtr->open(QFile::ReadOnly)) {
+        int fd = open(QFile::encodeName(fileName).constData(), O_RDONLY | O_NONBLOCK);
+        if (fd < 0)
+            throw std::system_error(errno, std::generic_category(),
+                                    "Can't open input file \"" + fileName.toStdString() + "\"");
+
+        if (!_inputFilePtr->open(fd, QFile::ReadOnly, QFile::AutoCloseHandle)) {
             const QString err = _inputFilePtr->errorString();
+            close(fd);
             qCritical().nospace()
                 << "Can't open input file " << fileName
-                << ": " << qPrintable(err);
+                << " from fd " << fd << ": " << qPrintable(err);
             //qApp->exit(1);  // We can't always do this, as the main loop maybe has not started yet, so exiting it will have no effect!
-            throw std::runtime_error("Can't open input file \"" + fileName.toStdString() + "\": " + err.toStdString());
+            throw std::runtime_error("Can't open input file \"" + fileName.toStdString() + "\" from fd: " + err.toStdString());
         }
     }
 

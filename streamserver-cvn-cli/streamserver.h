@@ -22,6 +22,7 @@ class StreamServer : public QObject
     quint16                 _listenPort;
     QTcpServer              _listenSocket;
     std::unique_ptr<QFile>  _inputFilePtr;
+    QString                 _inputFileName;
     std::unique_ptr<QSocketNotifier>  _inputFileNotifierPtr;
     QTimer                  _inputFileReopenTimer;
     int                     _inputFileReopenTimeoutMillisec = 1000;
