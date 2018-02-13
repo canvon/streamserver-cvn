@@ -2,6 +2,15 @@
 
 #include "streamserver.h"
 
+#ifdef __GNUC__
+// Added here to be able to manually demangle type name.
+#include <cxxabi.h>
+#define DEMANGLE_TYPENAME(mangled_name) \
+    abi::__cxa_demangle((mangled_name), nullptr, nullptr, nullptr)
+#else
+#define DEMANGLE_TYPENAME(name) (name)
+#endif
+
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -240,7 +249,7 @@ void handleTerminate() {
         }
         catch (const std::exception &ex) {
             qCritical().nospace()
-                << "Uncaught exception of type " << typeid(ex).name()
+                << "Uncaught exception of type " << DEMANGLE_TYPENAME(typeid(ex).name())
                 << ": " << ex.what();
         }
         catch (...) {
@@ -261,7 +270,7 @@ void handleTerminate() {
     }
     catch (const std::exception &ex) {
         fprintf(stderr, "<3>Exception of type %s in uncaught exception handler: %s\n",
-                typeid(ex).name(), ex.what());
+                DEMANGLE_TYPENAME(typeid(ex).name()), ex.what());
         abort();
     }
     catch (...) {
