@@ -257,12 +257,13 @@ void StreamServer::initInput()
             _tsPacketSize = 0;  // Request immediate re-detection.
         _openRealTimeValid = false;
         _openRealTime = 0;
-        if (verbose >= -1)
-            qInfo().nospace() << "Opening input file " << fileName << "...";
 
         bool openSucceeded = false;
         QString errMsgInfix;
         if (_inputFileOpenNonblocking) {
+            if (verbose >= -1)
+                qInfo() << "Opening input file" << fileName << "in non-blocking mode...";
+
             int fd = open(QFile::encodeName(fileName).constData(), O_RDONLY | O_NONBLOCK);
             if (fd < 0)
                 throw std::system_error(errno, std::generic_category(),
@@ -274,6 +275,9 @@ void StreamServer::initInput()
             }
         }
         else {
+            if (verbose >= -1)
+                qInfo() << "Opening input file" << fileName << "in normal (blocking) mode...";
+
             openSucceeded = _inputFilePtr->open(QFile::ReadOnly);
         }
 
