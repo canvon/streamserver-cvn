@@ -349,7 +349,7 @@ void StreamServer::processInput()
         finalizeInput();
 
         if (verbose >= 1)
-            qInfo() << "Setting up timer to open input again";
+            qInfo() << "Setting up timer to open input again after" << _inputFileReopenTimeoutMillisec << "ms";
         _inputFileReopenTimer.singleShot(_inputFileReopenTimeoutMillisec,
             this, &StreamServer::initInput);
 
