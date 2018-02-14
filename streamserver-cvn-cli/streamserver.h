@@ -74,6 +74,7 @@ public:
 signals:
 
 public slots:
+    void initInputSlot();
     void processInput();
     void shutdown(int sigNum = 0, const QString &sigStr = QString());
 

@@ -323,6 +323,25 @@ void StreamServer::finalizeInput()
         qInfo() << "Successfully finalized input";
 }
 
+void StreamServer::initInputSlot()
+{
+    bool succeeded = false;
+    try {
+        initInput();
+        succeeded = true;
+    }
+    catch (std::exception &ex) {
+        qCritical() << "Error (re)initializing input:" << ex.what();
+    }
+    catch (...) {
+        qCritical() << "Unknown error (re)initializing input";
+    }
+
+    if (!succeeded) {
+        shutdown();
+    }
+}
+
 void StreamServer::processInput()
 {
     qint64 readSize = _tsPacketSize;
@@ -395,7 +414,7 @@ void StreamServer::processInput()
         if (verbose >= 1)
             qInfo() << "Setting up timer to open input again after" << _inputFileReopenTimeoutMillisec << "ms";
         _inputFileReopenTimer.singleShot(_inputFileReopenTimeoutMillisec,
-            this, &StreamServer::initInput);
+            this, &StreamServer::initInputSlot);
 
         return;
     }
