@@ -256,6 +256,13 @@ void handleTerminate() {
             qCritical() << "Uncaught exception of unknown type";
         }
 
+        if (debug_level > 0) {
+            qCritical() << "Uncaught exception handling: Debugging turned on,"
+                        << "aborting before graceful server shutdown"
+                        << "in the hopes that the actual problem may be examined";
+            abort();
+        }
+
         if (server) {
             if (!server->isShuttingDown()) {
                 if (verbose >= 0)
