@@ -597,6 +597,8 @@ void StreamServer::shutdown(int sigNum, const QString &sigStr)
         for (auto client : _clients)
             client->close();
         // Be sure to return to event loop after this!
+        if (verbose >= 0)
+            qInfo() << "Shutdown: Done requesting close of all client connections";
     }
     else {
         if (verbose >= -1)
@@ -606,4 +608,7 @@ void StreamServer::shutdown(int sigNum, const QString &sigStr)
         else
             qFatal("Shutdown: Can't access application object to exit event loop");
     }
+
+    if (verbose >= 1)
+        qDebug() << "Shutdown: Returning to caller, expecting to ultimately return to event loop";
 }
