@@ -261,6 +261,22 @@ void handleTerminate() {
                 if (verbose >= 0)
                     qInfo() << "Uncaught exception handling: Trying to shut down server gracefully...";
                 server->shutdown();
+
+                if (qApp) {
+                    // Process events explicitly, as we won't be able to return to event loop. (?)
+                    if (verbose >= 1)
+                        qInfo() << "Uncaught exception handling: Processing events... (We can't return to event loop.)";
+                    //qApp->flush();  // This was not enough.
+                    qApp->processEvents();
+
+                    if (verbose >= 1)
+                        qInfo() << "Uncaught exception handling: Done processing events";
+                    if (verbose >= -1)
+                        qInfo() << "Uncaught exception handling: Exiting with code general error";
+                    exit(1);
+                }
+                else
+                    qFatal("Uncaught exception handling: No application object! Can't flush event loop");
             }
             else
                 qFatal("Uncaught exception handling: Server was already shutting down");
