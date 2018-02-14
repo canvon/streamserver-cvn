@@ -25,7 +25,6 @@ class StreamServer : public QObject
     QString                 _inputFileName;
     bool                    _inputFileOpenNonblocking = true;
     std::unique_ptr<QSocketNotifier>  _inputFileNotifierPtr;
-    QTimer                  _inputFileReopenTimer;
     int                     _inputFileReopenTimeoutMillisec = 1000;
     int                     _inputConsecutiveErrorCount = 0;
     qint64                  _tsPacketSize = 0;  // Request immediate automatic detection.

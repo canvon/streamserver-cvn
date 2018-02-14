@@ -34,7 +34,7 @@ double timenow()
 StreamServer::StreamServer(std::unique_ptr<QFile> inputFilePtr, quint16 listenPort, QObject *parent) :
     QObject(parent),
     _listenPort(listenPort), _listenSocket(this),
-    _inputFilePtr(std::move(inputFilePtr)), _inputFileReopenTimer(this),
+    _inputFilePtr(std::move(inputFilePtr)),
     _clientDisconnectedMapper(this)
 {
     connect(&_listenSocket, &QTcpServer::newConnection, this, &StreamServer::clientConnected);
@@ -413,7 +413,7 @@ void StreamServer::processInput()
 
         if (verbose >= 1)
             qInfo() << "Setting up timer to open input again after" << _inputFileReopenTimeoutMillisec << "ms";
-        _inputFileReopenTimer.singleShot(_inputFileReopenTimeoutMillisec,
+        QTimer::singleShot(_inputFileReopenTimeoutMillisec,
             this, &StreamServer::initInputSlot);
 
         return;
