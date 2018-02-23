@@ -4,8 +4,6 @@
 
 #include "humanreadable.h"
 
-extern int verbose;
-
 TSPacket::TSPacket(const QByteArray &bytes) :
     _bytes(bytes)
 {
