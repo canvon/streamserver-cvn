@@ -20,13 +20,6 @@ bool hasOtherThan(QChar hay, const QByteArray &haystack)
 
 }  // namespace
 
-#if 0
-HumanReadable::HumanReadable()
-{
-
-}
-#endif
-
 QString HumanReadable::byteCount(quint64 count, bool base1000, bool base1024)
 {
     bool both = (base1000 && base1024);
