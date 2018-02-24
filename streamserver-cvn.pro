@@ -1,5 +1,5 @@
 TEMPLATE = subdirs
 
 SUBDIRS += \
-    streamserver-cvn-cli \
-    libinfra
+    libinfra \
+    streamserver-cvn-cli
