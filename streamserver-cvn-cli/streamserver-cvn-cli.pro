@@ -41,3 +41,10 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # In order to do so, uncomment the following line.
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
+
+win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../libinfra/release/ -llibinfra
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../libinfra/debug/ -llibinfra
+else:unix: LIBS += -L$$OUT_PWD/../libinfra/ -llibinfra
+
+INCLUDEPATH += $$PWD/../libinfra
+DEPENDPATH += $$PWD/../libinfra
