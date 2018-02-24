@@ -28,6 +28,6 @@ HEADERS += libinfra.h\
         libinfra_global.h
 
 unix {
-    target.path = /usr/lib
+    target.path = /usr/lib/streamserver-cvn
     INSTALLS += target
 }
