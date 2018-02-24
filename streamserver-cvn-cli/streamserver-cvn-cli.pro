@@ -44,5 +44,8 @@ win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../libinfra/release/ -
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../libinfra/debug/ -linfra
 else:unix: LIBS += -L$$OUT_PWD/../libinfra/ -linfra
 
+!isEmpty(QMAKE_REL_RPATH_BASE): QMAKE_RPATHDIR += . ../libinfra
+unix: QMAKE_RPATHDIR += /usr/lib/streamserver-cvn
+
 INCLUDEPATH += $$PWD/../libinfra
 DEPENDPATH += $$PWD/../libinfra
