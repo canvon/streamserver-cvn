@@ -7,6 +7,7 @@
 QT       -= gui
 
 TARGET = infra
+VERSION = 0.1.0
 TEMPLATE = lib
 
 DEFINES += LIBINFRA_LIBRARY
