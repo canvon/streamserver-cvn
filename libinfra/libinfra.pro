@@ -6,7 +6,7 @@
 
 QT       -= gui
 
-TARGET = libinfra
+TARGET = infra
 TEMPLATE = lib
 
 DEFINES += LIBINFRA_LIBRARY
