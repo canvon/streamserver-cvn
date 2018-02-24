@@ -1,0 +1,12 @@
+#ifndef LIBINFRA_GLOBAL_H
+#define LIBINFRA_GLOBAL_H
+
+#include <QtCore/qglobal.h>
+
+#if defined(LIBINFRA_LIBRARY)
+#  define LIBINFRASHARED_EXPORT Q_DECL_EXPORT
+#else
+#  define LIBINFRASHARED_EXPORT Q_DECL_IMPORT
+#endif
+
+#endif // LIBINFRA_GLOBAL_H
