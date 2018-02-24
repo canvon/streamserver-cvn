@@ -1,11 +1,13 @@
 #ifndef HUMANREADABLE_H
 #define HUMANREADABLE_H
 
+#include "libinfra_global.h"
+
 #include <QString>
 #include <QByteArray>
 #include <QDebug>
 
-class HumanReadable
+class LIBINFRASHARED_EXPORT HumanReadable
 {
 public:
     HumanReadable() = delete;
@@ -28,6 +30,6 @@ public:
     };
 };
 
-QDebug operator<<(QDebug debug, const HumanReadable::Hexdump &dump);
+LIBINFRASHARED_EXPORT QDebug operator<<(QDebug debug, const HumanReadable::Hexdump &dump);
 
 #endif // HUMANREADABLE_H
