@@ -19,6 +19,8 @@ int main(int argc, char *argv[])
 
     QCommandLineParser parser;
     parser.setApplicationDescription("Dump MPEG-TS packet contents");
+    parser.addHelpOption();
+    parser.addPositionalArgument("FILE", "File to parse as MPEG-TS stream", "FILE [...]");
     parser.process(a);
 
     auto args = parser.positionalArguments();
