@@ -1,7 +1,7 @@
 QT += core
 QT -= gui
 
-CONFIG += c++11
+CONFIG += c++14
 
 TARGET = ts-dump
 CONFIG += console
