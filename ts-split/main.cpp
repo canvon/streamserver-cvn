@@ -51,6 +51,7 @@ int main(int argc, char *argv[])
     }
 
     //for (QString arg : args) {
+    errout << a.applicationName() << ": Not implemented, yet!" << endl;
 
     //return a.exec();
     return ret;
