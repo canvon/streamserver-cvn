@@ -15,6 +15,7 @@ int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
     int ret = 0;
+    bool doOffset = false;
     qint64 tsPacketLen = TSPacket::lengthBasic;
 
     QCommandLineParser parser;
@@ -22,11 +23,17 @@ int main(int argc, char *argv[])
     parser.addHelpOption();
     parser.addPositionalArgument("FILE", "File to parse as MPEG-TS stream", "FILE [...]");
     parser.addOptions({
+        { "offset",
+          "Output file offset of TS packet" },
         { { "s", "ts-packet-size" },
           "MPEG-TS packet size (e.g., 188 bytes)",
           "SIZE" },
     });
     parser.process(a);
+
+    // offset
+    if (parser.isSet("offset"))
+        doOffset = true;
 
     // TS packet size
     {
@@ -66,6 +73,7 @@ int main(int argc, char *argv[])
             return 1;
         }
 
+        qint64 offset = 0;
         QByteArray buf(tsPacketLen, 0);
         while (true) {
             qint64 readResult = file.read(buf.data(), buf.size());
@@ -93,6 +101,9 @@ int main(int argc, char *argv[])
                 break;
             }
 
+            if (doOffset)
+                out << offset << " ";
+
             TSPacket packet(buf);
             QString outStr;
             QDebug(&outStr) << packet;
@@ -102,6 +113,9 @@ int main(int argc, char *argv[])
             if (!errMsg.isEmpty()) {
                 out << "^ TS packet error: " << errMsg << endl;
             }
+
+            if (doOffset)
+                offset += buf.length();
         }
 
         if (args.length() > 1)
