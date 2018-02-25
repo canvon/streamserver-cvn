@@ -76,8 +76,14 @@ int main(int argc, char *argv[])
         qint64 offset = 0, tsPacketCount = 0;
         QByteArray buf(tsPacketLen, 0);
         while (true) {
+            if (doOffset)
+                out << "offset=" << offset << " ";
+
             qint64 readResult = file.read(buf.data(), buf.size());
             if (readResult < 0) {
+                if (doOffset)
+                    out << "(err)" << endl;
+
                 errout << a.applicationName()
                        << ": Error reading from \"" << fileName << "\": "
                        << file.errorString()
@@ -88,10 +94,15 @@ int main(int argc, char *argv[])
             }
             else if (readResult == 0) {
                 // Reached EOF.
+                if (doOffset)
+                    out << "(EOF)" << endl;
                 break;
             }
             // TODO: Handle partial reads gracefully.
             else if (readResult != tsPacketLen) {
+                if (doOffset)
+                    out << "(short)" << endl;
+
                 errout << a.applicationName()
                        << ": Got invalid bytes length of " << readResult
                        << " for file \"" << fileName << "\""
@@ -100,9 +111,6 @@ int main(int argc, char *argv[])
                     ret = 1;
                 break;
             }
-
-            if (doOffset)
-                out << "offset=" << offset << " ";
 
             TSPacket packet(buf);
             if (doOffset)
