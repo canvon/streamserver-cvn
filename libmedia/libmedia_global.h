@@ -1,0 +1,12 @@
+#ifndef LIBMEDIA_GLOBAL_H
+#define LIBMEDIA_GLOBAL_H
+
+#include <QtCore/qglobal.h>
+
+#if defined(LIBMEDIA_LIBRARY)
+#  define LIBMEDIASHARED_EXPORT Q_DECL_EXPORT
+#else
+#  define LIBMEDIASHARED_EXPORT Q_DECL_IMPORT
+#endif
+
+#endif // LIBMEDIA_GLOBAL_H
