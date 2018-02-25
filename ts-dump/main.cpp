@@ -72,6 +72,11 @@ int main(int argc, char *argv[])
             QString outStr;
             QDebug(&outStr) << packet;
             out << outStr << endl;
+
+            QString errMsg = packet.errorMessage();
+            if (!errMsg.isEmpty()) {
+                out << "^ TS packet error: " << errMsg << endl;
+            }
         }
 
         if (args.length() > 1)
