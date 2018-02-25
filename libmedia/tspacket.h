@@ -1,13 +1,15 @@
 #ifndef TSPACKET_H
 #define TSPACKET_H
 
+#include "libmedia_global.h"
+
 #include <QObject>
 
 #include <memory>
 #include <QByteArray>
 #include <QDebug>
 
-class TSPacket
+class LIBMEDIASHARED_EXPORT TSPacket
 {
     Q_GADGET
 
@@ -175,8 +177,8 @@ public:
     QByteArray toBasicPacketBytes() const;
 };
 
-QDebug operator<<(QDebug debug, const TSPacket &packet);
-QDebug operator<<(QDebug debug, const TSPacket::AdaptationField &af);
-QDebug operator<<(QDebug debug, const TSPacket::ProgramClockReference &pcr);
+LIBMEDIASHARED_EXPORT QDebug operator<<(QDebug debug, const TSPacket &packet);
+LIBMEDIASHARED_EXPORT QDebug operator<<(QDebug debug, const TSPacket::AdaptationField &af);
+LIBMEDIASHARED_EXPORT QDebug operator<<(QDebug debug, const TSPacket::ProgramClockReference &pcr);
 
 #endif // TSPACKET_H
