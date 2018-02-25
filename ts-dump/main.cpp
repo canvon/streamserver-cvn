@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
             return 1;
         }
 
-        qint64 offset = 0;
+        qint64 offset = 0, tsPacketCount = 0;
         QByteArray buf(tsPacketLen, 0);
         while (true) {
             qint64 readResult = file.read(buf.data(), buf.size());
@@ -102,9 +102,12 @@ int main(int argc, char *argv[])
             }
 
             if (doOffset)
-                out << offset << " ";
+                out << "offset=" << offset << " ";
 
             TSPacket packet(buf);
+            if (doOffset)
+                out << "count=" << ++tsPacketCount << " ";
+
             QString outStr;
             QDebug(&outStr) << packet;
             out << outStr << endl;
