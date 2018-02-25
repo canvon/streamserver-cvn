@@ -21,7 +21,28 @@ int main(int argc, char *argv[])
     parser.setApplicationDescription("Dump MPEG-TS packet contents");
     parser.addHelpOption();
     parser.addPositionalArgument("FILE", "File to parse as MPEG-TS stream", "FILE [...]");
+    parser.addOptions({
+        { { "s", "ts-packet-size" },
+          "MPEG-TS packet size (e.g., 188 bytes)",
+          "SIZE" },
+    });
     parser.process(a);
+
+    // TS packet size
+    {
+        QString valueStr = parser.value("ts-packet-size");
+        if (!valueStr.isNull()) {
+            bool ok = false;
+            tsPacketLen = valueStr.toLongLong(&ok);
+            if (!ok) {
+                errout << a.applicationName() << ": "
+                       << "TS packet size: Conversion to number failed for \""
+                       << valueStr << "\""
+                       << endl;
+                return 2;
+            }
+        }
+    }
 
     auto args = parser.positionalArguments();
     if (!(args.length() > 0)) {
