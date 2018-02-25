@@ -11,14 +11,12 @@ TEMPLATE = app
 
 SOURCES += main.cpp \
     streamserver.cpp \
-    tspacket.cpp \
     streamclient.cpp \
     httprequest.cpp \
     httpreply.cpp
 
 HEADERS += \
     streamserver.h \
-    tspacket.h \
     streamclient.h \
     httprequest.h \
     httpreply.h
