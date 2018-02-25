@@ -43,9 +43,10 @@ int main(int argc, char *argv[])
             return 1;
         }
 
-        while (!file.atEnd()) {
-            QByteArray bytes = file.read(tsPacketLen);
-            if (bytes.isNull()) {
+        QByteArray buf(tsPacketLen, 0);
+        while (true) {
+            qint64 readResult = file.read(buf.data(), buf.size());
+            if (readResult < 0) {
                 errout << a.applicationName()
                        << ": Error reading from \"" << fileName << "\": "
                        << file.errorString()
@@ -54,13 +55,14 @@ int main(int argc, char *argv[])
                     ret = 1;
                 break;
             }
-            else if (bytes.isEmpty()) {
-                // Reached EOF. (?)
+            else if (readResult == 0) {
+                // Reached EOF.
                 break;
             }
-            else if (bytes.length() != tsPacketLen) {
+            // TODO: Handle partial reads gracefully.
+            else if (readResult != tsPacketLen) {
                 errout << a.applicationName()
-                       << ": Got invalid bytes length of " << bytes.length()
+                       << ": Got invalid bytes length of " << readResult
                        << " for file \"" << fileName << "\""
                        << endl;
                 if (!(ret >= 1))
@@ -68,7 +70,7 @@ int main(int argc, char *argv[])
                 break;
             }
 
-            TSPacket packet(bytes);
+            TSPacket packet(buf);
             QString outStr;
             QDebug(&outStr) << packet;
             out << outStr << endl;
