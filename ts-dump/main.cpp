@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
     QCoreApplication a(argc, argv);
     int ret = 0;
     bool doOffset = false;
-    qint64 tsPacketLen = TSPacket::lengthBasic;
+    qint64 tsPacketSize = TSPacket::lengthBasic;
 
     QCommandLineParser parser;
     parser.setApplicationDescription("Dump MPEG-TS packet contents");
@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
         QString valueStr = parser.value("ts-packet-size");
         if (!valueStr.isNull()) {
             bool ok = false;
-            tsPacketLen = valueStr.toLongLong(&ok);
+            tsPacketSize = valueStr.toLongLong(&ok);
             if (!ok) {
                 errout << a.applicationName() << ": "
                        << "TS packet size: Conversion to number failed for \""
@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
         }
 
         qint64 offset = 0, tsPacketCount = 0;
-        QByteArray buf(tsPacketLen, 0);
+        QByteArray buf(tsPacketSize, 0);
         while (true) {
             if (doOffset)
                 out << "offset=" << offset << " ";
@@ -99,7 +99,7 @@ int main(int argc, char *argv[])
                 break;
             }
             // TODO: Handle partial reads gracefully.
-            else if (readResult != tsPacketLen) {
+            else if (readResult != tsPacketSize) {
                 if (doOffset)
                     out << "(short)" << endl;
 
