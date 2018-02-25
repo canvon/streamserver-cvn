@@ -1,183 +1,23 @@
 #include <QCoreApplication>
 
+#include "log_backend.h"
 #include "streamserver.h"
 #include "demangle.h"
 
 #include <string.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
 #include <signal.h>
 
 #include <memory>
 #include <QPointer>
-#include <QDateTime>
 #include <QTextStream>
 #include <QCommandLineParser>
-
-int verbose = 0;  // Normal output.
-
-int debug_level = 0;  // No debugging.
-
-bool isSystemdJournal_stdout = false;
-bool isSystemdJournal_stderr = false;
-const char systemdJournalEnvVarName[] = "JOURNAL_STREAM";
 
 sig_atomic_t lastSigNum = 0;
 
 QPointer<StreamServer> server;
 
 namespace {
-    bool logStarting = true;
-    enum class LogTimestamping {
-        None,
-        Date,
-        Time,
-        TimeSubsecond,
-    };
-    LogTimestamping logTs = LogTimestamping::Time;
-    QDateTime logLast;
-
     QTextStream out(stdout), errout(stderr);
-}
-
-static void msgHandler(QtMsgType type, const QMessageLogContext &ctx, const QString &msg) {
-    QDateTime now = QDateTime::currentDateTime();
-    int sd_info = 5;  // SD_NOTICE
-    bool is_fatal_msg = false;
-    QString prefix;
-
-    switch (type) {
-    case QtDebugMsg:
-        sd_info = 7;  // SD_DEBUG
-        // Only at --debug.
-        if (!(debug_level > 0))
-            return;
-        prefix = "DEBUG: ";
-        break;
-    case QtInfoMsg:
-        sd_info = 6;  // SD_INFO
-        break;
-    case QtWarningMsg:
-        sd_info = 4;  // SD_WARNING
-        break;
-    case QtCriticalMsg:
-        sd_info = 3;  // SD_ERR
-        break;
-    case QtFatalMsg:
-        sd_info = 2;  // SD_CRIT
-        is_fatal_msg = true;
-        prefix = "Fatal: ";
-        break;
-    default:
-        errout << "<4>Warning: Log message handler got unrecognized message type " << type << endl;
-        break;
-    }
-
-    if (logStarting) {
-        // During startup, use application name as prefix (if available).
-        if (qApp)
-            errout << qApp->applicationName() << ": ";
-    }
-    else {
-        // Output date once every day, if appropriate.
-        if (logTs >= LogTimestamping::Time && logLast.date() < now.date())
-            errout << "<6>" << now.date().toString() << endl;
-
-        // systemd-compatible message severity.
-        errout << "<" << sd_info << ">";
-
-        // Optional timestamp.
-        switch (logTs) {
-        case LogTimestamping::None:
-            break;
-        case LogTimestamping::Date:
-            errout << now.date().toString() << " ";
-            break;
-        case LogTimestamping::Time:
-            errout << now.time().toString() << " ";
-            break;
-        case LogTimestamping::TimeSubsecond:
-            errout << now.time().toString("HH:mm:ss.zzz") << " ";
-            break;
-        }
-    }
-
-    // Optional category.
-    if (ctx.category && strcmp(ctx.category, "default") != 0) {
-        errout << "[" << ctx.category << "] ";
-    }
-
-    // Optional prefix.
-    errout << prefix;
-
-    // Optional debugging aids.
-    if (debug_level > 0) {
-        if (debug_level > 1 && ctx.file) {
-            errout << ctx.file;
-            if (ctx.line) {
-                errout << ":" << ctx.line;
-            }
-            errout << ": ";
-        }
-        if (ctx.function) {
-            errout << ctx.function << ": ";
-        }
-    }
-
-    // The message.
-    errout << msg << endl;
-
-    if (!logStarting) {
-        // Save last logging timestamp for comparison on next logging.
-        logLast = now;
-    }
-
-    // Fatal messages shall be fatal to the program execution.
-    if (is_fatal_msg) {
-        if (debug_level > 0)
-            abort();
-
-        exit(3);
-    }
-}
-
-void updateIsSystemdJournal() {
-    if (!qEnvironmentVariableIsSet(systemdJournalEnvVarName))
-        return;
-
-    QByteArray deviceInodeBytes = qgetenv(systemdJournalEnvVarName);
-    auto list = deviceInodeBytes.split(':');
-    if (list.length() != 2)
-        return;
-
-    bool ok = false;
-    dev_t device = list.at(0).toULong(&ok);
-    if (!ok)
-        return;
-
-    ok = false;
-    ino_t inode = list.at(1).toULongLong(&ok);
-    if (!ok)
-        return;
-
-    struct ::stat buf;
-    int fd;
-    if ((fd = fileno(stdout)) >= 0 &&
-        fstat(fd, &buf) == 0 &&
-        buf.st_dev == device &&
-        buf.st_ino == inode)
-    {
-        isSystemdJournal_stdout = true;
-    }
-
-    if ((fd = fileno(stderr)) >= 0 &&
-        fstat(fd, &buf) == 0 &&
-        buf.st_dev == device &&
-        buf.st_ino == inode)
-    {
-        isSystemdJournal_stderr = true;
-    }
 }
 
 QString signalNumberToString(int signum)
@@ -297,18 +137,19 @@ void handleTerminate() {
 
 int main(int argc, char *argv[])
 {
-    updateIsSystemdJournal();
-    if (isSystemdJournal_stderr) {
+    log::backend::updateIsSystemdJournal();
+    if (log::backend::isSystemdJournal_stderr) {
         // With systemd journal, always use fancy output.
-        logStarting = false;
+        log::backend::logStarting = false;
 
         // ..but don't duplicate timestamps.
-        logTs = LogTimestamping::None;
+        log::backend::logTs = log::backend::LogTimestamping::None;
     }
 
     std::set_terminate(&handleTerminate);
 
-    qInstallMessageHandler(&msgHandler);
+    log::backend::logoutPtr = &errout;
+    qInstallMessageHandler(&log::backend::msgHandler);
     QCoreApplication a(argc, argv);
 
     QCommandLineParser parser;
@@ -343,13 +184,13 @@ int main(int argc, char *argv[])
     const QString logTsStr = parser.value("logts");
     if (!logTsStr.isNull()) {
         if (logTsStr == "none")
-            logTs = LogTimestamping::None;
+            log::backend::logTs = log::backend::LogTimestamping::None;
         else if (logTsStr == "date")
-            logTs = LogTimestamping::Date;
+            log::backend::logTs = log::backend::LogTimestamping::Date;
         else if (logTsStr == "time")
-            logTs = LogTimestamping::Time;
+            log::backend::logTs = log::backend::LogTimestamping::Time;
         else if (logTsStr == "timess" || logTsStr == "timesubsecond")
-            logTs = LogTimestamping::TimeSubsecond;
+            log::backend::logTs = log::backend::LogTimestamping::TimeSubsecond;
         else if (logTsStr == "help") {
             qInfo() << "Available log timestamping modes:"
                     << "none, date, time, timess/timesubsecond";
@@ -474,7 +315,7 @@ int main(int argc, char *argv[])
     QString inputFilePath = args.at(0);
 
 
-    logStarting = false;
+    log::backend::logStarting = false;
 
 
     StreamServer server(std::make_unique<QFile>(inputFilePath), listenPort);

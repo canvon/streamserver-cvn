@@ -12,8 +12,7 @@
 
 #include "tspacket.h"
 #include "humanreadable.h"
-
-extern int verbose;
+#include "log.h"
 
 namespace {
 

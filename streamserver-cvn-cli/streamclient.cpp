@@ -1,6 +1,6 @@
 #include "streamclient.h"
 
-extern int verbose;
+#include "log.h"
 
 StreamClient::StreamClient(socketPtr_type socketPtr, quint64 id, QObject *parent) :
     QObject(parent), _id(id), _createdTimestamp(QDateTime::currentDateTime()),
