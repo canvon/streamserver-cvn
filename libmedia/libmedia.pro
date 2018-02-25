@@ -6,7 +6,8 @@
 
 QT       -= gui
 
-TARGET = libmedia
+TARGET = media
+VERSION = 0.1.0
 TEMPLATE = lib
 
 DEFINES += LIBMEDIA_LIBRARY
@@ -28,6 +29,6 @@ HEADERS += libmedia.h\
         libmedia_global.h
 
 unix {
-    target.path = /usr/lib
+    target.path = /usr/lib/streamserver-cvn
     INSTALLS += target
 }
