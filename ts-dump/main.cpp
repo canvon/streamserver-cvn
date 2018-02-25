@@ -31,7 +31,8 @@ int main(int argc, char *argv[])
 
     for (QString arg : args) {
         QString fileName = arg;
-        out << fileName << ":" << endl;
+        if (args.length() > 1)
+            out << fileName << ":" << endl;
 
         QFile file(fileName);
         if (!file.open(QIODevice::ReadOnly)) {
@@ -73,7 +74,8 @@ int main(int argc, char *argv[])
             out << outStr << endl;
         }
 
-        out << endl;
+        if (args.length() > 1)
+            out << endl;
     }
 
     //return a.exec();
