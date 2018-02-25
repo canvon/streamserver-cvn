@@ -27,7 +27,8 @@ SOURCES += \
     humanreadable.cpp
 
 HEADERS += libinfra_global.h \
-    humanreadable.h
+    humanreadable.h \
+    demangle.h
 
 unix {
     target.path = /usr/lib/streamserver-cvn
