@@ -14,6 +14,8 @@
 #include "humanreadable.h"
 #include "log.h"
 
+using log::verbose;
+
 namespace {
 
 double timenow()

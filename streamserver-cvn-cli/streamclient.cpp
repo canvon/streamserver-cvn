@@ -2,6 +2,8 @@
 
 #include "log.h"
 
+using log::verbose;
+
 StreamClient::StreamClient(socketPtr_type socketPtr, quint64 id, QObject *parent) :
     QObject(parent), _id(id), _createdTimestamp(QDateTime::currentDateTime()),
     _socketPtr(std::move(socketPtr))

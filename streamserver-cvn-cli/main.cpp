@@ -12,6 +12,9 @@
 #include <QTextStream>
 #include <QCommandLineParser>
 
+using log::debug_level;
+using log::verbose;
+
 sig_atomic_t lastSigNum = 0;
 
 QPointer<StreamServer> server;
