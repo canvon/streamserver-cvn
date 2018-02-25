@@ -4,4 +4,5 @@ SUBDIRS += \
     libinfra \
     libmedia \
     streamserver-cvn-cli \
-    ts-dump
+    ts-dump \
+    ts-split
