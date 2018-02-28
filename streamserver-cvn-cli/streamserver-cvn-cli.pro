@@ -13,13 +13,15 @@ SOURCES += main.cpp \
     streamserver.cpp \
     streamclient.cpp \
     httprequest.cpp \
-    httpreply.cpp
+    httpreply.cpp \
+    httpheader.cpp
 
 HEADERS += \
     streamserver.h \
     streamclient.h \
     httprequest.h \
-    httpreply.h
+    httpreply.h \
+    httpheader.h
 
 CONFIG(debug, debug|release) {
     message("Building with debug messages")
