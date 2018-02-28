@@ -1,6 +1,7 @@
 #include "streamclient.h"
 
 #include "log.h"
+#include "streamserver.h"
 
 using log::verbose;
 
@@ -13,6 +14,25 @@ StreamClient::StreamClient(socketPtr_type socketPtr, quint64 id, QObject *parent
     _socketPtr->setParent(this);
     connect(_socketPtr.get(), &QTcpSocket::readyRead, this, &StreamClient::receiveData);
     connect(_socketPtr.get(), &QTcpSocket::bytesWritten, this, &StreamClient::sendData);
+}
+
+StreamServer *StreamClient::parentServer() const
+{
+    QObject *theParent = parent();
+    if (!theParent) {
+        if (verbose >= 2)
+            qWarning() << qPrintable(_logPrefix) << "Parent server: Parent not set";
+        return nullptr;
+    }
+
+    auto theParentServer = dynamic_cast<StreamServer *>(theParent);
+    if (!theParentServer) {
+        if (verbose >= 2)
+            qWarning() << qPrintable(_logPrefix) << "Parent server: Is not a StreamServer";
+        return nullptr;
+    }
+
+    return theParentServer;
 }
 
 quint64 StreamClient::id() const
@@ -206,6 +226,63 @@ void StreamClient::processRequest()
         _httpReplyPtr->setHeader("Content-Type", "text/plain");
         _httpReplyPtr->setBody("HTTP version not recognized.\n");
         return;
+    }
+
+    // TODO: Determine host according to RFC2616 5.2
+    QByteArray host;
+    const QList<HTTP::HeaderParser::Field> hostHeaders = _httpRequest.header().fields("Host");
+    if (hostHeaders.length() > 1) {
+        if (verbose >= 0)
+            qInfo() << qPrintable(_logPrefix) << "Multiple HTTP Host headers";  // TODO: Output.
+        _httpReplyPtr = std::make_unique<HTTPReply>(400, "Bad Request");
+        _httpReplyPtr->setHeader("Content-Type", "text/plain");
+        _httpReplyPtr->setBody("Multiple HTTP Host headers in request.\n");
+        return;
+    }
+    else if (hostHeaders.length() == 1) {
+        host = hostHeaders.first().fieldValue;
+    }
+    else {
+        // TODO: For HTTP/1.1 requests, give 400 Bad Request according to RFC2616 14.23
+    }
+
+    StreamServer *theParentServer = parentServer();
+    if (!theParentServer) {
+        if (verbose >= 0)
+            qInfo() << qPrintable(_logPrefix) << "Missing parent server object, can't check HTTP host of request" << host;
+    }
+    else {
+        const auto hostWhitelist = parentServer()->serverHostWhitelist();
+        if (!hostWhitelist.isEmpty()) {
+            QString compareHost = host.toLower();
+            if (!compareHost.contains(':'))
+                compareHost.append(":80");
+            else if (compareHost.endsWith(':'))
+                compareHost.append("80");
+
+            bool found = false;
+            for (QString hostWhite : hostWhitelist) {
+                QString compareHostWhite = hostWhite.toLower();
+                if (!compareHostWhite.contains(':'))
+                    compareHostWhite.append(":80");
+                else if (compareHostWhite.endsWith(':'))
+                    compareHostWhite.append("80");
+
+                if (compareHost == compareHostWhite) {
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found) {
+                if (verbose >= 0)
+                    qInfo() << qPrintable(_logPrefix) << "HTTP host invalid for this server:" << host;
+                _httpReplyPtr = std::make_unique<HTTPReply>(400, "Bad Request");
+                _httpReplyPtr->setHeader("Content-Type", "text/plain");
+                _httpReplyPtr->setBody("HTTP host invalid for this server\n");
+                return;
+            }
+        }
     }
 
     const QByteArray method = _httpRequest.method();

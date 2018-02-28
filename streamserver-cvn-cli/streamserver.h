@@ -21,6 +21,7 @@ class StreamServer : public QObject
     bool                    _isShuttingDown = false;
     quint16                 _listenPort;
     QTcpServer              _listenSocket;
+    QStringList             _serverHostWhitelist;
     std::unique_ptr<QFile>  _inputFilePtr;
     QString                 _inputFileName;
     bool                    _inputFileOpenNonblocking = true;
@@ -52,6 +53,8 @@ public:
 
     bool         isShuttingDown() const;
     quint16      listenPort() const;
+    const QStringList &serverHostWhitelist() const;
+    void         setServerHostWhitelist(const QStringList &whitelist);
     QFile       &inputFile();
     const QFile &inputFile() const;
     bool         inputFileOpenNonblocking() const;

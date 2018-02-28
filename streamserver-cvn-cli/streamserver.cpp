@@ -63,6 +63,16 @@ quint16 StreamServer::listenPort() const
     return _listenPort;
 }
 
+const QStringList &StreamServer::serverHostWhitelist() const
+{
+    return _serverHostWhitelist;
+}
+
+void StreamServer::setServerHostWhitelist(const QStringList &whitelist)
+{
+    _serverHostWhitelist = whitelist;
+}
+
 QFile &StreamServer::inputFile()
 {
     if (!_inputFilePtr)

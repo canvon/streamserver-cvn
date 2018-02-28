@@ -16,6 +16,8 @@
 #include "httpreply.h"
 #include "tspacket.h"
 
+class StreamServer;
+
 class StreamClient : public QObject
 {
     Q_OBJECT
@@ -42,6 +44,7 @@ private:
 public:
     explicit StreamClient(socketPtr_type socketPtr, quint64 id = 0, QObject *parent = 0);
 
+    StreamServer *parentServer() const;
     quint64 id() const;
     const QString &logPrefix() const;
     QDateTime createdTimestamp() const;
