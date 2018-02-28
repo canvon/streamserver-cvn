@@ -44,6 +44,11 @@ const QByteArray &HTTPRequest::httpVersion() const
     return _httpVersion;
 }
 
+const HTTPHeaderParser &HTTPRequest::header() const
+{
+    return _header;
+}
+
 void HTTPRequest::processChunk(const QByteArray &in)
 {
     if (_receiveState >= ReceiveState::Ready)
@@ -87,20 +92,46 @@ void HTTPRequest::processChunk(const QByteArray &in)
             break;
         }
         case ReceiveState::Header:
-        {
-            QByteArray lineSep2 = lineSep + lineSep;
-            int iLineSep2 = _buf.indexOf(lineSep2);
-            if (iLineSep2 < 0)
-                // Not completely received, yet.
-                return;
-            _header = _buf.left(iLineSep2 + lineSep.length());
+            while (true) {
+                int iLineSep = _buf.indexOf(lineSep);
+                if (iLineSep < 0) {
+                    // Not completely received, yet.
+                    return;
+                }
+                else if (iLineSep == 0) {
+                    // Empty line that terminates the header.
+                    _buf.remove(0, lineSep.length());
 
-            _buf.remove(0, iLineSep2 + lineSep2.length());
-            _receiveState = ReceiveState::Body;
-            if (_method == "GET" || _method == "HEAD")
-                _receiveState = ReceiveState::Ready;
+                    // One last couple of header lines?
+                    if (!_headerLinesBuf.isEmpty()) {
+                        _headerLinesBuf.chop(lineSep.length());
+                        _header.append(_headerLinesBuf);
+                        _headerLinesBuf.clear();
+                    }
+
+                    _receiveState = ReceiveState::Body;
+                    if (_method == "GET" || _method == "HEAD")
+                        _receiveState = ReceiveState::Ready;
+                    break;
+                }
+
+                QByteArray line = _buf.left(iLineSep + lineSep.length());
+                _buf.remove(0, iLineSep + lineSep.length());
+                if (line.startsWith(' ') || line.startsWith('\t')) {
+                    // Linear white-space (LWS).
+                    _headerLinesBuf.append(line);
+                }
+                else {
+                    // Has there been unprocessed header lines before?
+                    if (!_headerLinesBuf.isEmpty()) {
+                        _headerLinesBuf.chop(lineSep.length());
+                        _header.append(_headerLinesBuf);
+                    }
+
+                    _headerLinesBuf = line;
+                }
+            }
             break;
-        }
         case ReceiveState::Body:
             throw std::runtime_error("HTTP request: Request body not supported, yet");
         case ReceiveState::Ready:
