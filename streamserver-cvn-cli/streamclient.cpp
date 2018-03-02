@@ -232,8 +232,12 @@ void StreamClient::processRequest()
     QByteArray host;
     const QList<HTTP::HeaderParser::Field> hostHeaders = _httpRequest.header().fields("Host");
     if (hostHeaders.length() > 1) {
-        if (verbose >= 0)
-            qInfo() << qPrintable(_logPrefix) << "Multiple HTTP Host headers";  // TODO: Output.
+        if (verbose >= 0) {
+            QDebug info = qInfo();
+            info << qPrintable(_logPrefix) << "Multiple HTTP Host headers:";
+            for (const HTTP::HeaderParser::Field &hostHeader : hostHeaders)
+                info << hostHeader.fieldValue;
+        }
         _httpReplyPtr = std::make_unique<HTTPReply>(400, "Bad Request");
         _httpReplyPtr->setHeader("Content-Type", "text/plain");
         _httpReplyPtr->setBody("Multiple HTTP Host headers in request.\n");
