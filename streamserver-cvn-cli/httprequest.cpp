@@ -7,6 +7,62 @@ HTTPRequest::HTTPRequest()
 
 }
 
+QByteArray HTTPRequest::simplifiedLinearWhiteSpace(const QByteArray &bytes)
+{
+    QByteArray ret;
+    QByteArray lws;
+    enum { Null, Ret, LWS } dir;
+    for (const char &c : bytes) {
+        dir = Null;
+        switch (c) {
+        case '\r':  // CR. (LWS optionally starts with CR-LF.)
+            if (lws.isEmpty())
+                dir = LWS;
+            else
+                dir = Ret;
+            break;
+        case '\n':  // LF. (LWS optionally starts with CR-LF.)
+            if (lws == "\r")
+                dir = LWS;
+            else
+                dir = Ret;
+            break;
+        case ' ':  // SP (space)
+        case '\t':  // HT (horizontal-tab)
+            dir = LWS;
+            break;
+        default:
+            dir = Ret;
+            break;
+        }
+
+        switch (dir) {
+        case Null:
+        case Ret:
+            if (ret.isEmpty()) {
+                // Any leading LWS just gets removed.
+            }
+            else {
+                if (!lws.isEmpty())
+                    // Transform a sequence of LWS to a single SP.
+                    ret.append(' ');
+            }
+            lws.clear();
+
+            ret.append(c);
+            break;
+        case LWS:
+            lws.append(c);
+            break;
+        }
+    }
+
+    // Any trailing LWS just gets removed.
+    // (By ignoring the final value of the lws variable.)
+
+    return ret;
+}
+
 HTTPRequest::ReceiveState HTTPRequest::receiveState() const
 {
     return _receiveState;

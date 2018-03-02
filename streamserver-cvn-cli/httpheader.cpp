@@ -1,5 +1,6 @@
 #include "httpheader.h"
 
+#include "httprequest.h"
 #include "humanreadable.h"
 
 #include <stdexcept>
@@ -107,8 +108,9 @@ void HeaderParser::append(const QByteArray &fieldBytes)
         throw std::runtime_error(exMsg.toStdString());
     }
 
-    // TODO: Remove linear white-space.
-    theField.fieldValue = theField.fieldValueRaw.trimmed();
+    // Simplify linear white-space to single SPs,
+    // with LWS at start and end trimmed.
+    theField.fieldValue = HTTPRequest::simplifiedLinearWhiteSpace(theField.fieldValueRaw);
 
     _implPtr->append(theField);
 }

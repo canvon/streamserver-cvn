@@ -34,6 +34,8 @@ public:
     const QByteArray lineSep = "\r\n";
     const QByteArray fieldSepRequestLine = " ";
 
+    static QByteArray simplifiedLinearWhiteSpace(const QByteArray &bytes);
+
     ReceiveState receiveState() const;
     const QByteArray &requestLine() const;
     const QByteArray &method() const;
