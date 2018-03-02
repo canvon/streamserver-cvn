@@ -70,6 +70,8 @@ const QStringList &StreamServer::serverHostWhitelist() const
 
 void StreamServer::setServerHostWhitelist(const QStringList &whitelist)
 {
+    if (verbose >= 1)
+        qInfo() << "Changing server host white-list from" << _serverHostWhitelist << "to" << whitelist;
     _serverHostWhitelist = whitelist;
 }
 

@@ -164,6 +164,8 @@ int main(int argc, char *argv[])
         { { "d", "debug"   }, "Enable debugging. (Increase debug level.)" },
         { { "l", "listen" }, "Port to listen on for HTTP streaming client connections",
           "listen_port", "8000" },
+        { "server-host-whitelist", "HTTP server host names to require (e.g., \"foo:8000,bar:8000\")",
+          "whitelist" },
         { { "logts", "log-timestamping" }, "How to timestamp log messages: "
           "none, date, time, timess/timesubsecond",
           "mode" },
@@ -226,6 +228,14 @@ int main(int argc, char *argv[])
     if (!ok) {
         qCritical() << "Invalid port number" << listenPortStr;
         return 2;
+    }
+
+    std::unique_ptr<QStringList> serverHostWhitelistPtr;
+    {
+        QString valueStr = parser.value("server-host-whitelist");
+        if (!valueStr.isNull()) {
+            serverHostWhitelistPtr = std::make_unique<QStringList>(valueStr.split(','));
+        }
     }
 
     std::unique_ptr<qint64> tsPacketSizePtr;
@@ -325,6 +335,9 @@ int main(int argc, char *argv[])
     ::server = &server;
 
     try {
+        if (serverHostWhitelistPtr)
+            server.setServerHostWhitelist(*serverHostWhitelistPtr);
+
         if (tsPacketSizePtr) {
             server.setTSPacketSize(*tsPacketSizePtr);
             server.setTSPacketAutosize(false);
