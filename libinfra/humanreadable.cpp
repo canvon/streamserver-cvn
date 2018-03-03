@@ -170,7 +170,7 @@ QDebug operator<<(QDebug debug, const HumanReadable::Hexdump &dump)
     return debug;
 }
 
-bool HumanReadable::FlagConverter::flagToBool(const QVariant &flag, bool *ok)
+bool HumanReadable::FlagConverter::flagToBool(const QVariant &flag, bool *ok) const
 {
     if (ok)
         *ok = false;

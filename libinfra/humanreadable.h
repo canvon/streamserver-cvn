@@ -33,7 +33,7 @@ public:
         QStringList falseFlags = { "0", "false" };
         QStringList trueFlags  = { "1", "true" };
 
-        bool flagToBool(const QVariant &flag, bool *ok = nullptr);
+        bool flagToBool(const QVariant &flag, bool *ok = nullptr) const;
     };
 };
 
