@@ -28,6 +28,13 @@ public:
         Hexdump &enableCompressTrailing();
         Hexdump &enableAll();
     };
+
+    struct FlagConverter {
+        QStringList falseFlags = { "0", "false" };
+        QStringList trueFlags  = { "1", "true" };
+
+        bool flagToBool(const QVariant &flag, bool *ok = nullptr);
+    };
 };
 
 LIBINFRASHARED_EXPORT QDebug operator<<(QDebug debug, const HumanReadable::Hexdump &dump);

@@ -169,3 +169,35 @@ QDebug operator<<(QDebug debug, const HumanReadable::Hexdump &dump)
 
     return debug;
 }
+
+bool HumanReadable::FlagConverter::flagToBool(const QVariant &flag, bool *ok)
+{
+    if (ok)
+        *ok = false;
+
+    if (flag.type() == QVariant::Bool) {
+        if (ok)
+            *ok = true;
+        return flag.toBool();
+    }
+    else if (flag.canConvert(QVariant::String)) {
+        QString flagStr = flag.toString();
+        if (falseFlags.contains(flagStr, Qt::CaseInsensitive)) {
+            if (ok)
+                *ok = true;
+            return false;
+        }
+        else if (trueFlags.contains(flagStr, Qt::CaseInsensitive)) {
+            if (ok)
+                *ok = true;
+            return true;
+        }
+        else {
+            // (ok stays at false.)
+            return false;
+        }
+    }
+
+    // Fallback. (ok stays at false.)
+    return false;
+}
