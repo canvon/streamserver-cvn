@@ -1,5 +1,6 @@
 #include <QCoreApplication>
 
+#include "splitter.h"
 #include "tspacket.h"
 
 #include <QCommandLineParser>
@@ -13,7 +14,6 @@ namespace {
 int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
-    int ret = 0;
     qint64 tsPacketSize = TSPacket::lengthBasic;
 
     QCommandLineParser parser;
@@ -43,16 +43,17 @@ int main(int argc, char *argv[])
     }
 
     auto args = parser.positionalArguments();
-    if (!(args.length() > 0)) {
+    if (!(args.length() == 1)) {
         errout << a.applicationName()
                << ": Invalid arguments"
                << endl;
         return 2;
     }
 
-    //for (QString arg : args) {
-    errout << a.applicationName() << ": Not implemented, yet!" << endl;
+    QFile inputFile(args.first(), &a);
+    Splitter splitter(&a);
+    splitter.openInput(&inputFile);
+    splitter.tsReader()->setTSPacketSize(tsPacketSize);
 
-    //return a.exec();
-    return ret;
+    return a.exec();
 }
