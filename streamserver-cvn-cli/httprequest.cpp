@@ -1,5 +1,7 @@
 #include "httprequest.h"
 
+#include "humanreadable.h"
+
 #include <stdexcept>
 
 HTTPRequest::HTTPRequest()
@@ -63,6 +65,25 @@ QByteArray HTTPRequest::simplifiedLinearWhiteSpace(const QByteArray &bytes)
     return ret;
 }
 
+qint64 HTTPRequest::byteCount() const
+{
+    return _byteCount;
+}
+
+qint64 HTTPRequest::byteCountMax() const
+{
+    return _byteCountMax;
+}
+
+void HTTPRequest::setByteCountMax(qint64 max)
+{
+    if (!(max >= 0))
+        throw std::invalid_argument("HTTP request: Set byte count maximum: Invalid maximum " +
+                                    std::to_string(max));
+
+    _byteCountMax = max;
+}
+
 const QByteArray &HTTPRequest::buf() const
 {
     return _buf;
@@ -121,6 +142,12 @@ void HTTPRequest::processChunk(const QByteArray &in)
         throw std::runtime_error("HTTP request: Can't process chunk, as request is already ready");
 
     _buf.append(in);
+    _byteCount += in.length();
+    if (!(_byteCount <= _byteCountMax))
+        throw std::runtime_error("HTTP request: Byte count maximum exceeded (" +
+                                 std::to_string(_byteCount) + " bytes = " +
+                                 HumanReadable::byteCount(_byteCount).toStdString() + ")");
+
     while (_buf.length() > 0) {
         switch (_receiveState) {
         case ReceiveState::RequestLine:

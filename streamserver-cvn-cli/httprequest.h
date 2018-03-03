@@ -10,6 +10,8 @@ using HTTPHeaderParser = HTTP::HeaderParser;
 // An HTTP request from the wire.
 class HTTPRequest
 {
+    qint64      _byteCount = 0;
+    qint64      _byteCountMax = 10 * 1024;  // 10 KiB
     QByteArray  _buf;
     QByteArray  _headerLinesBuf;
 public:
@@ -36,6 +38,9 @@ public:
 
     static QByteArray simplifiedLinearWhiteSpace(const QByteArray &bytes);
 
+    qint64 byteCount() const;
+    qint64 byteCountMax() const;
+    void setByteCountMax(qint64 max);
     const QByteArray &buf() const;
     const QByteArray &headerLinesBuf() const;
 
