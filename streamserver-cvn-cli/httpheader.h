@@ -31,6 +31,7 @@ public:
 
     QList<Field> fields() const;
     QList<Field> fields(const QByteArray &fieldName) const;
+    QList<QByteArray> fieldValues(const QByteArray &fieldName) const;
     void setField(const QByteArray &fieldName, const QByteArray &fieldValue);
 
     void append(const QByteArray &fieldBytes);

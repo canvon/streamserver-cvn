@@ -212,16 +212,17 @@ void StreamClient::sendData()
 void StreamClient::processRequest()
 {
     if (verbose >= 0) {
-        qInfo() << qPrintable(_logPrefix) << "Processing client request:"
-                << "Method" << _httpRequest.method()
-                << "Path"   << _httpRequest.path()
-                << "HTTP version" << _httpRequest.httpVersion()
+        qInfo().nospace()
+                << qPrintable(_logPrefix) << " Processing client request: "
+                << "Method " << _httpRequest.method() << ", "
+                << "Path "   << _httpRequest.path()   << ", "
+                << "HTTP version " << _httpRequest.httpVersion()
                 << "...";
 
         const HTTP::HeaderParser &header(_httpRequest.header());
         qInfo() << qPrintable(_logPrefix) << "Headers extract:"
-                << "Host:"       << header.fields("Host")
-                << "User-Agent:" << header.fields("User-Agent");
+                << "Host:"       << header.fieldValues("Host")
+                << "User-Agent:" << header.fieldValues("User-Agent");
     }
     if (verbose >= 1) {
         qInfo() << qPrintable(_logPrefix) << "HTTP header:";

@@ -65,6 +65,15 @@ QList<HeaderParser::Field> HeaderParser::fields(const QByteArray &fieldName) con
     return ret;
 }
 
+QList<QByteArray> HeaderParser::fieldValues(const QByteArray &fieldName) const
+{
+    QList<QByteArray> ret;
+    for (const Field &theField : fields(fieldName))
+        ret.append(theField.fieldValue);
+
+    return ret;
+}
+
 void HeaderParser::setField(const QByteArray &fieldName, const QByteArray &fieldValue)
 {
     if (fieldName.isEmpty())
