@@ -259,7 +259,7 @@ int main(int argc, char *argv[])
             return 0;
         }
         else {
-            qCritical() << "Invalid log timestamping mode" << logTsStr;
+            qCritical() << "Invalid log timestamping mode:" << logTsVar;
             return 2;
         }
     }
