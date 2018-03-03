@@ -3,6 +3,7 @@
 #include "log_backend.h"
 #include "streamserver.h"
 #include "demangle.h"
+#include "humanreadable.h"
 
 #include <string.h>
 #include <signal.h>
@@ -163,6 +164,11 @@ int main(int argc, char *argv[])
     QSettings settingsBase;
     settingsBase.beginGroup(settingsGroupName);
     std::unique_ptr<QSettings> settingsConfigfilePtr;
+
+    HumanReadable::FlagConverter flagConverter {
+        { "0", "false", "no",  "off", "disable", "disabled" },
+        { "1", "true",  "yes", "on",  "enable",  "enabled"  },
+    };
 
     QCommandLineParser parser;
     parser.setApplicationDescription("Media streaming server from MPEG-TS to HTTP clients");
@@ -349,12 +355,10 @@ int main(int argc, char *argv[])
     {
         QVariant valueVar = effectiveValue("ts-strip-additional-info");
         if (valueVar.isValid()) {
-            QString valueStr = valueVar.toString();
-            if (valueStr == "0" || valueStr == "false" || valueStr == "no")
-                tsStripAdditionalInfoPtr = std::make_unique<bool>(false);
-            else if (valueStr == "1" || valueStr == "true" || valueStr == "yes")
-                tsStripAdditionalInfoPtr = std::make_unique<bool>(true);
-            else {
+            bool ok = false;
+            tsStripAdditionalInfoPtr = std::make_unique<bool>(flagConverter.flagToBool(valueVar, &ok));
+            if (!ok) {
+                tsStripAdditionalInfoPtr.reset();
                 qCritical() << "Invalid TS strip additional info flag: Can't convert to boolean:" << valueVar;
                 return 2;
             }
@@ -386,12 +390,10 @@ int main(int argc, char *argv[])
     {
         QVariant valueVar = effectiveValue("input-open-nonblock");
         if (valueVar.isValid()) {
-            QString valueStr = valueVar.toString();
-            if (valueStr == "0" || valueStr == "false" || valueStr == "no")
-                inputFileOpenNonblockingPtr = std::make_unique<bool>(false);
-            else if (valueStr == "1" || valueStr == "true" || valueStr == "yes")
-                inputFileOpenNonblockingPtr = std::make_unique<bool>(true);
-            else {
+            bool ok = false;
+            inputFileOpenNonblockingPtr = std::make_unique<bool>(flagConverter.flagToBool(valueVar, &ok));
+            if (!ok) {
+                inputFileOpenNonblockingPtr.reset();
                 qCritical() << "Invalid input open non-block flag: Can't convert to boolean:" << valueVar;
                 return 2;
             }
