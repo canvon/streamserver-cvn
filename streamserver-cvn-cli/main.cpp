@@ -215,35 +215,36 @@ int main(int argc, char *argv[])
 
     // Prepare helper for accessing multiple configuration sources successively.
     auto effectiveValue = [&](const QString &key) {
-        QString valueStr;
+        QVariant valueVar;
 
         // Base config.
         {
             QVariant valueBaseVar = settingsBase.value(key);
             if (valueBaseVar.isValid())
-                valueStr = valueBaseVar.toString();
+                valueVar = valueBaseVar;
         }
 
         // Per-run config file.
         if (settingsConfigfilePtr) {
             QVariant valueConfigfileVar = settingsConfigfilePtr->value(key);
             if (valueConfigfileVar.isValid())
-                valueStr = valueConfigfileVar.toString();
+                valueVar = valueConfigfileVar;
         }
 
         // Command-line argument.
         {
             QString valueCliStr = parser.value(key);
             if (!valueCliStr.isNull())
-                valueStr = valueCliStr;
+                valueVar = QVariant(valueCliStr);
         }
 
-        return valueStr;
+        return valueVar;
     };
 
     // Set up log timestamping mode.
-    QString logTsStr = effectiveValue("log-timestamping");
-    if (!logTsStr.isNull()) {
+    QVariant logTsVar = effectiveValue("log-timestamping");
+    if (logTsVar.isValid()) {
+        QString logTsStr = logTsVar.toString();
         if (logTsStr == "none")
             log::backend::logTs = log::backend::LogTimestamping::None;
         else if (logTsStr == "date")
@@ -265,23 +266,23 @@ int main(int argc, char *argv[])
 
     // Prepare start values to be changed by incremental options.
     {
-        QString valueStr = effectiveValue("verbose-level");
-        if (!valueStr.isNull()) {
+        QVariant valueVar = effectiveValue("verbose-level");
+        if (valueVar.isValid()) {
             bool ok = false;
-            verbose = valueStr.toInt(&ok);
+            verbose = valueVar.toInt(&ok);
             if (!ok) {
-                qCritical() << "Invalid verbose-level: Can't convert to number:" << valueStr;
+                qCritical() << "Invalid verbose-level: Can't convert to number:" << valueVar;
                 return 2;
             }
         }
     }
     {
-        QString valueStr = effectiveValue("debug-level");
-        if (!valueStr.isNull()) {
+        QVariant valueVar = effectiveValue("debug-level");
+        if (valueVar.isValid()) {
             bool ok = false;
-            debug_level = valueStr.toInt(&ok);
+            debug_level = valueVar.toInt(&ok);
             if (!ok) {
-                qCritical() << "Invalid debug-level: Can't convert to number:" << valueStr;
+                qCritical() << "Invalid debug-level: Can't convert to number:" << valueVar;
                 return 2;
             }
 #ifdef QT_NO_DEBUG_OUTPUT
@@ -308,12 +309,12 @@ int main(int argc, char *argv[])
 
     quint16 listenPort = StreamServer::listenPort_default;
     {
-        QString valueStr = effectiveValue("listen-port");
-        if (!valueStr.isNull()) {
+        QVariant valueVar = effectiveValue("listen-port");
+        if (valueVar.isValid()) {
             bool ok = false;
-            listenPort = valueStr.toUShort(&ok);
+            listenPort = valueVar.toUInt(&ok);
             if (!ok) {
-                qCritical() << "Invalid listen port number: Can't convert to number:" << valueStr;
+                qCritical() << "Invalid listen port number: Can't convert to number:" << valueVar;
                 return 2;
             }
         }
@@ -321,21 +322,24 @@ int main(int argc, char *argv[])
 
     std::unique_ptr<QStringList> serverHostWhitelistPtr;
     {
-        QString valueStr = effectiveValue("server-host-whitelist");
-        if (!valueStr.isNull()) {
-            serverHostWhitelistPtr = std::make_unique<QStringList>(valueStr.split(','));
+        QVariant valueVar = effectiveValue("server-host-whitelist");
+        if (valueVar.isValid()) {
+            if (valueVar.type() == QVariant::String)
+                serverHostWhitelistPtr = std::make_unique<QStringList>(valueVar.toString().split(','));
+            else
+                serverHostWhitelistPtr = std::make_unique<QStringList>(valueVar.toStringList());
         }
     }
 
     std::unique_ptr<qint64> tsPacketSizePtr;
     {
-        QString valueStr = effectiveValue("ts-packet-size");
-        if (!valueStr.isNull()) {
+        QVariant valueVar = effectiveValue("ts-packet-size");
+        if (valueVar.isValid()) {
             bool ok = false;
-            tsPacketSizePtr = std::make_unique<qint64>(valueStr.toLongLong(&ok));
+            tsPacketSizePtr = std::make_unique<qint64>(valueVar.toLongLong(&ok));
             if (!ok) {
                 tsPacketSizePtr.reset();
-                qCritical() << "TS packet size: Conversion to number failed for" << valueStr;
+                qCritical() << "Invalid TS packet size: Can't convert to number:" << valueVar;
                 return 2;
             }
         }
@@ -343,14 +347,15 @@ int main(int argc, char *argv[])
 
     std::unique_ptr<bool> tsStripAdditionalInfoPtr;
     {
-        QString valueStr = effectiveValue("ts-strip-additional-info");
-        if (!valueStr.isNull()) {
+        QVariant valueVar = effectiveValue("ts-strip-additional-info");
+        if (valueVar.isValid()) {
+            QString valueStr = valueVar.toString();
             if (valueStr == "0" || valueStr == "false" || valueStr == "no")
                 tsStripAdditionalInfoPtr = std::make_unique<bool>(false);
             else if (valueStr == "1" || valueStr == "true" || valueStr == "yes")
                 tsStripAdditionalInfoPtr = std::make_unique<bool>(true);
             else {
-                qCritical() << "TS strip additional info: Invalid flag value" << valueStr;
+                qCritical() << "Invalid TS strip additional info flag: Can't convert to boolean:" << valueVar;
                 return 2;
             }
         }
@@ -358,8 +363,9 @@ int main(int argc, char *argv[])
 
     std::unique_ptr<StreamServer::BrakeType> brakeTypePtr;
     {
-        QString valueStr = effectiveValue("brake");
-        if (!valueStr.isNull()) {
+        QVariant valueVar = effectiveValue("brake");
+        if (valueVar.isValid()) {
+            QString valueStr = valueVar.toString();
             if (valueStr == "none")
                 brakeTypePtr = std::make_unique<StreamServer::BrakeType>(StreamServer::BrakeType::None);
             else if (valueStr == "pcrsleep")
@@ -370,7 +376,7 @@ int main(int argc, char *argv[])
                 return 0;
             }
             else {
-                qCritical() << "Invalid brake type" << valueStr;
+                qCritical() << "Invalid brake type:" << valueVar;
                 return 2;
             }
         }
@@ -378,14 +384,15 @@ int main(int argc, char *argv[])
 
     std::unique_ptr<bool> inputFileOpenNonblockingPtr;
     {
-        QString valueStr = effectiveValue("input-open-nonblock");
-        if (!valueStr.isNull()) {
+        QVariant valueVar = effectiveValue("input-open-nonblock");
+        if (valueVar.isValid()) {
+            QString valueStr = valueVar.toString();
             if (valueStr == "0" || valueStr == "false" || valueStr == "no")
                 inputFileOpenNonblockingPtr = std::make_unique<bool>(false);
             else if (valueStr == "1" || valueStr == "true" || valueStr == "yes")
                 inputFileOpenNonblockingPtr = std::make_unique<bool>(true);
             else {
-                qCritical() << "Input open non-block: Invalid flag value" << valueStr;
+                qCritical() << "Invalid input open non-block flag: Can't convert to boolean:" << valueVar;
                 return 2;
             }
         }
@@ -393,13 +400,13 @@ int main(int argc, char *argv[])
 
     std::unique_ptr<int> inputFileReopenTimeoutMillisecPtr;
     {
-        QString valueStr = effectiveValue("input-reopen-timeout");
-        if (!valueStr.isNull()) {
+        QVariant valueVar = effectiveValue("input-reopen-timeout");
+        if (valueVar.isValid()) {
             bool ok = false;
-            inputFileReopenTimeoutMillisecPtr = std::make_unique<int>(valueStr.toUInt(&ok));
+            inputFileReopenTimeoutMillisecPtr = std::make_unique<int>(valueVar.toUInt(&ok));
             if (!ok) {
                 inputFileReopenTimeoutMillisecPtr.reset();
-                qCritical() << "Input reopen timeout: Conversion to number failed for" << valueStr;
+                qCritical() << "Input reopen timeout: Can't convert to number:" << valueVar;
                 return 2;
             }
         }
