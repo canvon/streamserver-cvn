@@ -169,6 +169,7 @@ int main(int argc, char *argv[])
         { "0", "false", "no",  "off", "disable", "disabled" },
         { "1", "true",  "yes", "on",  "enable",  "enabled"  },
     };
+    const QString flagSyntax = flagConverter.flagPairs().join(", ");
 
     QCommandLineParser parser;
     parser.setApplicationDescription("Media streaming server from MPEG-TS to HTTP clients");
@@ -193,12 +194,12 @@ int main(int argc, char *argv[])
         { { "s", "ts-packet-size" }, "MPEG-TS packet size (e.g., 188 bytes)",
           "size" },
         { "ts-strip-additional-info", "Strip additional info beyond 188 bytes basic packet size "
-          "from TS packets",
+          "from TS packets.\nValid flag values: " + flagSyntax + ".",
           "flag" },
         { "brake", "Set brake type to use to slow down input that is coming in too fast: "
           "none, pcrsleep (default)",
           "type" },
-        { "input-open-nonblock", "Open input in non-blocking mode",
+        { "input-open-nonblock", "Open input in non-blocking mode.\nValid flag values: " + flagSyntax + ".",
           "flag" },
         { "input-reopen-timeout", "Timeout before reopening input after EOF",
           "timeMillisec" },

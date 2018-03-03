@@ -34,6 +34,7 @@ public:
         QStringList trueFlags  = { "1", "true" };
 
         bool flagToBool(const QVariant &flag, bool *ok = nullptr) const;
+        QStringList flagPairs() const;
     };
 };
 

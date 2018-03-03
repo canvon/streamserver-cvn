@@ -1,5 +1,6 @@
 #include "humanreadable.h"
 
+#include <cmath>
 #include <utility>
 #include <stdexcept>
 #include <QList>
@@ -200,4 +201,21 @@ bool HumanReadable::FlagConverter::flagToBool(const QVariant &flag, bool *ok) co
 
     // Fallback. (ok stays at false.)
     return false;
+}
+
+QStringList HumanReadable::FlagConverter::flagPairs() const
+{
+    int falseLen = falseFlags.length();
+    int trueLen  = trueFlags.length();
+
+    QStringList ret;
+    for (int i = 0; i < std::max(falseLen, trueLen); i++) {
+        QStringList thePair {
+            i < falseLen ? falseFlags.at(i) : "(unknown)",
+            i < trueLen  ? trueFlags.at(i)  : "(unknown)",
+        };
+        ret.append(thePair.join('/'));
+    }
+
+    return ret;
 }
