@@ -2,6 +2,7 @@
 
 #include "log.h"
 #include "streamserver.h"
+#include "humanreadable.h"
 
 using log::verbose;
 
@@ -367,8 +368,15 @@ void StreamClient::receiveData()
         }
         catch (std::exception &ex) {
             _isReceiving = false;
-            if (verbose >= 0)
-                qInfo() << qPrintable(_logPrefix) << "Unable to parse network bytes as HTTP request:" << QString(ex.what());
+            if (verbose >= 0) {
+                qInfo() << qPrintable(_logPrefix) << "Unable to parse network bytes as HTTP request:" << ex.what();
+                qInfo() << qPrintable(_logPrefix) << "Buffer was"
+                        << HumanReadable::Hexdump { _httpRequest.buf(), true, true, true };
+                qInfo() << qPrintable(_logPrefix) << "Header lines buffer was"
+                        << HumanReadable::Hexdump { _httpRequest.headerLinesBuf(), true, true, true };
+                qInfo() << qPrintable(_logPrefix) << "Rejected chunk was"
+                        << HumanReadable::Hexdump { buf, true, true, true };
+            }
             _httpReplyPtr = std::make_unique<HTTPReply>(400, "Bad Request");
             _httpReplyPtr->setHeader("Content-Type", "text/plain");
             _httpReplyPtr->setBody("Unable to parse HTTP request.\n");

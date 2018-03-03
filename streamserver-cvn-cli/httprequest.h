@@ -36,6 +36,9 @@ public:
 
     static QByteArray simplifiedLinearWhiteSpace(const QByteArray &bytes);
 
+    const QByteArray &buf() const;
+    const QByteArray &headerLinesBuf() const;
+
     ReceiveState receiveState() const;
     const QByteArray &requestLine() const;
     const QByteArray &method() const;

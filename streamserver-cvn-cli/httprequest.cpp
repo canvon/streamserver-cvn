@@ -63,6 +63,16 @@ QByteArray HTTPRequest::simplifiedLinearWhiteSpace(const QByteArray &bytes)
     return ret;
 }
 
+const QByteArray &HTTPRequest::buf() const
+{
+    return _buf;
+}
+
+const QByteArray &HTTPRequest::headerLinesBuf() const
+{
+    return _headerLinesBuf;
+}
+
 HTTPRequest::ReceiveState HTTPRequest::receiveState() const
 {
     return _receiveState;
