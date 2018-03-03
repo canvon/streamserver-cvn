@@ -180,28 +180,35 @@ int main(int argc, char *argv[])
         { { "v", "verbose" }, "Increase verbose level" },
         { { "q", "quiet"   }, "Decrease verbose level" },
         { { "d", "debug"   }, "Enable debugging. (Increase debug level.)" },
-        { "verbose-level", "Set verbose level",
+        { "verbose-level", "Set verbose level (default: 0)",
           "level_number" },
-        { "debug-level", "Set debug level",
+        { "debug-level", "Set debug level (default: 0)",
           "level_number" },
-        { { "l", "listen-port" }, "Port to listen on for HTTP streaming client connections",
+        { { "l", "listen-port" }, "Port to listen on for HTTP streaming client connections"
+          " (default: " + QString::number(StreamServer::listenPort_default) + ")",
           "port" },
-        { "server-host-whitelist", "HTTP server host names to require (e.g., \"foo:8000,bar:8000\")",
+        { "server-host-whitelist", "HTTP server host names to require (e.g., \"foo:8000,bar:8000\")"
+          " (default: accept any)",
           "whitelist" },
         { { "logts", "log-timestamping" }, "How to timestamp log messages: "
-          "none, date, time, timess/timesubsecond",
+          "none, date, time, timess/timesubsecond"
+          " (default: time, or none when running with systemd journal)",
           "mode" },
-        { { "s", "ts-packet-size" }, "MPEG-TS packet size (e.g., 188 bytes)",
+        { { "s", "ts-packet-size" }, "MPEG-TS packet size (e.g., 188 bytes)"
+          " (default: auto-detect)",
           "size" },
         { "ts-strip-additional-info", "Strip additional info beyond 188 bytes basic packet size "
-          "from TS packets.\nValid flag values: " + flagSyntax + ".",
+          "from TS packets (default: on)"
+          ".\nValid flag values: " + flagSyntax + ".",
           "flag" },
         { "brake", "Set brake type to use to slow down input that is coming in too fast: "
           "none, pcrsleep (default)",
           "type" },
-        { "input-open-nonblock", "Open input in non-blocking mode.\nValid flag values: " + flagSyntax + ".",
+        { "input-open-nonblock", "Open input in non-blocking mode (default: on)"
+          ".\nValid flag values: " + flagSyntax + ".",
           "flag" },
-        { "input-reopen-timeout", "Timeout before reopening input after EOF",
+        { "input-reopen-timeout", "Timeout before reopening input after EOF"
+          " (default: 1000 ms)",
           "timeMillisec" },
     });
     parser.addPositionalArgument("input", "Input file name");
