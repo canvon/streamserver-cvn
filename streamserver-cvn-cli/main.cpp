@@ -11,6 +11,7 @@
 #include <QPointer>
 #include <QTextStream>
 #include <QCommandLineParser>
+#include <QSettings>
 
 using log::debug_level;
 using log::verbose;
@@ -155,15 +156,29 @@ int main(int argc, char *argv[])
     qInstallMessageHandler(&log::backend::msgHandler);
     QCoreApplication a(argc, argv);
 
+    a.setOrganizationName("streamserver-cvn");
+    a.setOrganizationDomain("streamserver-cvn.canvon.de");
+    a.setApplicationName("streamserver-cvn-cli");
+    const QString settingsGroupName = "streamserver-cvn-cli";
+    QSettings settingsBase;
+    settingsBase.beginGroup(settingsGroupName);
+    std::unique_ptr<QSettings> settingsConfigfilePtr;
+
     QCommandLineParser parser;
     parser.setApplicationDescription("Media streaming server from MPEG-TS to HTTP clients");
     parser.addHelpOption();
     parser.addOptions({
+        { { "c", "config-file" }, "Defaults that override the global config, but can be overridden by command-line arguments",
+          "file_path" },
         { { "v", "verbose" }, "Increase verbose level" },
         { { "q", "quiet"   }, "Decrease verbose level" },
         { { "d", "debug"   }, "Enable debugging. (Increase debug level.)" },
-        { { "l", "listen" }, "Port to listen on for HTTP streaming client connections",
-          "listen_port", "8000" },
+        { "verbose-level", "Set verbose level",
+          "level_number" },
+        { "debug-level", "Set debug level",
+          "level_number" },
+        { { "l", "listen-port" }, "Port to listen on for HTTP streaming client connections",
+          "port", "8000" },
         { "server-host-whitelist", "HTTP server host names to require (e.g., \"foo:8000,bar:8000\")",
           "whitelist" },
         { { "logts", "log-timestamping" }, "How to timestamp log messages: "
@@ -185,8 +200,45 @@ int main(int argc, char *argv[])
     parser.addPositionalArgument("input", "Input file name");
     parser.process(a);
 
+    // Determine per-run configuration.
+    {
+        QString valueStr = parser.value("config-file");
+        if (!valueStr.isNull()) {
+            settingsConfigfilePtr = std::make_unique<QSettings>(valueStr, QSettings::IniFormat);
+            settingsConfigfilePtr->beginGroup(settingsGroupName);
+        }
+    }
+
+    // Prepare helper for accessing multiple configuration sources successively.
+    auto effectiveValue = [&](const QString &key) {
+        QString valueStr;
+
+        // Base config.
+        {
+            QVariant valueBaseVar = settingsBase.value(key);
+            if (valueBaseVar.isValid())
+                valueStr = valueBaseVar.toString();
+        }
+
+        // Per-run config file.
+        if (settingsConfigfilePtr) {
+            QVariant valueConfigfileVar = settingsConfigfilePtr->value(key);
+            if (valueConfigfileVar.isValid())
+                valueStr = valueConfigfileVar.toString();
+        }
+
+        // Command-line argument.
+        {
+            QString valueCliStr = parser.value(key);
+            if (!valueCliStr.isNull())
+                valueStr = valueCliStr;
+        }
+
+        return valueStr;
+    };
+
     // Set up log timestamping mode.
-    const QString logTsStr = parser.value("logts");
+    QString logTsStr = effectiveValue("log-timestamping");
     if (!logTsStr.isNull()) {
         if (logTsStr == "none")
             log::backend::logTs = log::backend::LogTimestamping::None;
@@ -207,6 +259,34 @@ int main(int argc, char *argv[])
         }
     }
 
+    // Prepare start values to be changed by incremental options.
+    {
+        QString valueStr = effectiveValue("verbose-level");
+        if (!valueStr.isNull()) {
+            bool ok = false;
+            verbose = valueStr.toInt(&ok);
+            if (!ok) {
+                qCritical() << "Invalid verbose-level: Can't convert to number:" << valueStr;
+                return 2;
+            }
+        }
+    }
+    {
+        QString valueStr = effectiveValue("debug-level");
+        if (!valueStr.isNull()) {
+            bool ok = false;
+            debug_level = valueStr.toInt(&ok);
+            if (!ok) {
+                qCritical() << "Invalid debug-level: Can't convert to number:" << valueStr;
+                return 2;
+            }
+#ifdef QT_NO_DEBUG_OUTPUT
+            if (debug_level > 0)
+                qFatal("No debug output compiled in, can't initialize debug-level to %d!", debug_level);
+#endif
+        }
+    }
+
     // Apply incremental options.
     for (QString opt : parser.optionNames()) {
         if (opt == "v" || opt == "verbose")
@@ -222,7 +302,7 @@ int main(int argc, char *argv[])
     }
 
 
-    QString listenPortStr = parser.value("listen");
+    QString listenPortStr = effectiveValue("listen-port");
     bool ok = false;
     qint16 listenPort = listenPortStr.toUShort(&ok);
     if (!ok) {
@@ -232,7 +312,7 @@ int main(int argc, char *argv[])
 
     std::unique_ptr<QStringList> serverHostWhitelistPtr;
     {
-        QString valueStr = parser.value("server-host-whitelist");
+        QString valueStr = effectiveValue("server-host-whitelist");
         if (!valueStr.isNull()) {
             serverHostWhitelistPtr = std::make_unique<QStringList>(valueStr.split(','));
         }
@@ -240,7 +320,7 @@ int main(int argc, char *argv[])
 
     std::unique_ptr<qint64> tsPacketSizePtr;
     {
-        QString valueStr = parser.value("ts-packet-size");
+        QString valueStr = effectiveValue("ts-packet-size");
         if (!valueStr.isNull()) {
             bool ok = false;
             tsPacketSizePtr = std::make_unique<qint64>(valueStr.toLongLong(&ok));
@@ -254,7 +334,7 @@ int main(int argc, char *argv[])
 
     std::unique_ptr<bool> tsStripAdditionalInfoPtr;
     {
-        QString valueStr = parser.value("ts-strip-additional-info");
+        QString valueStr = effectiveValue("ts-strip-additional-info");
         if (!valueStr.isNull()) {
             if (valueStr == "0" || valueStr == "false" || valueStr == "no")
                 tsStripAdditionalInfoPtr = std::make_unique<bool>(false);
@@ -269,7 +349,7 @@ int main(int argc, char *argv[])
 
     std::unique_ptr<StreamServer::BrakeType> brakeTypePtr;
     {
-        QString valueStr = parser.value("brake");
+        QString valueStr = effectiveValue("brake");
         if (!valueStr.isNull()) {
             if (valueStr == "none")
                 brakeTypePtr = std::make_unique<StreamServer::BrakeType>(StreamServer::BrakeType::None);
@@ -289,7 +369,7 @@ int main(int argc, char *argv[])
 
     std::unique_ptr<bool> inputFileOpenNonblockingPtr;
     {
-        QString valueStr = parser.value("input-open-nonblock");
+        QString valueStr = effectiveValue("input-open-nonblock");
         if (!valueStr.isNull()) {
             if (valueStr == "0" || valueStr == "false" || valueStr == "no")
                 inputFileOpenNonblockingPtr = std::make_unique<bool>(false);
@@ -304,7 +384,7 @@ int main(int argc, char *argv[])
 
     std::unique_ptr<int> inputFileReopenTimeoutMillisecPtr;
     {
-        QString valueStr = parser.value("input-reopen-timeout");
+        QString valueStr = effectiveValue("input-reopen-timeout");
         if (!valueStr.isNull()) {
             bool ok = false;
             inputFileReopenTimeoutMillisecPtr = std::make_unique<int>(valueStr.toUInt(&ok));
