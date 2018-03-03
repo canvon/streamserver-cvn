@@ -217,6 +217,11 @@ void StreamClient::processRequest()
                 << "HTTP version" << _httpRequest.httpVersion()
                 << "...";
     }
+    if (verbose >= 1) {
+        qInfo() << qPrintable(_logPrefix) << "HTTP header:";
+        for (const HTTP::HeaderParser::Field &headerField : _httpRequest.header().fields())
+            qInfo() << qPrintable(_logPrefix) << headerField;
+    }
 
     const QByteArray httpVersion = _httpRequest.httpVersion();
     if (!(httpVersion == "HTTP/1.0" || httpVersion == "HTTP/1.1")) {

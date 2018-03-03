@@ -4,6 +4,7 @@
 #include <memory>
 #include <QByteArray>
 #include <QList>
+#include <QDebug>
 
 namespace HTTP {
 
@@ -37,6 +38,8 @@ public:
     // Reverse direction
     //QByteArray toBytes() const;
 };
+
+QDebug operator<<(QDebug debug, const HeaderParser::Field &field);
 
 }  // namespace HTTP
 

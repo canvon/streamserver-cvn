@@ -115,4 +115,16 @@ void HeaderParser::append(const QByteArray &fieldBytes)
     _implPtr->append(theField);
 }
 
+QDebug operator<<(QDebug debug, const HeaderParser::Field &field)
+{
+    QDebugStateSaver saver(debug);
+    debug.nospace();
+
+    debug << "HTTP::HeaderParser::Field(";
+    debug << "fieldName="  << field.fieldName << " ";
+    debug << "fieldValue=" << field.fieldValue << ")";
+
+    return debug;
+}
+
 }  // namespace HTTP
