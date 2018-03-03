@@ -204,6 +204,10 @@ int main(int argc, char *argv[])
     {
         QString valueStr = parser.value("config-file");
         if (!valueStr.isNull()) {
+            if (!QFile::exists(valueStr)) {
+                qCritical() << "Invalid per-run config-file: File does not exist:" << valueStr;
+                return 2;
+            }
             settingsConfigfilePtr = std::make_unique<QSettings>(valueStr, QSettings::IniFormat);
             settingsConfigfilePtr->beginGroup(settingsGroupName);
         }
