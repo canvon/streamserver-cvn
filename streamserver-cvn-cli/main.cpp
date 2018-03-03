@@ -178,7 +178,7 @@ int main(int argc, char *argv[])
         { "debug-level", "Set debug level",
           "level_number" },
         { { "l", "listen-port" }, "Port to listen on for HTTP streaming client connections",
-          "port", "8000" },
+          "port" },
         { "server-host-whitelist", "HTTP server host names to require (e.g., \"foo:8000,bar:8000\")",
           "whitelist" },
         { { "logts", "log-timestamping" }, "How to timestamp log messages: "
@@ -302,12 +302,17 @@ int main(int argc, char *argv[])
     }
 
 
-    QString listenPortStr = effectiveValue("listen-port");
-    bool ok = false;
-    qint16 listenPort = listenPortStr.toUShort(&ok);
-    if (!ok) {
-        qCritical() << "Invalid port number" << listenPortStr;
-        return 2;
+    quint16 listenPort = StreamServer::listenPort_default;
+    {
+        QString valueStr = effectiveValue("listen-port");
+        if (!valueStr.isNull()) {
+            bool ok = false;
+            listenPort = valueStr.toUShort(&ok);
+            if (!ok) {
+                qCritical() << "Invalid listen port number: Can't convert to number:" << valueStr;
+                return 2;
+            }
+        }
     }
 
     std::unique_ptr<QStringList> serverHostWhitelistPtr;

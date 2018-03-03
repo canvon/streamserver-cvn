@@ -49,7 +49,9 @@ private:
     QSignalMapper                         _clientDisconnectedMapper;
 
 public:
-    explicit StreamServer(std::unique_ptr<QFile> inputFilePtr, quint16 listenPort = 8000, QObject *parent = 0);
+    explicit StreamServer(std::unique_ptr<QFile> inputFilePtr, quint16 listenPort = listenPort_default, QObject *parent = 0);
+
+    static const quint16 listenPort_default = 8000;
 
     bool         isShuttingDown() const;
     quint16      listenPort() const;
