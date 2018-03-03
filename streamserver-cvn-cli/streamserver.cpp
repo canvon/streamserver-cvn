@@ -212,6 +212,17 @@ void StreamServer::clientDisconnected(QObject *objPtr)
     QTcpSocket &socket(clientPtr->socket());
     const QString logPrefix = clientPtr->logPrefix();
 
+    const HTTPRequest &theHTTPRequest(clientPtr->httpRequest());
+    if (theHTTPRequest.receiveState() != HTTPRequest::ReceiveState::Ready) {
+        if (verbose >= 0) {
+            qInfo() << qPrintable(logPrefix) << "No valid HTTP request before disconnect!";
+            qInfo() << qPrintable(logPrefix) << "Buffer was"
+                    << HumanReadable::Hexdump { theHTTPRequest.buf(), true, true, true };
+            qInfo() << qPrintable(logPrefix) << "Header lines buffer was"
+                    << HumanReadable::Hexdump { theHTTPRequest.headerLinesBuf(), true, true, true };
+        }
+    }
+
     if (verbose >= -1) {
         qInfo() << qPrintable(logPrefix)
                 << "Client" << clientPtr->id() << "disconnected:"
