@@ -31,6 +31,7 @@ public:
 
     qint64 tsPacketSize() const;
     void setTSPacketSize(qint64 size);
+    qint64 tsPacketOffset() const;
 
 signals:
     void tsPacketReady(const TSPacket &packet);

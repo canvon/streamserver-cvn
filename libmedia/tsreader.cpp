@@ -16,6 +16,7 @@ class ReaderImpl {
     std::unique_ptr<QSocketNotifier>  _notifierPtr;
     QByteArray                        _buf;
     qint64                            _tsPacketSize = TSPacket::lengthBasic;
+    qint64                            _tsPacketOffset = 0;
     friend Reader;
 
 public:
@@ -59,6 +60,11 @@ void Reader::setTSPacketSize(qint64 size)
         throw std::invalid_argument("TS reader: Set TS packet size: Invalid size " + std::to_string(size));
 
     _implPtr->_tsPacketSize = size;
+}
+
+qint64 Reader::tsPacketOffset() const
+{
+    return _implPtr->_tsPacketOffset;
 }
 
 void Reader::readData()
@@ -105,6 +111,8 @@ void Reader::readData()
         }
 
         emit tsPacketReady(packet);
+
+        _implPtr->_tsPacketOffset += packet.bytes().length();
     } while (true);
 }
 
