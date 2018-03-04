@@ -88,6 +88,7 @@ void Reader::readData()
             }
             else if (bufLenPrev + readResult < bufLenTarget) {
                 // Short read. Guess all we can do is return...
+                buf.resize(bufLenPrev + readResult);
                 return;
             }
 
