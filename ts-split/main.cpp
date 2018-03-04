@@ -33,7 +33,10 @@ int main(int argc, char *argv[])
         { { "s", "ts-packet-size" },
           "MPEG-TS packet size (e.g., 188 bytes)",
           "SIZE" },
+        { "outfile", "Output file description",
+          "startOffset=START,lenPackets=LENPACKETS,fileName=FILENAME" },
     });
+    parser.addPositionalArgument("INPUT", "Input file to split into parts");
     parser.process(a);
 
     // Apply incremental options.
@@ -63,14 +66,83 @@ int main(int argc, char *argv[])
         }
     }
 
+    // Output files
+    QList<Splitter::Output> outputs;
+    for (const QString &outputDesc : parser.values("outfile")) {
+        Splitter::Output output { nullptr, -1, -1 };
+        int iComma = -1;
+        int iStart = iComma + 1;
+        while ((iComma = outputDesc.indexOf(',', iStart)) >= 0) {
+            const QString field = outputDesc.mid(iStart, iComma - iStart);
+
+            if (field.isEmpty()) {
+                qCritical() << "Invalid output file description: Contains empty field:" << outputDesc;
+                return 2;
+            }
+
+            int iFieldEq = field.indexOf('=');
+            if (iFieldEq < 0) {
+                qCritical() << "Invalid output file description: Field" << field << "doesn't have key=value structure:" << outputDesc;
+                return 2;
+            }
+
+            const QString key   = field.mid(0, iFieldEq);
+            const QString value = field.mid(iFieldEq + 1);
+
+            if (key.compare("startOffset", Qt::CaseInsensitive) == 0) {
+                bool ok = false;
+                output.startOffset = value.toLongLong(&ok);
+                if (!ok) {
+                    qCritical().nospace() << "Invalid output file description: Key " << key << ": Can't convert value to number: " << value;
+                    return 2;
+                }
+            }
+            else if (key.compare("lenPackets", Qt::CaseInsensitive) == 0) {
+                bool ok = false;
+                output.lenPackets = value.toInt(&ok);
+                if (!ok) {
+                    qCritical().nospace() << "Invalid output file description: Key " << key << ": Can't convert value to number: " << value;
+                    return 2;
+                }
+            }
+            else {
+                qCritical().nospace() << "Invalid output file description: Invalid key " << key << ": " << outputDesc;
+                return 2;
+            }
+
+            iStart = iComma + 1;
+        }
+
+        const QString rest = outputDesc.mid(iStart);
+        const QString fileNameIntro = "fileName=";
+        if (!rest.startsWith(fileNameIntro, Qt::CaseInsensitive)) {
+            qCritical() << "Invalid output file description: fileName designator missing:" << outputDesc;
+            return 2;
+        }
+
+        const QString fileName = rest.mid(fileNameIntro.length());
+        if (fileName.isEmpty()) {
+            qCritical() << "Invalid output file description: fileName is empty:" << outputDesc;
+            return 2;
+        }
+        output.outputFile = new QFile(fileName, &a);
+
+        outputs.append(output);
+    }
+    if (outputs.isEmpty()) {
+        qCritical() << "No --outfile descriptions specified";
+        return 2;
+    }
+
     auto args = parser.positionalArguments();
     if (!(args.length() == 1)) {
-        qCritical() << "Invalid arguments";
+        qCritical() << "Input file missing";
         return 2;
     }
 
     QFile inputFile(args.first(), &a);
     Splitter splitter(&a);
+    splitter.setOutputs(outputs);
     splitter.openInput(&inputFile);
     splitter.tsReader()->setTSPacketSize(tsPacketSize);
 

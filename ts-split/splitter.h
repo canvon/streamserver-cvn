@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <QString>
+#include <QList>
 
 class QFile;
 class TSPacket;
@@ -19,11 +20,19 @@ class Splitter : public QObject
     std::unique_ptr<SplitterImpl>  _implPtr;
 
 public:
+    struct Output {
+        QFile  *outputFile;
+        qint64  startOffset;
+        int     lenPackets;
+    };
+
     explicit Splitter(QObject *parent = 0);
     ~Splitter();
 
     TS::Reader *tsReader();
     const TS::Reader *tsReader() const;
+    const QList<Output> &outputs() const;
+    void setOutputs(const QList<Output> &outs);
 
 signals:
 
