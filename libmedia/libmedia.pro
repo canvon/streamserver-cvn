@@ -27,11 +27,13 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
     tspacket.cpp \
-    tsreader.cpp
+    tsreader.cpp \
+    tswriter.cpp
 
 HEADERS += libmedia_global.h \
     tspacket.h \
-    tsreader.h
+    tsreader.h \
+    tswriter.h
 
 unix {
     target.path = /usr/lib/streamserver-cvn
