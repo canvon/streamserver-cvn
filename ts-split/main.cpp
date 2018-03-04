@@ -2,10 +2,14 @@
 
 #include "splitter.h"
 #include "tspacket.h"
+#include "log_backend.h"
 
 #include <QCommandLineParser>
 #include <QFile>
 #include <QTextStream>
+
+using log::verbose;
+using log::debug_level;
 
 namespace {
     QTextStream out(stdout), errout(stderr);
@@ -13,6 +17,9 @@ namespace {
 
 int main(int argc, char *argv[])
 {
+    log::backend::logoutPtr = &errout;
+    qInstallMessageHandler(&log::backend::msgHandler);
+
     QCoreApplication a(argc, argv);
     qint64 tsPacketSize = TSPacket::lengthBasic;
 
@@ -20,11 +27,28 @@ int main(int argc, char *argv[])
     parser.setApplicationDescription("Split MPEG-TS stream into files");
     parser.addHelpOption();
     parser.addOptions({
+        { { "v", "verbose" }, "Increase verbose level" },
+        { { "q", "quiet"   }, "Decrease verbose level" },
+        { { "d", "debug"   }, "Enable debugging. (Increase debug level.)" },
         { { "s", "ts-packet-size" },
           "MPEG-TS packet size (e.g., 188 bytes)",
           "SIZE" },
     });
     parser.process(a);
+
+    // Apply incremental options.
+    for (QString opt : parser.optionNames()) {
+        if (opt == "v" || opt == "verbose")
+            verbose++;
+        else if (opt == "q" || opt == "quiet")
+            verbose--;
+        else if (opt == "d" || opt == "debug")
+#ifdef QT_NO_DEBUG_OUTPUT
+            qFatal("No debug output compiled in, can't enable debugging!");
+#else
+            debug_level++;
+#endif
+    }
 
     // TS packet size
     {
