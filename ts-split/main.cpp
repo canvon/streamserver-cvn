@@ -57,10 +57,7 @@ int main(int argc, char *argv[])
             bool ok = false;
             tsPacketSize = valueStr.toLongLong(&ok);
             if (!ok) {
-                errout << a.applicationName() << ": "
-                       << "TS packet size: Conversion to number failed for \""
-                       << valueStr << "\""
-                       << endl;
+                qCritical() << "Invalid TS packet size: Can't convert to number:" << valueStr;
                 return 2;
             }
         }
@@ -68,9 +65,7 @@ int main(int argc, char *argv[])
 
     auto args = parser.positionalArguments();
     if (!(args.length() == 1)) {
-        errout << a.applicationName()
-               << ": Invalid arguments"
-               << endl;
+        qCritical() << "Invalid arguments";
         return 2;
     }
 
