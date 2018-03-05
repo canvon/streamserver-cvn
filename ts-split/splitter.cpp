@@ -214,15 +214,18 @@ void Splitter::handleTSPacketReady(const TSPacket &packet)
     }
 }
 
-void Splitter::handleDiscontEncountered()
+void Splitter::handleDiscontEncountered(double pcrPrev)
 {
     TS::Reader &reader(*_implPtr->_tsReaderPtr);
     const qint64 currentOffset = reader.tsPacketOffset();
+    const double pcrLast       = reader.pcrLast();
 
     if (verbose >= 0) {
         qInfo().nospace()
             << "[" << currentOffset << "] "
-            << "Discontinuity encountered: Input switches to segment " << reader.discontSegment();
+            << "Discontinuity encountered "
+            << "(" << pcrPrev << " -> " << pcrLast << "): "
+            << "Input switches to segment " << reader.discontSegment();
     }
 
     // TODO: Allow adding segment-based output files dynamically.

@@ -74,7 +74,7 @@ signals:
 public slots:
     void openInput(QFile *inputFile);
     void handleTSPacketReady(const TSPacket &packet);
-    void handleDiscontEncountered();
+    void handleDiscontEncountered(double pcrPrev);
     void handleEOFEncountered();
     void handleErrorEncountered(TS::Reader::ErrorKind errorKind, QString errorMessage);
 };

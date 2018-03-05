@@ -2,6 +2,7 @@
 
 #include "tspacket.h"
 
+#include <cmath>
 #include <stdexcept>
 #include <QByteArray>
 #include <QPointer>
@@ -83,6 +84,11 @@ int Reader::discontSegment() const
     return _implPtr->_discontSegment;
 }
 
+double Reader::pcrLast() const
+{
+    return _implPtr->_discontLastPCRValid ? _implPtr->_discontLastPCR : NAN;
+}
+
 void Reader::readData()
 {
     if (!_implPtr->_devPtr) {
@@ -122,10 +128,11 @@ void Reader::readData()
         buf.clear();
         _implPtr->_tsPacketCount++;
 
+        double pcrPrev = pcrLast();
         if (_implPtr->checkIsDiscontinuity(packet)) {
             _implPtr->_discontSegment++;
 
-            emit discontEncountered();
+            emit discontEncountered(pcrPrev);
         }
 
         const QString errMsg = packet.errorMessage();

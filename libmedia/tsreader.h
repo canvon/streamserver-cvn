@@ -34,10 +34,11 @@ public:
     qint64 tsPacketOffset() const;
     qint64 tsPacketCount() const;
     int discontSegment() const;
+    double pcrLast() const;
 
 signals:
     void tsPacketReady(const TSPacket &packet);
-    void discontEncountered();
+    void discontEncountered(double pcrPrev);
     void eofEncountered();
     void errorEncountered(ErrorKind errorKind, QString errorMessage);
 
