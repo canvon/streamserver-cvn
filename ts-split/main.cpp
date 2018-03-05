@@ -207,7 +207,7 @@ int main(int argc, char *argv[])
     }
     else {
         if (verbose >= 1) {
-            qInfo() << "Outputs before run:";
+            qInfo() << "Output requests before run:";
             for (const Splitter::Output &output : outputs)
                 qInfo() << output;
         }
@@ -225,5 +225,13 @@ int main(int argc, char *argv[])
     splitter.openInput(&inputFile);
     splitter.tsReader()->setTSPacketSize(tsPacketSize);
 
-    return a.exec();
+    int ret = a.exec();
+
+    if (verbose >= 1) {
+        qInfo() << "Output results after run:";
+        for (const Splitter::Output &result : splitter.outputResults())
+            qInfo() << result;
+    }
+
+    return ret;
 }
