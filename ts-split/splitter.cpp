@@ -54,45 +54,45 @@ const QList<Splitter::Output> &Splitter::outputRequests() const
 
 void Splitter::setOutputRequests(const QList<Splitter::Output> &requests)
 {
-    for (const Output &theOut : requests) {
-        if (!theOut.outputFile)
+    for (const Output &outRequest : requests) {
+        if (!outRequest.outputFile)
             throw std::invalid_argument("Splitter: Set outputs: Output file can't be null");
-        switch (theOut.start.startKind) {
+        switch (outRequest.start.startKind) {
         case StartKind::None:
             throw std::invalid_argument("Splitter: Set outputs: Start kind can't be none");
         case StartKind::Offset:
-            if (!(theOut.start.startOffset >= 0))
+            if (!(outRequest.start.startOffset >= 0))
                 throw std::invalid_argument("Splitter: Set outputs: Start offset must be positive or zero");
             break;
         case StartKind::Packet:
-            if (!(theOut.start.startPacket >= 1))
+            if (!(outRequest.start.startPacket >= 1))
                 throw std::invalid_argument("Splitter: Set outputs: Start packet must be positive");
             break;
         case StartKind::DiscontinuitySegment:
-            if (!(theOut.start.startDiscontSegment >= 1))
+            if (!(outRequest.start.startDiscontSegment >= 1))
                 throw std::invalid_argument("Splitter: Set outputs: Start discontinuity segment must be positive");
             break;
         default:
-            throw std::invalid_argument("Splitter: Set outputs: Invalid start kind " + std::to_string((int)theOut.start.startKind));
+            throw std::invalid_argument("Splitter: Set outputs: Invalid start kind " + std::to_string((int)outRequest.start.startKind));
         }
 
-        switch (theOut.length.lenKind) {
+        switch (outRequest.length.lenKind) {
         case LengthKind::None:
             throw std::invalid_argument("Splitter: Set outputs: Length kind can't be none");
         case LengthKind::Bytes:
-            if (!(theOut.length.lenBytes >= 0))
+            if (!(outRequest.length.lenBytes >= 0))
                 throw std::invalid_argument("Splitter: Set outputs: Length in bytes must be positive or zero");
             break;
         case LengthKind::Packets:
-            if (!(theOut.length.lenPackets >= 0))
+            if (!(outRequest.length.lenPackets >= 0))
                 throw std::invalid_argument("Splitter: Set outputs: Length in packets must be positive or zero");
             break;
         case LengthKind::DiscontinuitySegments:
-            if (!(theOut.length.lenDiscontSegments >= 0))
+            if (!(outRequest.length.lenDiscontSegments >= 0))
                 throw std::invalid_argument("Splitter: Set outputs: Length in discontinuity segments must be positive or zero");
             break;
         default:
-            throw std::invalid_argument("Splitter: Set outputs: Invalid length kind " + std::to_string((int)theOut.length.lenKind));
+            throw std::invalid_argument("Splitter: Set outputs: Invalid length kind " + std::to_string((int)outRequest.length.lenKind));
         }
     }
 
@@ -155,29 +155,29 @@ void Splitter::handleTSPacketReady(const TSPacket &packet)
     }
 
     // Conditionally forward to output files.
-    for (Output &theOut : _implPtr->_outputRequests) {
-        QFile &outputFile(*theOut.outputFile);
+    for (Output &outRequest : _implPtr->_outputRequests) {
+        QFile &outputFile(*outRequest.outputFile);
         Output &result(_implPtr->findOrDefaultOutputResult(&outputFile));
 
         // Started, yet?
         bool isStarted = false;
-        switch (theOut.start.startKind) {
+        switch (outRequest.start.startKind) {
         case StartKind::Offset:
-            if (theOut.start.startOffset <= packetOffset)
+            if (outRequest.start.startOffset <= packetOffset)
                 isStarted = true;
             break;
         case StartKind::Packet:
-            if (theOut.start.startPacket <= packetCount)
+            if (outRequest.start.startPacket <= packetCount)
                 isStarted = true;
             break;
         case StartKind::DiscontinuitySegment:
-            if (theOut.start.startDiscontSegment <= discontSegment)
+            if (outRequest.start.startDiscontSegment <= discontSegment)
                 isStarted = true;
             break;
         default:
         {
             QString exMsg;
-            QDebug(&exMsg) << "Splitter: Unsupported output start kind" << theOut.start.startKind;
+            QDebug(&exMsg) << "Splitter: Unsupported output start kind" << outRequest.start.startKind;
             throw std::runtime_error(exMsg.toStdString());
         }
         }
@@ -186,7 +186,7 @@ void Splitter::handleTSPacketReady(const TSPacket &packet)
 
         // Finished, already?
         bool isFinished = false;
-        switch (theOut.length.lenKind) {
+        switch (outRequest.length.lenKind) {
         case LengthKind::Bytes:
             if (result.length.lenKind == LengthKind::None) {
                 result.length.lenKind = LengthKind::Bytes;
@@ -197,7 +197,7 @@ void Splitter::handleTSPacketReady(const TSPacket &packet)
                 QDebug(&errMsg) << "Splitter: Output result length kind expected to be bytes, but was" << result.length.lenKind;
                 qFatal("%s", qPrintable(errMsg));
             }
-            if (!(result.length.lenBytes < theOut.length.lenBytes))
+            if (!(result.length.lenBytes < outRequest.length.lenBytes))
                 isFinished = true;
             break;
         case LengthKind::Packets:
@@ -210,7 +210,7 @@ void Splitter::handleTSPacketReady(const TSPacket &packet)
                 QDebug(&errMsg) << "Splitter: Output result length kind expected to be packets, but was" << result.length.lenKind;
                 qFatal("%s", qPrintable(errMsg));
             }
-            if (!(result.length.lenPackets < theOut.length.lenPackets))
+            if (!(result.length.lenPackets < outRequest.length.lenPackets))
                 isFinished = true;
             break;
         case LengthKind::DiscontinuitySegments:
@@ -223,13 +223,13 @@ void Splitter::handleTSPacketReady(const TSPacket &packet)
                 QDebug(&errMsg) << "Splitter: Output result length kind expected to be discontinuity segments, but was" << result.length.lenKind;
                 qFatal("%s", qPrintable(errMsg));
             }
-            if (!(result.length.lenDiscontSegments < theOut.length.lenDiscontSegments))
+            if (!(result.length.lenDiscontSegments < outRequest.length.lenDiscontSegments))
                 isFinished = true;
             break;
         default:
         {
             QString exMsg;
-            QDebug(&exMsg) << "Splitter: Unsupported output length kind" << theOut.length.lenKind;
+            QDebug(&exMsg) << "Splitter: Unsupported output length kind" << outRequest.length.lenKind;
             throw std::runtime_error(exMsg.toStdString());
         }
         }
