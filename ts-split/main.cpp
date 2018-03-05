@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
     // Output files
     QList<Splitter::Output> outputs;
     for (const QString &outputDesc : parser.values("outfile")) {
-        Splitter::Output output { nullptr, -1, -1 };
+        Splitter::Output output;
         int iComma = -1;
         int iStart = iComma + 1;
         while ((iComma = outputDesc.indexOf(',', iStart)) >= 0) {
@@ -91,7 +91,8 @@ int main(int argc, char *argv[])
 
             if (key.compare("startOffset", Qt::CaseInsensitive) == 0) {
                 bool ok = false;
-                output.startOffset = value.toLongLong(&ok);
+                output.start.startKind = Splitter::StartKind::Offset;
+                output.start.startOffset = value.toLongLong(&ok);
                 if (!ok) {
                     qCritical().nospace() << "Invalid output file description: Key " << key << ": Can't convert value to number: " << value;
                     return 2;
@@ -99,7 +100,8 @@ int main(int argc, char *argv[])
             }
             else if (key.compare("lenPackets", Qt::CaseInsensitive) == 0) {
                 bool ok = false;
-                output.lenPackets = value.toInt(&ok);
+                output.length.lenKind = Splitter::LengthKind::Packets;
+                output.length.lenPackets = value.toInt(&ok);
                 if (!ok) {
                     qCritical().nospace() << "Invalid output file description: Key " << key << ": Can't convert value to number: " << value;
                     return 2;
@@ -132,6 +134,13 @@ int main(int argc, char *argv[])
     if (outputs.isEmpty()) {
         qCritical() << "No --outfile descriptions specified";
         return 2;
+    }
+    else {
+        if (verbose >= 1) {
+            qInfo() << "Outputs before run:";
+            for (const Splitter::Output &output : outputs)
+                qInfo() << output;
+        }
     }
 
     auto args = parser.positionalArguments();

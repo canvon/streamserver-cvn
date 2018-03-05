@@ -8,6 +8,7 @@
 #include <memory>
 #include <QString>
 #include <QList>
+#include <QDebug>
 
 class QFile;
 class TSPacket;
@@ -20,10 +21,44 @@ class Splitter : public QObject
     std::unique_ptr<SplitterImpl>  _implPtr;
 
 public:
+    enum class StartKind {
+        None = 0,
+        Offset,
+        Packet,
+        DiscontinuitySegment,
+    };
+    Q_ENUM(StartKind)
+
+    struct Start {
+        StartKind  startKind = StartKind::None;
+        union {
+            qint64  startOffset;
+            qint64  startPacket;
+            int     startDiscontSegment;
+        };
+    };
+
+    enum class LengthKind {
+        None = 0,
+        Bytes,
+        Packets,
+        DiscontinuitySegments,
+    };
+    Q_ENUM(LengthKind)
+
+    struct Length {
+        LengthKind  lenKind = LengthKind::None;
+        union {
+            qint64  lenBytes;
+            qint64  lenPackets;
+            int     lenDiscontSegments;
+        };
+    };
+
     struct Output {
         QFile  *outputFile;
-        qint64  startOffset;
-        int     lenPackets;
+        Start   start;
+        Length  length;
     };
 
     explicit Splitter(QObject *parent = 0);
@@ -42,5 +77,9 @@ public slots:
     void handleEOFEncountered();
     void handleErrorEncountered(TS::Reader::ErrorKind errorKind, QString errorMessage);
 };
+
+QDebug operator<<(QDebug debug, const Splitter::Start &start);
+QDebug operator<<(QDebug debug, const Splitter::Length &length);
+QDebug operator<<(QDebug debug, const Splitter::Output &output);
 
 #endif // SPLITTER_H

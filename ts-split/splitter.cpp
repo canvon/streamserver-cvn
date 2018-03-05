@@ -54,10 +54,43 @@ void Splitter::setOutputs(const QList<Splitter::Output> &outs)
     for (const Output &theOut : outs) {
         if (!theOut.outputFile)
             throw std::invalid_argument("Splitter: Set outputs: Output file can't be null");
-        if (!(theOut.startOffset >= 0))
-            throw std::invalid_argument("Splitter: Set outputs: Start offset must be positive or zero");
-        if (!(theOut.lenPackets >= 0))
-            throw std::invalid_argument("Splitter: Set outputs: Length in packets must be positive or zero");
+        switch (theOut.start.startKind) {
+        case StartKind::None:
+            throw std::invalid_argument("Splitter: Set outputs: Start kind can't be none");
+        case StartKind::Offset:
+            if (!(theOut.start.startOffset >= 0))
+                throw std::invalid_argument("Splitter: Set outputs: Start offset must be positive or zero");
+            break;
+        case StartKind::Packet:
+            if (!(theOut.start.startPacket >= 1))
+                throw std::invalid_argument("Splitter: Set outputs: Start packet must be positive");
+            break;
+        case StartKind::DiscontinuitySegment:
+            if (!(theOut.start.startDiscontSegment >= 1))
+                throw std::invalid_argument("Splitter: Set outputs: Start discontinuity segment must be positive");
+            break;
+        default:
+            throw std::invalid_argument("Splitter: Set outputs: Invalid start kind " + std::to_string((int)theOut.start.startKind));
+        }
+
+        switch (theOut.length.lenKind) {
+        case LengthKind::None:
+            throw std::invalid_argument("Splitter: Set outputs: Length kind can't be none");
+        case LengthKind::Bytes:
+            if (!(theOut.length.lenBytes >= 0))
+                throw std::invalid_argument("Splitter: Set outputs: Length in bytes must be positive or zero");
+            break;
+        case LengthKind::Packets:
+            if (!(theOut.length.lenPackets >= 0))
+                throw std::invalid_argument("Splitter: Set outputs: Length in packets must be positive or zero");
+            break;
+        case LengthKind::DiscontinuitySegments:
+            if (!(theOut.length.lenDiscontSegments >= 0))
+                throw std::invalid_argument("Splitter: Set outputs: Length in discontinuity segments must be positive or zero");
+            break;
+        default:
+            throw std::invalid_argument("Splitter: Set outputs: Invalid length kind " + std::to_string((int)theOut.length.lenKind));
+        }
     }
 
     _implPtr->_outputs = outs;
@@ -102,11 +135,35 @@ void Splitter::handleTSPacketReady(const TSPacket &packet)
         QFile &outputFile(*theOut.outputFile);
 
         // Started, yet?
-        if (!(theOut.startOffset <= currentOffset))
+        qint64 startOffset;
+        switch (theOut.start.startKind) {
+        case StartKind::Offset:
+            startOffset = theOut.start.startOffset;
+            break;
+        default:
+        {
+            QString exMsg;
+            QDebug(&exMsg) << "Splitter: Unsupported output start kind" << theOut.start.startKind;
+            throw std::runtime_error(exMsg.toStdString());
+        }
+        }
+        if (!(startOffset <= currentOffset))
             continue;
 
         // Finished, already?
-        if (!(currentOffset < theOut.startOffset + theOut.lenPackets * packetSize)) {
+        qint64 pastEndOffset;
+        switch (theOut.length.lenKind) {
+        case LengthKind::Packets:
+            pastEndOffset = startOffset + theOut.length.lenPackets * packetSize;
+            break;
+        default:
+        {
+            QString exMsg;
+            QDebug(&exMsg) << "Splitter: Unsupported output length kind" << theOut.length.lenKind;
+            throw std::runtime_error(exMsg.toStdString());
+        }
+        }
+        if (!(currentOffset < pastEndOffset)) {
             if (outputFile.isOpen()) {
                 if (verbose >= 0) {
                     qInfo().nospace()
@@ -172,4 +229,70 @@ void Splitter::handleErrorEncountered(TS::Reader::ErrorKind errorKind, QString e
         qWarning() << "Splitter: Ignoring TS error:" << errorMessage;
         break;
     }
+}
+
+QDebug operator<<(QDebug debug, const Splitter::Start &start)
+{
+    QDebugStateSaver saver(debug);
+    debug.nospace();
+    debug << "Splitter::Start(";
+    debug << start.startKind;
+    switch (start.startKind) {
+    case Splitter::StartKind::None:
+        break;
+    case Splitter::StartKind::Offset:
+        debug << " startOffset=" << start.startOffset;
+        break;
+    case Splitter::StartKind::Packet:
+        debug << " startPacket=" << start.startPacket;
+        break;
+    case Splitter::StartKind::DiscontinuitySegment:
+        debug << " startDiscontSegment=" << start.startDiscontSegment;
+        break;
+    }
+    debug << ")";
+
+    return debug;
+}
+
+QDebug operator<<(QDebug debug, const Splitter::Length &length)
+{
+    QDebugStateSaver saver(debug);
+    debug.nospace();
+    debug << "Splitter::Length(";
+    debug << length.lenKind;
+    switch (length.lenKind) {
+    case Splitter::LengthKind::None:
+        break;
+    case Splitter::LengthKind::Bytes:
+        debug << " lenBytes=" << length.lenBytes;
+        break;
+    case Splitter::LengthKind::Packets:
+        debug << " lenPackets=" << length.lenPackets;
+        break;
+    case Splitter::LengthKind::DiscontinuitySegments:
+        debug << " lenDiscontSegments=" << length.lenDiscontSegments;
+        break;
+    }
+    debug << ")";
+
+    return debug;
+}
+
+QDebug operator<<(QDebug debug, const Splitter::Output &output)
+{
+    QDebugStateSaver saver(debug);
+    debug.nospace();
+    debug << "Splitter::Output(";
+    debug <<        output.start;
+    debug << " " << output.length;
+    if (!output.outputFile) {
+        debug << " noFile";
+    }
+    else {
+        debug << " fileName=" << output.outputFile->fileName();
+    }
+    debug << ")";
+
+    return debug;
 }
