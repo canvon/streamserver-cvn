@@ -69,6 +69,7 @@ int main(int argc, char *argv[])
     // Output files
     QList<Splitter::Output> outputs;
     for (const QString &outputDesc : parser.values("outfile")) {
+        const char *errPrefix = "Invalid output file description:";
         Splitter::Output output;
         int iComma = -1;
         int iStart = iComma + 1;
@@ -76,39 +77,108 @@ int main(int argc, char *argv[])
             const QString field = outputDesc.mid(iStart, iComma - iStart);
 
             if (field.isEmpty()) {
-                qCritical() << "Invalid output file description: Contains empty field:" << outputDesc;
+                qCritical() << errPrefix << "Contains empty field:" << outputDesc;
                 return 2;
             }
 
             int iFieldEq = field.indexOf('=');
             if (iFieldEq < 0) {
-                qCritical() << "Invalid output file description: Field" << field << "doesn't have key=value structure:" << outputDesc;
+                qCritical() << errPrefix << "Field" << field << "doesn't have key=value structure:" << outputDesc;
                 return 2;
             }
 
             const QString key   = field.mid(0, iFieldEq);
             const QString value = field.mid(iFieldEq + 1);
 
+            auto checkIsStartKindNone = [&]() {
+                if (output.start.startKind == Splitter::StartKind::None)
+                    return true;
+
+                qCritical().nospace()
+                    << errPrefix << " Key " << key << ": "
+                    << "Start kind was already set to " << output.start.startKind
+                    << ": " << value;
+                return false;
+            };
+            auto checkIsLengthKindNone = [&]() {
+                if (output.length.lenKind == Splitter::LengthKind::None)
+                    return true;
+
+                qCritical().nospace()
+                    << errPrefix << " Key " << key << ": "
+                    << "Length kind was already set to " << output.length.lenKind
+                    << ": " << value;
+                return false;
+            };
+
             if (key.compare("startOffset", Qt::CaseInsensitive) == 0) {
+                if (!checkIsStartKindNone())
+                    return 2;
                 bool ok = false;
                 output.start.startKind = Splitter::StartKind::Offset;
                 output.start.startOffset = value.toLongLong(&ok);
                 if (!ok) {
-                    qCritical().nospace() << "Invalid output file description: Key " << key << ": Can't convert value to number: " << value;
+                    qCritical().nospace() << errPrefix << " Key " << key << ": Can't convert value to number: " << value;
+                    return 2;
+                }
+            }
+            else if (key.compare("startPacket", Qt::CaseInsensitive) == 0) {
+                if (!checkIsStartKindNone())
+                    return 2;
+                bool ok = false;
+                output.start.startKind = Splitter::StartKind::Packet;
+                output.start.startPacket = value.toLongLong(&ok);
+                if (!ok) {
+                    qCritical().nospace() << errPrefix << " Key " << key << ": Can't convert value to number: " << value;
+                    return 2;
+                }
+            }
+            else if (key.compare("startDiscontSegment", Qt::CaseInsensitive) == 0) {
+                if (!checkIsStartKindNone())
+                    return 2;
+                bool ok = false;
+                output.start.startKind = Splitter::StartKind::DiscontinuitySegment;
+                output.start.startDiscontSegment = value.toLongLong(&ok);
+                if (!ok) {
+                    qCritical().nospace() << errPrefix << " Key " << key << ": Can't convert value to number: " << value;
+                    return 2;
+                }
+            }
+            else if (key.compare("lenBytes", Qt::CaseInsensitive) == 0) {
+                if (!checkIsLengthKindNone())
+                    return 2;
+                bool ok = false;
+                output.length.lenKind = Splitter::LengthKind::Bytes;
+                output.length.lenBytes = value.toInt(&ok);
+                if (!ok) {
+                    qCritical().nospace() << errPrefix << " Key " << key << ": Can't convert value to number: " << value;
                     return 2;
                 }
             }
             else if (key.compare("lenPackets", Qt::CaseInsensitive) == 0) {
+                if (!checkIsLengthKindNone())
+                    return 2;
                 bool ok = false;
                 output.length.lenKind = Splitter::LengthKind::Packets;
                 output.length.lenPackets = value.toInt(&ok);
                 if (!ok) {
-                    qCritical().nospace() << "Invalid output file description: Key " << key << ": Can't convert value to number: " << value;
+                    qCritical().nospace() << errPrefix << " Key " << key << ": Can't convert value to number: " << value;
+                    return 2;
+                }
+            }
+            else if (key.compare("lenDiscontSegments", Qt::CaseInsensitive) == 0) {
+                if (!checkIsLengthKindNone())
+                    return 2;
+                bool ok = false;
+                output.length.lenKind = Splitter::LengthKind::DiscontinuitySegments;
+                output.length.lenDiscontSegments = value.toInt(&ok);
+                if (!ok) {
+                    qCritical().nospace() << errPrefix << " Key " << key << ": Can't convert value to number: " << value;
                     return 2;
                 }
             }
             else {
-                qCritical().nospace() << "Invalid output file description: Invalid key " << key << ": " << outputDesc;
+                qCritical().nospace() << errPrefix << " Invalid key " << key << ": " << outputDesc;
                 return 2;
             }
 
@@ -118,13 +188,13 @@ int main(int argc, char *argv[])
         const QString rest = outputDesc.mid(iStart);
         const QString fileNameIntro = "fileName=";
         if (!rest.startsWith(fileNameIntro, Qt::CaseInsensitive)) {
-            qCritical() << "Invalid output file description: fileName designator missing:" << outputDesc;
+            qCritical() << errPrefix << "fileName designator missing:" << outputDesc;
             return 2;
         }
 
         const QString fileName = rest.mid(fileNameIntro.length());
         if (fileName.isEmpty()) {
-            qCritical() << "Invalid output file description: fileName is empty:" << outputDesc;
+            qCritical() << errPrefix << "fileName is empty:" << outputDesc;
             return 2;
         }
         output.outputFile = new QFile(fileName, &a);
@@ -151,7 +221,7 @@ int main(int argc, char *argv[])
 
     QFile inputFile(args.first(), &a);
     Splitter splitter(&a);
-    splitter.setOutputs(outputs);
+    splitter.setOutputRequests(outputs);
     splitter.openInput(&inputFile);
     splitter.tsReader()->setTSPacketSize(tsPacketSize);
 

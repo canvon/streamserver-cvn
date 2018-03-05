@@ -17,9 +17,12 @@ using log::verbose;
 class SplitterImpl {
     QPointer<QFile>              _inputFilePtr;
     std::unique_ptr<TS::Reader>  _tsReaderPtr;
-    QList<Splitter::Output>      _outputs;
+    QList<Splitter::Output>      _outputRequests, _outputResults;
     typedef std::shared_ptr<TS::Writer>  _writerPtr_type;
     QHash<QFile *, _writerPtr_type>      _outputWriters;
+
+    Splitter::Output &findOrDefaultOutputResult(QFile *outputFile);
+
     friend Splitter;
 };
 
@@ -44,14 +47,14 @@ const TS::Reader *Splitter::tsReader() const
     return _implPtr->_tsReaderPtr.get();
 }
 
-const QList<Splitter::Output> &Splitter::outputs() const
+const QList<Splitter::Output> &Splitter::outputRequests() const
 {
-    return _implPtr->_outputs;
+    return _implPtr->_outputRequests;
 }
 
-void Splitter::setOutputs(const QList<Splitter::Output> &outs)
+void Splitter::setOutputRequests(const QList<Splitter::Output> &requests)
 {
-    for (const Output &theOut : outs) {
+    for (const Output &theOut : requests) {
         if (!theOut.outputFile)
             throw std::invalid_argument("Splitter: Set outputs: Output file can't be null");
         switch (theOut.start.startKind) {
@@ -93,7 +96,25 @@ void Splitter::setOutputs(const QList<Splitter::Output> &outs)
         }
     }
 
-    _implPtr->_outputs = outs;
+    _implPtr->_outputRequests = requests;
+}
+
+const QList<Splitter::Output> &Splitter::outputResults() const
+{
+    return _implPtr->_outputResults;
+}
+
+Splitter::Output &SplitterImpl::findOrDefaultOutputResult(QFile *outputFile)
+{
+    for (Splitter::Output &output : _outputResults) {
+        if (output.outputFile == outputFile)
+            return output;
+    }
+
+    Splitter::Output output;
+    output.outputFile = outputFile;
+    _outputResults.append(output);
+    return _outputResults.last();
 }
 
 void Splitter::openInput(QFile *inputFile)
@@ -121,25 +142,37 @@ void Splitter::openInput(QFile *inputFile)
 
 void Splitter::handleTSPacketReady(const TSPacket &packet)
 {
-    const qint64 packetSize    = _implPtr->_tsReaderPtr->tsPacketSize();
-    const qint64 currentOffset = _implPtr->_tsReaderPtr->tsPacketOffset();
+    TS::Reader &reader(*_implPtr->_tsReaderPtr);
+    const qint64 packetOffset = reader.tsPacketOffset();
+    const qint64 packetCount  = reader.tsPacketCount();
+    const int discontSegment  = reader.discontSegment();
 
     // Dump.
     if (verbose >= 2) {
         qInfo().nospace()
-            << "[" << currentOffset << "] "
+            << "[" << packetOffset << "] "
             << "Packet: " << packet;
     }
 
     // Conditionally forward to output files.
-    for (Output &theOut : _implPtr->_outputs) {
+    for (Output &theOut : _implPtr->_outputRequests) {
         QFile &outputFile(*theOut.outputFile);
+        Output &result(_implPtr->findOrDefaultOutputResult(&outputFile));
 
         // Started, yet?
-        qint64 startOffset;
+        bool isStarted = false;
         switch (theOut.start.startKind) {
         case StartKind::Offset:
-            startOffset = theOut.start.startOffset;
+            if (theOut.start.startOffset <= packetOffset)
+                isStarted = true;
+            break;
+        case StartKind::Packet:
+            if (theOut.start.startPacket <= packetCount)
+                isStarted = true;
+            break;
+        case StartKind::DiscontinuitySegment:
+            if (theOut.start.startDiscontSegment <= discontSegment)
+                isStarted = true;
             break;
         default:
         {
@@ -148,14 +181,50 @@ void Splitter::handleTSPacketReady(const TSPacket &packet)
             throw std::runtime_error(exMsg.toStdString());
         }
         }
-        if (!(startOffset <= currentOffset))
+        if (!isStarted)
             continue;
 
         // Finished, already?
-        qint64 pastEndOffset;
+        bool isFinished = false;
         switch (theOut.length.lenKind) {
+        case LengthKind::Bytes:
+            if (result.length.lenKind == LengthKind::None) {
+                result.length.lenKind = LengthKind::Bytes;
+                result.length.lenBytes = 0;
+            }
+            if (result.length.lenKind != LengthKind::Bytes) {
+                QString errMsg;
+                QDebug(&errMsg) << "Splitter: Output result length kind expected to be bytes, but was" << result.length.lenKind;
+                qFatal("%s", qPrintable(errMsg));
+            }
+            if (!(result.length.lenBytes < theOut.length.lenBytes))
+                isFinished = true;
+            break;
         case LengthKind::Packets:
-            pastEndOffset = startOffset + theOut.length.lenPackets * packetSize;
+            if (result.length.lenKind == LengthKind::None) {
+                result.length.lenKind = LengthKind::Packets;
+                result.length.lenPackets = 0;
+            }
+            if (result.length.lenKind != LengthKind::Packets) {
+                QString errMsg;
+                QDebug(&errMsg) << "Splitter: Output result length kind expected to be packets, but was" << result.length.lenKind;
+                qFatal("%s", qPrintable(errMsg));
+            }
+            if (!(result.length.lenPackets < theOut.length.lenPackets))
+                isFinished = true;
+            break;
+        case LengthKind::DiscontinuitySegments:
+            if (result.length.lenKind == LengthKind::None) {
+                result.length.lenKind = LengthKind::DiscontinuitySegments;
+                result.length.lenDiscontSegments = 0;
+            }
+            if (result.length.lenKind != LengthKind::DiscontinuitySegments) {
+                QString errMsg;
+                QDebug(&errMsg) << "Splitter: Output result length kind expected to be discontinuity segments, but was" << result.length.lenKind;
+                qFatal("%s", qPrintable(errMsg));
+            }
+            if (!(result.length.lenDiscontSegments < theOut.length.lenDiscontSegments))
+                isFinished = true;
             break;
         default:
         {
@@ -164,11 +233,11 @@ void Splitter::handleTSPacketReady(const TSPacket &packet)
             throw std::runtime_error(exMsg.toStdString());
         }
         }
-        if (!(currentOffset < pastEndOffset)) {
+        if (isFinished) {
             if (outputFile.isOpen()) {
                 if (verbose >= 0) {
                     qInfo().nospace()
-                        << "[" << currentOffset << "] "
+                        << "[" << packetOffset << "] "
                         << "Closing output file " << outputFile.fileName()
                         << "...";
                 }
@@ -186,7 +255,7 @@ void Splitter::handleTSPacketReady(const TSPacket &packet)
 
             if (verbose >= 0) {
                 qInfo().nospace()
-                    << "[" << currentOffset << "] "
+                    << "[" << packetOffset << "] "
                     << "Opening output file " << outputFile.fileName()
                     << "...";
             }
@@ -211,6 +280,18 @@ void Splitter::handleTSPacketReady(const TSPacket &packet)
 
         writerPtr->queueTSPacket(packet);
         writerPtr->writeData();
+
+        switch (result.length.lenKind) {
+        case LengthKind::Bytes:
+            result.length.lenBytes += packet.bytes().length();
+            break;
+        case LengthKind::Packets:
+            result.length.lenPackets++;
+            break;
+        default:
+            // Ignore.
+            break;
+        }
     }
 }
 
@@ -226,6 +307,11 @@ void Splitter::handleDiscontEncountered(double pcrPrev)
             << "Discontinuity encountered "
             << "(" << pcrPrev << " -> " << pcrLast << "): "
             << "Input switches to segment " << reader.discontSegment();
+    }
+
+    for (Output &outputResult : _implPtr->_outputResults) {
+        if (outputResult.length.lenKind == LengthKind::DiscontinuitySegments)
+            outputResult.length.lenDiscontSegments++;
     }
 
     // TODO: Allow adding segment-based output files dynamically.

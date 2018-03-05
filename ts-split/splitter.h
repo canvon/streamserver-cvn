@@ -66,8 +66,9 @@ public:
 
     TS::Reader *tsReader();
     const TS::Reader *tsReader() const;
-    const QList<Output> &outputs() const;
-    void setOutputs(const QList<Output> &outs);
+    const QList<Output> &outputRequests() const;
+    void setOutputRequests(const QList<Output> &requests);
+    const QList<Output> &outputResults() const;
 
 signals:
 
