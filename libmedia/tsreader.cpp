@@ -17,6 +17,10 @@ class ReaderImpl {
     QByteArray                        _buf;
     qint64                            _tsPacketSize = TSPacket::lengthBasic;
     qint64                            _tsPacketOffset = 0;
+    qint64                            _tsPacketCount  = 0;
+    int                               _discontSegment = 1;
+    bool                              _discontLastPCRValid = false;
+    double                            _discontLastPCR;
     friend Reader;
 
 public:
@@ -24,6 +28,8 @@ public:
     {
 
     }
+
+    bool checkIsDiscontinuity(const TSPacket &packet);
 };
 }  // namespace TS::impl
 
@@ -67,6 +73,16 @@ qint64 Reader::tsPacketOffset() const
     return _implPtr->_tsPacketOffset;
 }
 
+qint64 Reader::tsPacketCount() const
+{
+    return _implPtr->_tsPacketCount;
+}
+
+int Reader::discontSegment() const
+{
+    return _implPtr->_discontSegment;
+}
+
 void Reader::readData()
 {
     if (!_implPtr->_devPtr) {
@@ -104,6 +120,13 @@ void Reader::readData()
         // Try to interpret as TS packet.
         TSPacket packet(buf);
         buf.clear();
+        _implPtr->_tsPacketCount++;
+
+        if (_implPtr->checkIsDiscontinuity(packet)) {
+            _implPtr->_discontSegment++;
+
+            emit discontEncountered();
+        }
 
         const QString errMsg = packet.errorMessage();
         if (!errMsg.isNull()) {
@@ -114,6 +137,50 @@ void Reader::readData()
 
         _implPtr->_tsPacketOffset += packet.bytes().length();
     } while (true);
+}
+
+bool impl::ReaderImpl::checkIsDiscontinuity(const TSPacket &packet)
+{
+    if (!(packet.validity() >= TSPacket::ValidityType::AdaptationField))
+        return false;
+
+    auto afControl = packet.adaptationFieldControl();
+    if (!(afControl == TSPacket::AdaptationFieldControlType::AdaptationFieldOnly ||
+          afControl == TSPacket::AdaptationFieldControlType::AdaptationFieldThenPayload))
+        return false;
+
+    auto afPtr = packet.adaptationField();
+    if (!afPtr)
+        return false;
+
+    if (!afPtr->flagsValid())
+        return false;
+
+    if (!afPtr->PCRFlag())
+        return false;
+
+    auto pcrPtr = afPtr->PCR();
+    if (!pcrPtr)
+        return false;
+
+    // We got a valid PCR!
+    double pcr = pcrPtr->toSecs();
+
+    // Previous PCR available? If not, just remember the new one for later.
+    if (!_discontLastPCRValid) {
+        _discontLastPCR = pcr;
+        _discontLastPCRValid = true;
+        return false;
+    }
+
+    double lastPCR = _discontLastPCR;
+    _discontLastPCR = pcr;
+
+    if (lastPCR <= pcr && pcr <= lastPCR + 1)
+        // Everything within parameters.
+        return false;
+
+    return true;
 }
 
 }  // namespace TS

@@ -114,6 +114,7 @@ void Splitter::openInput(QFile *inputFile)
 
     // Set up signals.
     connect(&reader, &TS::Reader::tsPacketReady, this, &Splitter::handleTSPacketReady);
+    connect(&reader, &TS::Reader::discontEncountered, this, &Splitter::handleDiscontEncountered);
     connect(&reader, &TS::Reader::eofEncountered, this, &Splitter::handleEOFEncountered);
     connect(&reader, &TS::Reader::errorEncountered, this, &Splitter::handleErrorEncountered);
 }
@@ -211,6 +212,20 @@ void Splitter::handleTSPacketReady(const TSPacket &packet)
         writerPtr->queueTSPacket(packet);
         writerPtr->writeData();
     }
+}
+
+void Splitter::handleDiscontEncountered()
+{
+    TS::Reader &reader(*_implPtr->_tsReaderPtr);
+    const qint64 currentOffset = reader.tsPacketOffset();
+
+    if (verbose >= 0) {
+        qInfo().nospace()
+            << "[" << currentOffset << "] "
+            << "Discontinuity encountered: Input switches to segment " << reader.discontSegment();
+    }
+
+    // TODO: Allow adding segment-based output files dynamically.
 }
 
 void Splitter::handleEOFEncountered()

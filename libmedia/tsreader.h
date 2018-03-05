@@ -32,9 +32,12 @@ public:
     qint64 tsPacketSize() const;
     void setTSPacketSize(qint64 size);
     qint64 tsPacketOffset() const;
+    qint64 tsPacketCount() const;
+    int discontSegment() const;
 
 signals:
     void tsPacketReady(const TSPacket &packet);
+    void discontEncountered();
     void eofEncountered();
     void errorEncountered(ErrorKind errorKind, QString errorMessage);
 
