@@ -8,6 +8,7 @@
 #include <stdexcept>
 #include <QPointer>
 #include <QHash>
+#include <QStack>
 #include <QFile>
 #include <QDebug>
 #include <QCoreApplication>
@@ -155,7 +156,10 @@ void Splitter::handleTSPacketReady(const TSPacket &packet)
     }
 
     // Conditionally forward to output files.
-    for (Output &outRequest : _implPtr->_outputRequests) {
+    QStack<int> removeRequestIndices;
+    QList<Output> &outputRequests(_implPtr->_outputRequests);
+    for (int i = 0, len = outputRequests.length(); i < len; i++) {
+        Output &outRequest(outputRequests[i]);
         QFile &outputFile(*outRequest.outputFile);
         Output &result(_implPtr->findOrDefaultOutputResult(&outputFile));
 
@@ -245,6 +249,9 @@ void Splitter::handleTSPacketReady(const TSPacket &packet)
                 outputFile.close();
             }
 
+            // For efficiency, don't iterate over this output request anymore (but remove it).
+            removeRequestIndices.push(i);
+
             continue;
         }
 
@@ -293,6 +300,8 @@ void Splitter::handleTSPacketReady(const TSPacket &packet)
             break;
         }
     }
+    while (!removeRequestIndices.isEmpty())
+        outputRequests.removeAt(removeRequestIndices.pop());
 }
 
 void Splitter::handleDiscontEncountered(double pcrPrev)
