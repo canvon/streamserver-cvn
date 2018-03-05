@@ -310,6 +310,10 @@ void Splitter::handleDiscontEncountered(double pcrPrev)
     }
 
     for (Output &outputResult : _implPtr->_outputResults) {
+        // Only increase counts on output files that are currently open.
+        if (!(outputResult.outputFile && outputResult.outputFile->isOpen()))
+            continue;
+
         if (outputResult.length.lenKind == LengthKind::DiscontinuitySegments)
             outputResult.length.lenDiscontSegments++;
     }
