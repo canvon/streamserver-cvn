@@ -36,6 +36,16 @@ public:
         bool flagToBool(const QVariant &flag, bool *ok = nullptr) const;
         QStringList flagPairs() const;
     };
+
+    struct KeyValueOption {
+        QString  buf;
+        QString  fieldSep      = "=";
+        QString  interFieldSep = ",";
+
+        QString takeKey();
+        QString takeValue();
+        QString takeRest();
+    };
 };
 
 LIBINFRASHARED_EXPORT QDebug operator<<(QDebug debug, const HumanReadable::Hexdump &dump);

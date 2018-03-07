@@ -219,3 +219,43 @@ QStringList HumanReadable::FlagConverter::flagPairs() const
 
     return ret;
 }
+
+QString HumanReadable::KeyValueOption::takeKey()
+{
+    int i = buf.indexOf(fieldSep);
+    if (i < 0) {
+        // No key found anymore => QString with .isNull() == true.
+        return QString();
+    }
+
+    // Extract "KEY".
+    QString key = buf.mid(0, i);
+    // Remove "KEY=".
+    buf.remove(0, i + fieldSep.length());
+
+    return key;
+}
+
+QString HumanReadable::KeyValueOption::takeValue()
+{
+    int i = buf.indexOf(interFieldSep);
+    if (i < 0) {
+        // No inter-field separator found anymore,
+        // => this value ends at buffer end.
+        return takeRest();
+    }
+
+    // Extract "VALUE".
+    QString value = buf.mid(0, i);
+    // Remove "VALUE,"
+    buf.remove(0, i + interFieldSep.length());
+
+    return value;
+}
+
+QString HumanReadable::KeyValueOption::takeRest()
+{
+    QString ret = buf;
+    buf.clear();
+    return ret;
+}
