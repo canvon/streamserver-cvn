@@ -3,6 +3,7 @@
 #include "splitter.h"
 #include "tspacket.h"
 #include "log_backend.h"
+#include "humanreadable.h"
 
 #include <QCommandLineParser>
 #include <QFile>
@@ -35,6 +36,8 @@ int main(int argc, char *argv[])
           "SIZE" },
         { "outfile", "Output file description",
           "startOffset=START,lenPackets=LENPACKETS,fileName=FILENAME" },
+        { "outfiles-template", "Output files template description",
+          "discontSegments=[1-7:3:11],fileFormat=myout%03d.ts" },
     });
     parser.addPositionalArgument("INPUT", "Input file to split into parts");
     parser.process(a);
@@ -201,16 +204,128 @@ int main(int argc, char *argv[])
 
         outputs.append(output);
     }
-    if (outputs.isEmpty()) {
-        qCritical() << "No --outfile descriptions specified";
+
+    // Output templates.
+    QList<Splitter::OutputTemplate> outputTemplates;
+    for (const QString &outTemplDescr : parser.values("outfiles-template")) {
+        const char *errPrefix = "Invalid output template description:";
+        HumanReadable::KeyValueOption opt { outTemplDescr };
+        Splitter::OutputTemplate outTempl;
+
+        while (!opt.buf.isEmpty()) {
+            const QString key = opt.takeKey();
+            if (key.isEmpty()) {
+                qCritical() << errPrefix << "Rest does not contain a key:" << opt.buf;
+                return 2;
+            }
+            else if (key.compare("discontSegments", Qt::CaseInsensitive) == 0) {
+                if (outTempl.outputFilesKind != Splitter::TemplateKind::None) {
+                    qCritical() << errPrefix << "Output template kind has already been set to" << outTempl.outputFilesKind;
+                    return 2;
+                }
+                outTempl.outputFilesKind = Splitter::TemplateKind::DiscontinuitySegments;
+                const QString value = opt.takeValue();
+                const QStringList rangeStrs = value.isEmpty() ? QStringList() : value.split(':');  // (No rangeStrs when empty.)
+                for (const QString &rangeStr : rangeStrs) {
+                    Splitter::OutputTemplate::range_type range;
+                    const QStringList rangeBounds = rangeStr.split('-');
+                    switch (rangeBounds.length()) {
+                    case 1:
+                    {
+                        const QString &bound(rangeBounds.first());
+                        if (bound.isEmpty()) {
+                            qCritical().nospace()
+                                << errPrefix << " Key " << key << ": "
+                                << "Value contains empty range: " << value;
+                            return 2;
+                        }
+                        bool ok = false;
+                        int boundNum = bound.toInt(&ok);
+                        if (!ok) {
+                            qCritical().nospace()
+                                << errPrefix << " Key " << key << ": "
+                                << "Can't convert part of range list to number: " << bound;
+                        }
+
+                        range.first = QVariant(boundNum);
+                        range.second = range.first;
+                        break;
+                    }
+                    case 2:
+                    {
+                        const QString &from(rangeBounds.first());
+                        const QString &to(rangeBounds.last());
+                        if (from.isEmpty()) {
+                            range.first = QVariant();
+                        }
+                        else {
+                            bool ok = false;
+                            int fromNum = from.toInt(&ok);
+                            if (!ok) {
+                                qCritical().nospace()
+                                    << errPrefix << " Key " << key << ": "
+                                    << "Can't convert lower bound of range to number: " << rangeStr;
+                                return 2;
+                            }
+                            range.first = QVariant(fromNum);
+                        }
+                        if (to.isEmpty()) {
+                            range.second = QVariant();
+                        }
+                        else {
+                            bool ok = false;
+                            int toNum = to.toInt(&ok);
+                            if (!ok) {
+                                qCritical().nospace()
+                                    << errPrefix << " Key " << key << ": "
+                                    << "Can't convert upper bound of range to number: " << rangeStr;
+                                return 2;
+                            }
+                            range.second = QVariant(toNum);
+                        }
+                        break;
+                    }
+                    default:
+                        qCritical().nospace()
+                            << errPrefix << " Key " << key << ": "
+                            << "Value contains invalid range: " << value;
+                        return 2;
+                    }
+
+                    outTempl.filter.append(range);
+                }
+            }
+            else if (key.compare("fileFormat", Qt::CaseInsensitive) == 0) {
+                outTempl.outputFilesFormatString = opt.takeRest();
+            }
+            else {
+                qCritical() << errPrefix << "Invalid key" << key;
+                return 2;
+            }  // if chain over key
+        }  // while buf not empty
+
+        outputTemplates.append(outTempl);
+    }  // for outfiles-template options
+
+    // Sanity check.
+    if (outputs.isEmpty() && outputTemplates.isEmpty()) {
+        qCritical() << "No --outfile/--outfiles-template descriptions specified";
         return 2;
     }
     else {
-        if (verbose >= 1) {
+        if (verbose >= 1 && !outputs.isEmpty()) {
             qInfo() << "Output requests before run:";
             for (const Splitter::Output &output : outputs)
                 qInfo() << output;
         }
+
+#if 0  // FIXME: Implement QDebug for Splitter::OutputTemplate
+        if (verbose >= 1 && !outputTemplates.isEmpty()) {
+            qInfo() << "Output templates before run:";
+            for (const Splitter::OutputTemplate &outputTemplate : outputTemplates)
+                qInfo() << outputTemplate;
+        }
+#endif
     }
 
     auto args = parser.positionalArguments();
@@ -221,7 +336,10 @@ int main(int argc, char *argv[])
 
     QFile inputFile(args.first(), &a);
     Splitter splitter(&a);
-    splitter.setOutputRequests(outputs);
+    if (!outputs.isEmpty())
+        splitter.setOutputRequests(outputs);
+    if (!outputTemplates.isEmpty())
+        splitter.setOutputTemplates(outputTemplates);
     splitter.openInput(&inputFile);
     splitter.tsReader()->setTSPacketSize(tsPacketSize);
 

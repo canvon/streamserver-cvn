@@ -61,6 +61,19 @@ public:
         Length  length;
     };
 
+    enum class TemplateKind {
+        None = 0,
+        DiscontinuitySegments,
+    };
+    Q_ENUM(TemplateKind)
+
+    struct OutputTemplate {
+        TemplateKind  outputFilesKind = TemplateKind::None;
+        QString       outputFilesFormatString;
+        typedef std::pair<QVariant, QVariant>  range_type;
+        QList<range_type>  filter;
+    };
+
     explicit Splitter(QObject *parent = 0);
     ~Splitter();
 
@@ -68,6 +81,8 @@ public:
     const TS::Reader *tsReader() const;
     const QList<Output> &outputRequests() const;
     void setOutputRequests(const QList<Output> &requests);
+    const QList<OutputTemplate> &outputTemplates() const;
+    void setOutputTemplates(const QList<OutputTemplate> &templates);
     const QList<Output> &outputResults() const;
 
 signals:

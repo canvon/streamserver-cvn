@@ -5,6 +5,7 @@
 #include "tswriter.h"
 #include "log.h"
 
+#include <string>
 #include <stdexcept>
 #include <QPointer>
 #include <QHash>
@@ -19,6 +20,7 @@ class SplitterImpl {
     QPointer<QFile>              _inputFilePtr;
     std::unique_ptr<TS::Reader>  _tsReaderPtr;
     QList<Splitter::Output>      _outputRequests, _outputResults;
+    QList<Splitter::OutputTemplate>      _outputTemplates;
     typedef std::shared_ptr<TS::Writer>  _writerPtr_type;
     QHash<QFile *, _writerPtr_type>      _outputWriters;
 
@@ -98,6 +100,73 @@ void Splitter::setOutputRequests(const QList<Splitter::Output> &requests)
     }
 
     _implPtr->_outputRequests = requests;
+}
+
+const QList<Splitter::OutputTemplate> &Splitter::outputTemplates() const
+{
+    return _implPtr->_outputTemplates;
+}
+
+void Splitter::setOutputTemplates(const QList<Splitter::OutputTemplate> &templates)
+{
+    const char *errPrefix = "Splitter: Set output templates:";
+    for (const OutputTemplate &outTemplate : templates) {
+        switch (outTemplate.outputFilesKind) {
+        case TemplateKind::DiscontinuitySegments:
+        {
+            const char *errPrefix2 = "Discontinuity segment filter range:";
+            for (const OutputTemplate::range_type &range : outTemplate.filter) {
+                if (!(range.first.isValid() && range.second.isValid()))
+                    // Partial range is always ok. (?)
+                    continue;
+
+                bool okFrom = false, okTo = false;
+                int from = range.first.toInt(&okFrom);
+                int to   = range.second.toInt(&okTo);
+                if (!(okFrom && okTo)) {
+                    QString exMsg;
+                    QDebug(&exMsg) << errPrefix << errPrefix2
+                                   << "Can't convert both parts to number: From" << range.first
+                                   << "to" << range.second;
+                    throw std::invalid_argument(exMsg.toStdString());
+                }
+                else if (!(from <= to)) {
+                    QString exMsg;
+                    QDebug(&exMsg) << errPrefix << errPrefix2
+                                   << "Range is not ordered: From" << range.first
+                                   << "to" << range.second;
+                    throw std::invalid_argument(exMsg.toStdString());
+                }
+            }
+            break;
+        }
+        default:
+        {
+            QString exMsg;
+            QDebug(&exMsg) << errPrefix << "Invalid output files kind" << outTemplate.outputFilesKind;
+            throw std::invalid_argument(exMsg.toStdString());
+        }
+        }
+
+        const QString &format(outTemplate.outputFilesFormatString);
+        if (format.isEmpty())
+            throw std::invalid_argument(errPrefix + std::string(" Invalid output files format string: Can't be empty"));
+
+        const QString example = QString::asprintf(qPrintable(format), 1);
+        if (example.isEmpty()) {
+            QString exMsg;
+            QDebug(&exMsg) << errPrefix << "Invalid output files format string: Result for running with single number argument was empty:"
+                           << format;
+            throw std::invalid_argument(exMsg.toStdString());
+        }
+
+        if (verbose >= 1) {
+            qInfo() << "Splitter: Output files format string" << format
+                    << "will expand to, e.g.:" << example;
+        }
+    }
+
+    _implPtr->_outputTemplates = templates;
 }
 
 const QList<Splitter::Output> &Splitter::outputResults() const
@@ -309,13 +378,14 @@ void Splitter::handleDiscontEncountered(double pcrPrev)
     TS::Reader &reader(*_implPtr->_tsReaderPtr);
     const qint64 currentOffset = reader.tsPacketOffset();
     const double pcrLast       = reader.pcrLast();
+    const int discontSegment   = reader.discontSegment();
 
     if (verbose >= 0) {
         qInfo().nospace()
             << "[" << currentOffset << "] "
             << "Discontinuity encountered "
             << "(" << pcrPrev << " -> " << pcrLast << "): "
-            << "Input switches to segment " << reader.discontSegment();
+            << "Input switches to segment " << discontSegment;
     }
 
     for (Output &outputResult : _implPtr->_outputResults) {
@@ -327,7 +397,136 @@ void Splitter::handleDiscontEncountered(double pcrPrev)
             outputResult.length.lenDiscontSegments++;
     }
 
-    // TODO: Allow adding segment-based output files dynamically.
+    // Allow adding segment-based output files dynamically.
+    for (OutputTemplate &outputTemplate : _implPtr->_outputTemplates) {
+        switch (outputTemplate.outputFilesKind) {
+        case TemplateKind::DiscontinuitySegments:
+        {
+            if (outputTemplate.filter.isEmpty()) {
+                if (verbose >= 1) {
+                    qInfo().nospace()
+                        << "[" << currentOffset << "] "
+                        << "Template " << outputTemplate.outputFilesFormatString
+                        << " matches due to no filter present";
+                }
+            }
+            else {
+                bool found = false;
+                for (const OutputTemplate::range_type &range : outputTemplate.filter) {
+                    if (!range.first.isValid() && !range.second.isValid()) {
+                        found = true;
+                        break;
+                    }
+                    else if (!range.first.isValid()) {
+                        bool ok = false;
+                        int upperBound = range.second.toInt(&ok);
+                        if (!ok) {
+                            QString exMsg;
+                            QDebug(&exMsg) << "Splitter: Invalid output template discontinuity segment filter range: Can't convert upper bound to number:"
+                                           << range.second;
+                            qFatal("%s", qPrintable(exMsg));
+                        }
+
+                        if (discontSegment <= upperBound) {
+                            if (verbose >= 1) {
+                                qInfo().nospace()
+                                    << "[" << currentOffset << "] "
+                                    << "Template " << outputTemplate.outputFilesFormatString
+                                    << " matches due to filter range up-to " << upperBound;
+                            }
+
+                            found = true;
+                            break;
+                        }
+                    }
+                    else if (!range.second.isValid()) {
+                        bool ok = false;
+                        int lowerBound = range.first.toInt(&ok);
+                        if (!ok) {
+                            QString exMsg;
+                            QDebug(&exMsg) << "Splitter: Invalid output template discontinuity segment filter range: Can't convert lower bound to number:"
+                                           << range.first;
+                            qFatal("%s", qPrintable(exMsg));
+                        }
+
+                        if (lowerBound <= discontSegment) {
+                            if (verbose >= 1) {
+                                qInfo().nospace()
+                                    << "[" << currentOffset << "] "
+                                    << "Template " << outputTemplate.outputFilesFormatString
+                                    << " matches due to filter range from " << lowerBound << " onwards";
+                            }
+
+                            found = true;
+                            break;
+                        }
+                    }
+                    else {
+                        bool okFrom = false, okTo = false;
+                        int from = range.first.toInt(&okFrom);
+                        int to   = range.second.toInt(&okTo);
+                        if (!(okFrom && okTo)) {
+                            QString exMsg;
+                            QDebug(&exMsg) << "Splitter: Invalid output template discontinuity segment filter range: Can't convert both lower and upper bound to number:"
+                                           << "From" << range.first << "to" << range.second;
+                            qFatal("%s", qPrintable(exMsg));
+                        }
+
+                        if (from <= discontSegment && discontSegment <= to) {
+                            if (verbose >= 1) {
+                                qInfo().nospace()
+                                    << "[" << currentOffset << "] "
+                                    << "Template " << outputTemplate.outputFilesFormatString
+                                    << " matches due to filter range from " << from
+                                    << " to " << to;
+                            }
+
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!found)
+                    break;  // Break out of the switch, which will continue the for loop.
+            }
+
+
+            // Filter matches, so insert a dynamic output request.
+
+            Output output;
+            const QString fileName = QString::asprintf(qPrintable(outputTemplate.outputFilesFormatString), discontSegment);
+
+            // Owned, to prevent resource leak.
+            // The using code can get at the QFile from the output results
+            // before this Splitter is destroyed, and can re-own the QFile
+            // to prevent its automatic destruction.
+            output.outputFile = new QFile(fileName, this);
+
+            output.start.startKind = StartKind::DiscontinuitySegment;
+            output.start.startDiscontSegment = discontSegment;
+            output.length.lenKind = LengthKind::DiscontinuitySegments;
+            output.length.lenDiscontSegments = 1;
+
+            if (verbose >= 1) {
+                qInfo().nospace()
+                    << "[" << currentOffset << "] "
+                    << "Adding dynamic output request for discontinuity segment " << discontSegment
+                    << ": " << fileName;
+            }
+
+            _implPtr->_outputRequests.append(output);
+
+            break;
+        }
+        default:
+        {
+            QString msg;
+            QDebug(&msg) << "Splitter: Unimplemented output template kind" << outputTemplate.outputFilesKind;
+            qFatal("%s", qPrintable(msg));
+        }
+        }
+    }
 }
 
 void Splitter::handleEOFEncountered()
