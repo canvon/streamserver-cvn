@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
             "  lenBytes=NUMBER    OR\n"
             "  lenPackets=NUMBER  OR\n"
             "  lenDiscontSegments=NUMBER\n"
-            "  fileName=FILENAME",
+            "  fileName=FILENAME\n",
         "[--outfile OUTFILE]");
     parser.addPositionalArgument("OUTTEMPLATE", "Output files template description:\n"
             "Syntax: KEY1=VALUE1,KEY2=VALUE2,...,FINAL=REST\n"
@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
             "  discontSegments=RANGE1:RANGE2:...:RANGEN\n"
             "    (e.g., 1-7:9:11, or nothing)\n"
             "  fileFormat=PRINTF_FORMAT\n"
-            "    (e.g., myout%03d.ts)",
+            "    (e.g., myout%03d.ts)\n",
         "[--outfiles-template OUTTEMPLATE]");
     parser.addPositionalArgument("INPUT", "Input file to split into parts");
     parser.process(a);
