@@ -35,10 +35,16 @@ int main(int argc, char *argv[])
           "MPEG-TS packet size (e.g., 188 bytes)",
           "SIZE" },
         { "outfile", "Output file description",
-          "startOffset=START,lenPackets=LENPACKETS,fileName=FILENAME" },
+          "OUTFILE" },
         { "outfiles-template", "Output files template description",
-          "discontSegments=[1-7:3:11],fileFormat=myout%03d.ts" },
+          "OUTTEMPLATE" },
     });
+    parser.addPositionalArgument("OUTFILE", "Output file description:"
+        "\n--outfile startOffset=START,lenPackets=LENPACKETS,fileName=FILENAME",
+        "[--outfile OUTFILE]");
+    parser.addPositionalArgument("OUTTEMPLATE", "Output files template description:"
+        "\n--outfiles-template discontSegments=[1-7:3:11],fileFormat=myout%03d.ts",
+        "[--outfiles-template OUTTEMPLATE]");
     parser.addPositionalArgument("INPUT", "Input file to split into parts");
     parser.process(a);
 
