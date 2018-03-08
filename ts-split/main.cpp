@@ -35,12 +35,20 @@ int main(int argc, char *argv[])
           "MPEG-TS packet size (e.g., 188 bytes)",
           "SIZE" },
         { "outfile", "Output file description",
-          "OUTFILE" },
+          "DESCR" },
         { "outfiles-template", "Output files template description",
-          "OUTTEMPLATE" },
+          "DESCR" },
     });
-    parser.addPositionalArgument("OUTFILE", "Output file description:"
-        "\n--outfile startOffset=START,lenPackets=LENPACKETS,fileName=FILENAME",
+    parser.addPositionalArgument("OUTFILE", "Output file description:\n"
+            "Syntax: KEY1=VALUE1,KEY2=VALUE2,...,FINAL=REST\n"
+            "Available keys/values:\n"
+            "  startOffset=OFFSET  OR\n"
+            "  startPacket=NUMBER  OR\n"
+            "  startDiscontSegment=NUMBER\n"
+            "  lenBytes=NUMBER    OR\n"
+            "  lenPackets=NUMBER  OR\n"
+            "  lenDiscontSegments=NUMBER\n"
+            "  fileName=FILENAME",
         "[--outfile OUTFILE]");
     parser.addPositionalArgument("OUTTEMPLATE", "Output files template description:"
         "\n--outfiles-template discontSegments=[1-7:3:11],fileFormat=myout%03d.ts",
