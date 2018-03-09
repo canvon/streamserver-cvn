@@ -105,8 +105,7 @@ struct NumericRange
         {
             const QString &bound(rangeBounds.first());
             if (bound.isEmpty()) {
-                throw static_cast<std::invalid_argument>(ExceptionBuilder()
-                    << "Numeric range: Empty range:" << rangeStr);
+                throw std::invalid_argument("Numeric range: Empty range");
             }
             bool ok = false;
             int boundNum = toI(bound, &ok);
