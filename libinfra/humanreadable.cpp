@@ -5,6 +5,8 @@
 #include <stdexcept>
 #include <QList>
 
+namespace HumanReadable {
+
 namespace {
 
 bool hasOtherThan(QChar hay, const QByteArray &haystack)
@@ -21,7 +23,7 @@ bool hasOtherThan(QChar hay, const QByteArray &haystack)
 
 }  // namespace
 
-QString HumanReadable::byteCount(quint64 count, bool base1000, bool base1024)
+QString byteCount(quint64 count, bool base1000, bool base1024)
 {
     bool both = (base1000 && base1024);
     QList<QChar> unitChars { 'K', 'M', 'G', 'T' };
@@ -52,7 +54,7 @@ QString HumanReadable::byteCount(quint64 count, bool base1000, bool base1024)
     return ret;
 }
 
-QString HumanReadable::timeDuration(qint64 msec, bool exact)
+QString timeDuration(qint64 msec, bool exact)
 {
     QList<std::pair<QString, qint64>> units {
         std::make_pair("s",   1000),
@@ -97,19 +99,19 @@ QString HumanReadable::timeDuration(qint64 msec, bool exact)
     return ret;
 }
 
-HumanReadable::Hexdump &HumanReadable::Hexdump::enableByteCount()
+Hexdump &Hexdump::enableByteCount()
 {
     byteCount = true;
     return *this;
 }
 
-HumanReadable::Hexdump &HumanReadable::Hexdump::enableCompressTrailing()
+Hexdump &Hexdump::enableCompressTrailing()
 {
     compressTrailing = true;
     return *this;
 }
 
-HumanReadable::Hexdump &HumanReadable::Hexdump::enableAll()
+Hexdump &Hexdump::enableAll()
 {
     hex = true;
     ascii = true;
@@ -121,7 +123,7 @@ HumanReadable::Hexdump &HumanReadable::Hexdump::enableAll()
     return *this;
 }
 
-QDebug operator<<(QDebug debug, const HumanReadable::Hexdump &dump)
+QDebug operator<<(QDebug debug, const Hexdump &dump)
 {
     QDebugStateSaver saver(debug);
     debug.nospace();
@@ -171,7 +173,7 @@ QDebug operator<<(QDebug debug, const HumanReadable::Hexdump &dump)
     return debug;
 }
 
-bool HumanReadable::FlagConverter::flagToBool(const QVariant &flag, bool *ok) const
+bool FlagConverter::flagToBool(const QVariant &flag, bool *ok) const
 {
     if (ok)
         *ok = false;
@@ -203,7 +205,7 @@ bool HumanReadable::FlagConverter::flagToBool(const QVariant &flag, bool *ok) co
     return false;
 }
 
-QStringList HumanReadable::FlagConverter::flagPairs() const
+QStringList FlagConverter::flagPairs() const
 {
     int falseLen = falseFlags.length();
     int trueLen  = trueFlags.length();
@@ -219,3 +221,45 @@ QStringList HumanReadable::FlagConverter::flagPairs() const
 
     return ret;
 }
+
+QString KeyValueOption::takeKey()
+{
+    int i = buf.indexOf(fieldSep);
+    if (i < 0) {
+        // No key found anymore => QString with .isNull() == true.
+        return QString();
+    }
+
+    // Extract "KEY".
+    QString key = buf.mid(0, i);
+    // Remove "KEY=".
+    buf.remove(0, i + fieldSep.length());
+
+    return key;
+}
+
+QString KeyValueOption::takeValue()
+{
+    int i = buf.indexOf(interFieldSep);
+    if (i < 0) {
+        // No inter-field separator found anymore,
+        // => this value ends at buffer end.
+        return takeRest();
+    }
+
+    // Extract "VALUE".
+    QString value = buf.mid(0, i);
+    // Remove "VALUE,"
+    buf.remove(0, i + interFieldSep.length());
+
+    return value;
+}
+
+QString KeyValueOption::takeRest()
+{
+    QString ret = buf;
+    buf.clear();
+    return ret;
+}
+
+}  // namespace HumanReadable

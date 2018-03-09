@@ -31,6 +31,8 @@ SOURCES += \
 
 HEADERS += libinfra_global.h \
     humanreadable.h \
+    numericrange.h \
+    exceptionbuilder.h \
     demangle.h \
     log.h \
     log_backend.h

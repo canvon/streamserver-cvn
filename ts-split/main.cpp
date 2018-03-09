@@ -1,10 +1,16 @@
 #include <QCoreApplication>
 
+#include "splitter.h"
 #include "tspacket.h"
+#include "log_backend.h"
+#include "humanreadable.h"
 
 #include <QCommandLineParser>
 #include <QFile>
 #include <QTextStream>
+
+using log::verbose;
+using log::debug_level;
 
 namespace {
     QTextStream out(stdout), errout(stderr);
@@ -12,19 +18,62 @@ namespace {
 
 int main(int argc, char *argv[])
 {
+    log::backend::logoutPtr = &errout;
+    qInstallMessageHandler(&log::backend::msgHandler);
+
     QCoreApplication a(argc, argv);
-    int ret = 0;
     qint64 tsPacketSize = TSPacket::lengthBasic;
 
     QCommandLineParser parser;
     parser.setApplicationDescription("Split MPEG-TS stream into files");
     parser.addHelpOption();
     parser.addOptions({
+        { { "v", "verbose" }, "Increase verbose level" },
+        { { "q", "quiet"   }, "Decrease verbose level" },
+        { { "d", "debug"   }, "Enable debugging. (Increase debug level.)" },
         { { "s", "ts-packet-size" },
           "MPEG-TS packet size (e.g., 188 bytes)",
           "SIZE" },
+        { "outfile", "Output file description",
+          "DESCR" },
+        { "outfiles-template", "Output files template description",
+          "DESCR" },
     });
+    parser.addPositionalArgument("OUTFILE", "Output file description:\n"
+            "Syntax: KEY1=VALUE1,KEY2=VALUE2,...,FINAL=REST\n"
+            "Available keys/values:\n"
+            "  startOffset=OFFSET  OR\n"
+            "  startPacket=NUMBER  OR\n"
+            "  startDiscontSegment=NUMBER\n"
+            "  lenBytes=NUMBER    OR\n"
+            "  lenPackets=NUMBER  OR\n"
+            "  lenDiscontSegments=NUMBER\n"
+            "  fileName=FILENAME\n",
+        "[--outfile OUTFILE]");
+    parser.addPositionalArgument("OUTTEMPLATE", "Output files template description:\n"
+            "Syntax: KEY1=VALUE1,KEY2=VALUE2,...,FINAL=REST\n"
+            "Available keys/values:\n"
+            "  discontSegments=RANGE1:RANGE2:...:RANGEN\n"
+            "    (e.g., 1-7:9:11, or nothing)\n"
+            "  fileFormat=PRINTF_FORMAT\n"
+            "    (e.g., myout%03d.ts)\n",
+        "[--outfiles-template OUTTEMPLATE]");
+    parser.addPositionalArgument("INPUT", "Input file to split into parts");
     parser.process(a);
+
+    // Apply incremental options.
+    for (QString opt : parser.optionNames()) {
+        if (opt == "v" || opt == "verbose")
+            verbose++;
+        else if (opt == "q" || opt == "quiet")
+            verbose--;
+        else if (opt == "d" || opt == "debug")
+#ifdef QT_NO_DEBUG_OUTPUT
+            qFatal("No debug output compiled in, can't enable debugging!");
+#else
+            debug_level++;
+#endif
+    }
 
     // TS packet size
     {
@@ -33,26 +82,236 @@ int main(int argc, char *argv[])
             bool ok = false;
             tsPacketSize = valueStr.toLongLong(&ok);
             if (!ok) {
-                errout << a.applicationName() << ": "
-                       << "TS packet size: Conversion to number failed for \""
-                       << valueStr << "\""
-                       << endl;
+                qCritical() << "Invalid TS packet size: Can't convert to number:" << valueStr;
                 return 2;
             }
         }
     }
 
+    // Output files
+    QList<Splitter::Output> outputs;
+    for (const QString &outputDesc : parser.values("outfile")) {
+        const char *errPrefix = "Invalid output file description:";
+        HumanReadable::KeyValueOption opt { outputDesc };
+        Splitter::Output output;
+
+        while (!opt.buf.isEmpty()) {
+            const QString key = opt.takeKey();
+            if (key.isEmpty()) {
+                qCritical() << errPrefix << "Rest does not contain a key:" << opt.buf;
+                return 2;
+            }
+
+            auto checkIsStartKindNone = [&]() {
+                if (output.start.startKind == Splitter::StartKind::None)
+                    return true;
+
+                qCritical().nospace()
+                    << errPrefix << " Key " << key << ": "
+                    << "Start kind was already set to " << output.start.startKind
+                    << ": " << outputDesc;
+                return false;
+            };
+            auto checkIsLengthKindNone = [&]() {
+                if (output.length.lenKind == Splitter::LengthKind::None)
+                    return true;
+
+                qCritical().nospace()
+                    << errPrefix << " Key " << key << ": "
+                    << "Length kind was already set to " << output.length.lenKind
+                    << ": " << outputDesc;
+                return false;
+            };
+
+            if (key.compare("startOffset", Qt::CaseInsensitive) == 0) {
+                if (!checkIsStartKindNone())
+                    return 2;
+                const QString value = opt.takeValue();
+                bool ok = false;
+                output.start.startKind = Splitter::StartKind::Offset;
+                output.start.startOffset = value.toLongLong(&ok);
+                if (!ok) {
+                    qCritical().nospace() << errPrefix << " Key " << key << ": Can't convert value to number: " << value;
+                    return 2;
+                }
+            }
+            else if (key.compare("startPacket", Qt::CaseInsensitive) == 0) {
+                if (!checkIsStartKindNone())
+                    return 2;
+                const QString value = opt.takeValue();
+                bool ok = false;
+                output.start.startKind = Splitter::StartKind::Packet;
+                output.start.startPacket = value.toLongLong(&ok);
+                if (!ok) {
+                    qCritical().nospace() << errPrefix << " Key " << key << ": Can't convert value to number: " << value;
+                    return 2;
+                }
+            }
+            else if (key.compare("startDiscontSegment", Qt::CaseInsensitive) == 0) {
+                if (!checkIsStartKindNone())
+                    return 2;
+                const QString value = opt.takeValue();
+                bool ok = false;
+                output.start.startKind = Splitter::StartKind::DiscontinuitySegment;
+                output.start.startDiscontSegment = value.toLongLong(&ok);
+                if (!ok) {
+                    qCritical().nospace() << errPrefix << " Key " << key << ": Can't convert value to number: " << value;
+                    return 2;
+                }
+            }
+            else if (key.compare("lenBytes", Qt::CaseInsensitive) == 0) {
+                if (!checkIsLengthKindNone())
+                    return 2;
+                const QString value = opt.takeValue();
+                bool ok = false;
+                output.length.lenKind = Splitter::LengthKind::Bytes;
+                output.length.lenBytes = value.toInt(&ok);
+                if (!ok) {
+                    qCritical().nospace() << errPrefix << " Key " << key << ": Can't convert value to number: " << value;
+                    return 2;
+                }
+            }
+            else if (key.compare("lenPackets", Qt::CaseInsensitive) == 0) {
+                if (!checkIsLengthKindNone())
+                    return 2;
+                const QString value = opt.takeValue();
+                bool ok = false;
+                output.length.lenKind = Splitter::LengthKind::Packets;
+                output.length.lenPackets = value.toInt(&ok);
+                if (!ok) {
+                    qCritical().nospace() << errPrefix << " Key " << key << ": Can't convert value to number: " << value;
+                    return 2;
+                }
+            }
+            else if (key.compare("lenDiscontSegments", Qt::CaseInsensitive) == 0) {
+                if (!checkIsLengthKindNone())
+                    return 2;
+                const QString value = opt.takeValue();
+                bool ok = false;
+                output.length.lenKind = Splitter::LengthKind::DiscontinuitySegments;
+                output.length.lenDiscontSegments = value.toInt(&ok);
+                if (!ok) {
+                    qCritical().nospace() << errPrefix << " Key " << key << ": Can't convert value to number: " << value;
+                    return 2;
+                }
+            }
+            else if (key.compare("fileName", Qt::CaseInsensitive) == 0) {
+                const QString fileName = opt.takeRest();
+                if (fileName.isEmpty()) {
+                    qCritical() << errPrefix << "fileName is empty:" << outputDesc;
+                    return 2;
+                }
+                output.outputFile = new QFile(fileName, &a);
+            }
+            else {
+                qCritical().nospace() << errPrefix << " Invalid key " << key << ": " << outputDesc;
+                return 2;
+            }
+        }
+
+        outputs.append(output);
+    }
+
+    // Output templates.
+    QList<Splitter::OutputTemplate> outputTemplates;
+    for (const QString &outTemplDesc : parser.values("outfiles-template")) {
+        const char *errPrefix = "Invalid output template description:";
+        HumanReadable::KeyValueOption opt { outTemplDesc };
+        Splitter::OutputTemplate outTempl;
+
+        while (!opt.buf.isEmpty()) {
+            const QString key = opt.takeKey();
+            if (key.isEmpty()) {
+                qCritical() << errPrefix << "Rest does not contain a key:" << opt.buf;
+                return 2;
+            }
+            else if (key.compare("discontSegments", Qt::CaseInsensitive) == 0) {
+                if (outTempl.outputFilesKind != Splitter::TemplateKind::None) {
+                    qCritical() << errPrefix << "Output template kind has already been set to" << outTempl.outputFilesKind;
+                    return 2;
+                }
+                outTempl.outputFilesKind = Splitter::TemplateKind::DiscontinuitySegments;
+                const QString value = opt.takeValue();
+                const QStringList rangeStrs = value.isEmpty() ? QStringList() : value.split(':');  // (No rangeStrs when empty.)
+                for (const QString &rangeStr : rangeStrs) {
+                    try {
+                        auto range = Splitter::OutputTemplate::range_type::fromString(rangeStr);
+                        outTempl.filter.append(range);
+                    }
+                    catch (std::exception &ex) {
+                        qCritical().nospace()
+                            << errPrefix << " Key " << key << ": "
+                            << "Value contains invalid range string " << rangeStr << ": "
+                            << ex.what();
+                        return 2;
+                    }
+                    catch (...) {
+                        qCritical().nospace()
+                            << errPrefix << " Key " << key << ": "
+                            << "Value contains invalid range string " << rangeStr << ": "
+                            << "(Unrecognized exception type)";
+                        return 2;
+                    }
+                }
+            }
+            else if (key.compare("fileFormat", Qt::CaseInsensitive) == 0) {
+                const QString fileFormat = opt.takeRest();
+                if (fileFormat.isEmpty()) {
+                    qCritical() << errPrefix << "fileFormat is empty:" << outTemplDesc;
+                    return 2;
+                }
+                outTempl.outputFilesFormatString = fileFormat;
+            }
+            else {
+                qCritical().nospace() << errPrefix << " Invalid key " << key << ": " << outTemplDesc;
+                return 2;
+            }  // if chain over key
+        }  // while buf not empty
+
+        outputTemplates.append(outTempl);
+    }  // for outfiles-template options
+
+    // Sanity check.
+    if (outputs.isEmpty() && outputTemplates.isEmpty()) {
+        qCritical() << "No --outfile/--outfiles-template descriptions specified";
+        return 2;
+    }
+    else {
+        if (verbose >= 1 && !outputs.isEmpty()) {
+            qInfo() << "Output requests before run:";
+            for (const Splitter::Output &output : outputs)
+                qInfo() << output;
+        }
+
+        if (verbose >= 1 && !outputTemplates.isEmpty()) {
+            qInfo() << "Output templates before run:";
+            for (const Splitter::OutputTemplate &outputTemplate : outputTemplates)
+                qInfo() << outputTemplate;
+        }
+    }
+
     auto args = parser.positionalArguments();
-    if (!(args.length() > 0)) {
-        errout << a.applicationName()
-               << ": Invalid arguments"
-               << endl;
+    if (!(args.length() == 1)) {
+        qCritical() << "Input file missing";
         return 2;
     }
 
-    //for (QString arg : args) {
-    errout << a.applicationName() << ": Not implemented, yet!" << endl;
+    QFile inputFile(args.first(), &a);
+    Splitter splitter(&a);
+    if (!outputs.isEmpty())
+        splitter.setOutputRequests(outputs);
+    if (!outputTemplates.isEmpty())
+        splitter.setOutputTemplates(outputTemplates);
+    splitter.openInput(&inputFile);
+    splitter.tsReader()->setTSPacketSize(tsPacketSize);
 
-    //return a.exec();
+    int ret = a.exec();
+
+    if (verbose >= 1) {
+        qInfo() << "Output results after run:";
+        for (const Splitter::Output &result : splitter.outputResults())
+            qInfo() << result;
+    }
+
     return ret;
 }
