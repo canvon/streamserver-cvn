@@ -224,6 +224,9 @@ void Splitter::openInput(QFile *inputFile)
     connect(&reader, &TS::Reader::discontEncountered, this, &Splitter::handleDiscontEncountered);
     connect(&reader, &TS::Reader::eofEncountered, this, &Splitter::handleEOFEncountered);
     connect(&reader, &TS::Reader::errorEncountered, this, &Splitter::handleErrorEncountered);
+
+    // Be sure that discontinuity segment 1, too, may be matched by output templates.
+    handleSegmentStarts();
 }
 
 void Splitter::handleTSPacketReady(const TSPacket &packet)
