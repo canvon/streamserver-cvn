@@ -542,3 +542,16 @@ QDebug operator<<(QDebug debug, const Splitter::Output &output)
 
     return debug;
 }
+
+QDebug operator<<(QDebug debug, const Splitter::OutputTemplate &outTemplate)
+{
+    QDebugStateSaver saver(debug);
+    debug.nospace();
+    debug << "Splitter::OutputTemplate(";
+    debug << outTemplate.outputFilesKind;
+    debug << " filter=" << outTemplate.filter;
+    debug << " formatString=" << outTemplate.outputFilesFormatString;
+    debug << ")";
+
+    return debug;
+}

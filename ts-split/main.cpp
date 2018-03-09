@@ -290,13 +290,11 @@ int main(int argc, char *argv[])
                 qInfo() << output;
         }
 
-#if 0  // FIXME: Implement QDebug for Splitter::OutputTemplate
         if (verbose >= 1 && !outputTemplates.isEmpty()) {
             qInfo() << "Output templates before run:";
             for (const Splitter::OutputTemplate &outputTemplate : outputTemplates)
                 qInfo() << outputTemplate;
         }
-#endif
     }
 
     auto args = parser.positionalArguments();

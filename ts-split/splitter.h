@@ -99,5 +99,6 @@ public slots:
 QDebug operator<<(QDebug debug, const Splitter::Start &start);
 QDebug operator<<(QDebug debug, const Splitter::Length &length);
 QDebug operator<<(QDebug debug, const Splitter::Output &output);
+QDebug operator<<(QDebug debug, const Splitter::OutputTemplate &outTemplate);
 
 #endif // SPLITTER_H
