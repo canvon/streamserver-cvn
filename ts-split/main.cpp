@@ -214,9 +214,9 @@ int main(int argc, char *argv[])
 
     // Output templates.
     QList<Splitter::OutputTemplate> outputTemplates;
-    for (const QString &outTemplDescr : parser.values("outfiles-template")) {
+    for (const QString &outTemplDesc : parser.values("outfiles-template")) {
         const char *errPrefix = "Invalid output template description:";
-        HumanReadable::KeyValueOption opt { outTemplDescr };
+        HumanReadable::KeyValueOption opt { outTemplDesc };
         Splitter::OutputTemplate outTempl;
 
         while (!opt.buf.isEmpty()) {
@@ -255,10 +255,15 @@ int main(int argc, char *argv[])
                 }
             }
             else if (key.compare("fileFormat", Qt::CaseInsensitive) == 0) {
-                outTempl.outputFilesFormatString = opt.takeRest();
+                const QString fileFormat = opt.takeRest();
+                if (fileFormat.isEmpty()) {
+                    qCritical() << errPrefix << "fileFormat is empty:" << outTemplDesc;
+                    return 2;
+                }
+                outTempl.outputFilesFormatString = fileFormat;
             }
             else {
-                qCritical() << errPrefix << "Invalid key" << key;
+                qCritical().nospace() << errPrefix << " Invalid key " << key << ": " << outTemplDesc;
                 return 2;
             }  // if chain over key
         }  // while buf not empty
