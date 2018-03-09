@@ -94,6 +94,7 @@ public slots:
     void openInput(QFile *inputFile);
     void handleTSPacketReady(const TSPacket &packet);
     void handleDiscontEncountered(double pcrPrev);
+    void handleSegmentStarts();
     void handleEOFEncountered();
     void handleErrorEncountered(TS::Reader::ErrorKind errorKind, QString errorMessage);
 };

@@ -413,6 +413,15 @@ void Splitter::handleDiscontEncountered(double pcrPrev)
             outputResult.length.lenDiscontSegments++;
     }
 
+    handleSegmentStarts();
+}
+
+void Splitter::handleSegmentStarts()
+{
+    TS::Reader &reader(*_implPtr->_tsReaderPtr);
+    const qint64 currentOffset = reader.tsPacketOffset();
+    const int discontSegment   = reader.discontSegment();
+
     // Allow adding segment-based output files dynamically.
     for (OutputTemplate &outputTemplate : _implPtr->_outputTemplates) {
         switch (outputTemplate.outputFilesKind) {
