@@ -13,7 +13,7 @@ namespace HumanReadable {
 template <typename I> I numericConverter(const QString &s, bool *ok = nullptr);
 
 template <>
-int numericConverter<int>(const QString &s, bool *ok) { return s.toInt(ok); }
+inline int numericConverter<int>(const QString &s, bool *ok) { return s.toInt(ok); }
 
 
 template <typename I, I (*toI)(const QString &, bool *) = numericConverter<I>>
