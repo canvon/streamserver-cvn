@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <QString>
 #include <QStringList>
+#include <QList>
 
 namespace HumanReadable {
 
@@ -228,6 +229,35 @@ QDebug operator<<(QDebug debug, const NumericRange<I, toI> &range)
 
     return debug;
 }
+
+
+// QList<NumericRange<...>> sub-class
+template <typename I, decltype(&numericConverter<I>) toI = numericConverter<I>>
+class NumericRangeList : public QList<NumericRange<I, toI>>
+{
+public:
+    using base = QList<NumericRange<I, toI>>;
+    using base::isEmpty;
+
+    bool matches(I value)
+    {
+        if (isEmpty()) {
+            // Matches due to no filter present.
+            return true;
+        }
+
+        for (const auto &range : *this) {
+            if (!range.compare(value) == 0)
+                continue;
+
+            // Matches due to that filter range.
+            return true;
+        }
+
+        // No match.
+        return false;
+    }
+};
 
 
 }  // namespace HumanReadable

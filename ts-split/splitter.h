@@ -72,7 +72,8 @@ public:
         TemplateKind  outputFilesKind = TemplateKind::None;
         QString       outputFilesFormatString;
         typedef HumanReadable::NumericRange<int>  range_type;
-        QList<range_type>  filter;
+        //QList<range_type>                         filter;
+        HumanReadable::NumericRangeList<int>      filter;
     };
 
     explicit Splitter(QObject *parent = 0);

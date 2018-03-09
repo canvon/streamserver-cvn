@@ -418,35 +418,15 @@ void Splitter::handleDiscontEncountered(double pcrPrev)
         switch (outputTemplate.outputFilesKind) {
         case TemplateKind::DiscontinuitySegments:
         {
-            if (outputTemplate.filter.isEmpty()) {
-                if (verbose >= 1) {
-                    qInfo().nospace()
-                        << "[" << currentOffset << "] "
-                        << "Template " << outputTemplate.outputFilesFormatString
-                        << " matches due to no filter present";
-                }
+            if (!outputTemplate.filter.matches(discontSegment))
+                break;  // Break out of the switch, which will continue the for loop.
+
+            if (verbose >= 1) {
+                qInfo().nospace()
+                    << "[" << currentOffset << "] "
+                    << "Template " << outputTemplate.outputFilesFormatString
+                    << " filter matched";
             }
-            else {
-                bool found = false;
-                for (const OutputTemplate::range_type &range : outputTemplate.filter) {
-                    if (!(range.compare(discontSegment) == 0))
-                        continue;
-
-                    if (verbose >= 1) {
-                        qInfo().nospace()
-                            << "[" << currentOffset << "] "
-                            << "Template " << outputTemplate.outputFilesFormatString
-                            << " matches due to filter range " << range;
-                    }
-
-                    found = true;
-                    break;
-                }
-
-                if (!found)
-                    break;  // Break out of the switch, which will continue the for loop.
-            }
-
 
             // Filter matches, so insert a dynamic output request.
             appendDiscontSegmentOutputRequest(discontSegment, outputTemplate.outputFilesFormatString);
