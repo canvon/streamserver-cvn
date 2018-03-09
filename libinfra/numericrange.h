@@ -103,7 +103,7 @@ struct NumericRange
 
     // Conversion from string
 
-    static NumericRange fromString(QString rangeStr)
+    static NumericRange fromString(const QString &rangeStr)
     {
         NumericRange range;
         const QStringList rangeBounds = rangeStr.split('-');
