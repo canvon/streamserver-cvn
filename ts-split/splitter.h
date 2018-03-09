@@ -82,6 +82,7 @@ public:
     const TS::Reader *tsReader() const;
     const QList<Output> &outputRequests() const;
     void setOutputRequests(const QList<Output> &requests);
+    void appendDiscontSegmentOutputRequest(int discontSegment, const QString &fileFormatString);
     const QList<OutputTemplate> &outputTemplates() const;
     void setOutputTemplates(const QList<OutputTemplate> &templates);
     const QList<Output> &outputResults() const;

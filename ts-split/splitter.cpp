@@ -103,6 +103,32 @@ void Splitter::setOutputRequests(const QList<Splitter::Output> &requests)
     _implPtr->_outputRequests = requests;
 }
 
+void Splitter::appendDiscontSegmentOutputRequest(int discontSegment, const QString &fileFormatString)
+{
+    Output output;
+    const QString fileName = QString::asprintf(qPrintable(fileFormatString), discontSegment);
+
+    // Owned, to prevent resource leak.
+    // The using code can get at the QFile from the output results
+    // before this Splitter is destroyed, and can re-own the QFile
+    // to prevent its automatic destruction.
+    output.outputFile = new QFile(fileName, this);
+
+    output.start.startKind = StartKind::DiscontinuitySegment;
+    output.start.startDiscontSegment = discontSegment;
+    output.length.lenKind = LengthKind::DiscontinuitySegments;
+    output.length.lenDiscontSegments = 1;
+
+    if (verbose >= 1) {
+        qInfo().nospace()
+            << "[" << _implPtr->_tsReaderPtr->tsPacketOffset() << "] "
+            << "Adding dynamic output request for discontinuity segment " << discontSegment
+            << ": " << fileName;
+    }
+
+    _implPtr->_outputRequests.append(output);
+}
+
 const QList<Splitter::OutputTemplate> &Splitter::outputTemplates() const
 {
     return _implPtr->_outputTemplates;
@@ -423,29 +449,7 @@ void Splitter::handleDiscontEncountered(double pcrPrev)
 
 
             // Filter matches, so insert a dynamic output request.
-
-            Output output;
-            const QString fileName = QString::asprintf(qPrintable(outputTemplate.outputFilesFormatString), discontSegment);
-
-            // Owned, to prevent resource leak.
-            // The using code can get at the QFile from the output results
-            // before this Splitter is destroyed, and can re-own the QFile
-            // to prevent its automatic destruction.
-            output.outputFile = new QFile(fileName, this);
-
-            output.start.startKind = StartKind::DiscontinuitySegment;
-            output.start.startDiscontSegment = discontSegment;
-            output.length.lenKind = LengthKind::DiscontinuitySegments;
-            output.length.lenDiscontSegments = 1;
-
-            if (verbose >= 1) {
-                qInfo().nospace()
-                    << "[" << currentOffset << "] "
-                    << "Adding dynamic output request for discontinuity segment " << discontSegment
-                    << ": " << fileName;
-            }
-
-            _implPtr->_outputRequests.append(output);
+            appendDiscontSegmentOutputRequest(discontSegment, outputTemplate.outputFilesFormatString);
 
             break;
         }
