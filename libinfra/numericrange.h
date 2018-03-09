@@ -2,6 +2,7 @@
 #define NUMERICRANGE_H
 
 #include "exceptionbuilder.h"
+#include "demangle.h"
 
 #include <stdexcept>
 #include <QString>
@@ -101,6 +102,48 @@ struct NumericRange
     }
 
 
+    // Check for whether a value lies inside the range.
+
+    int compare(I value) const
+    {
+        if (!hasLowerBound && !hasUpperBound) {
+            // No bounds? Assume -infinity to +infinity => always within.
+            // TODO: Or could, e.g. with floats, some value lie outside?
+            return 0;
+        }
+        else if (!hasLowerBound) {
+            if (value <= upperBoundValue)
+                // Within.
+                return 0;
+            else
+                // Greater than range.
+                // TODO: Or could this be wrong for floats?
+                return 1;
+        }
+        else if (!hasUpperBound) {
+            if (lowerBoundValue <= value)
+                // Within.
+                return 0;
+            else
+                // Less than range.
+                // TODO: Or could this be wrong for floats?
+                return -1;
+        }
+        else {
+            if (!(lowerBoundValue <= value))
+                // Less than range.
+                // TODO: floats?
+                return -1;
+            else if (!(value <= upperBoundValue))
+                // Greater than range.
+                // TODO: floats?
+                return 1;
+            else
+                return 0;
+        }
+    }
+
+
     // Conversion from string
 
     static NumericRange fromString(const QString &rangeStr)
@@ -163,6 +206,28 @@ struct NumericRange
         return range;
     }
 };
+
+// Output to QDebug.
+template <typename I, decltype(&numericConverter<I>) toI>
+QDebug operator<<(QDebug debug, const NumericRange<I, toI> &range)
+{
+    QDebugStateSaver saver(debug);
+
+    debug.nospace() << "NumericRange<" << DEMANGLE_TYPENAME(typeid(I).name()) << ">(";
+    if (!range.hasLowerBound)
+        debug       << "noLowerBound";
+    else
+        debug       << "lowerBound=" << range.lowerBoundValue;
+
+    if (!range.hasUpperBound)
+        debug       << " noUpperBound";
+    else
+        debug       << " upperBound=" << range.upperBoundValue;
+
+    debug << ")";
+
+    return debug;
+}
 
 
 }  // namespace HumanReadable

@@ -246,72 +246,24 @@ int main(int argc, char *argv[])
                 const QString value = opt.takeValue();
                 const QStringList rangeStrs = value.isEmpty() ? QStringList() : value.split(':');  // (No rangeStrs when empty.)
                 for (const QString &rangeStr : rangeStrs) {
-                    Splitter::OutputTemplate::range_type range;
-                    const QStringList rangeBounds = rangeStr.split('-');
-                    switch (rangeBounds.length()) {
-                    case 1:
-                    {
-                        const QString &bound(rangeBounds.first());
-                        if (bound.isEmpty()) {
-                            qCritical().nospace()
-                                << errPrefix << " Key " << key << ": "
-                                << "Value contains empty range: " << value;
-                            return 2;
-                        }
-                        bool ok = false;
-                        int boundNum = bound.toInt(&ok);
-                        if (!ok) {
-                            qCritical().nospace()
-                                << errPrefix << " Key " << key << ": "
-                                << "Can't convert part of range list to number: " << bound;
-                        }
-
-                        range.first = QVariant(boundNum);
-                        range.second = range.first;
-                        break;
+                    try {
+                        auto range = Splitter::OutputTemplate::range_type::fromString(rangeStr);
+                        outTempl.filter.append(range);
                     }
-                    case 2:
-                    {
-                        const QString &from(rangeBounds.first());
-                        const QString &to(rangeBounds.last());
-                        if (from.isEmpty()) {
-                            range.first = QVariant();
-                        }
-                        else {
-                            bool ok = false;
-                            int fromNum = from.toInt(&ok);
-                            if (!ok) {
-                                qCritical().nospace()
-                                    << errPrefix << " Key " << key << ": "
-                                    << "Can't convert lower bound of range to number: " << rangeStr;
-                                return 2;
-                            }
-                            range.first = QVariant(fromNum);
-                        }
-                        if (to.isEmpty()) {
-                            range.second = QVariant();
-                        }
-                        else {
-                            bool ok = false;
-                            int toNum = to.toInt(&ok);
-                            if (!ok) {
-                                qCritical().nospace()
-                                    << errPrefix << " Key " << key << ": "
-                                    << "Can't convert upper bound of range to number: " << rangeStr;
-                                return 2;
-                            }
-                            range.second = QVariant(toNum);
-                        }
-                        break;
-                    }
-                    default:
+                    catch (std::exception &ex) {
                         qCritical().nospace()
                             << errPrefix << " Key " << key << ": "
-                            << "Value contains invalid range: " << value;
+                            << "Value contains invalid range string " << rangeStr << ": "
+                            << ex.what();
                         return 2;
                     }
-
-                    outTempl.filter.append(range);
+                    catch (...) {
+                        qCritical().nospace()
+                            << errPrefix << " Key " << key << ": "
+                            << "Value contains invalid range string " << rangeStr << ": "
+                            << "(Unrecognized exception type)";
+                        return 2;
+                    }
                 }
             }
             else if (key.compare("fileFormat", Qt::CaseInsensitive) == 0) {

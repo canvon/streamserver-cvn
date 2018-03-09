@@ -4,6 +4,7 @@
 #include <QObject>
 
 #include "tsreader.h"
+#include "numericrange.h"
 
 #include <memory>
 #include <QString>
@@ -70,7 +71,7 @@ public:
     struct OutputTemplate {
         TemplateKind  outputFilesKind = TemplateKind::None;
         QString       outputFilesFormatString;
-        typedef std::pair<QVariant, QVariant>  range_type;
+        typedef HumanReadable::NumericRange<int>  range_type;
         QList<range_type>  filter;
     };
 

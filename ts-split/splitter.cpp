@@ -4,6 +4,7 @@
 #include "tsreader.h"
 #include "tswriter.h"
 #include "log.h"
+#include "exceptionbuilder.h"
 
 #include <string>
 #include <stdexcept>
@@ -116,26 +117,15 @@ void Splitter::setOutputTemplates(const QList<Splitter::OutputTemplate> &templat
         {
             const char *errPrefix2 = "Discontinuity segment filter range:";
             for (const OutputTemplate::range_type &range : outTemplate.filter) {
-                if (!(range.first.isValid() && range.second.isValid()))
+                if (!(range.hasLowerBound && range.hasUpperBound))
                     // Partial range is always ok. (?)
                     continue;
 
-                bool okFrom = false, okTo = false;
-                int from = range.first.toInt(&okFrom);
-                int to   = range.second.toInt(&okTo);
-                if (!(okFrom && okTo)) {
-                    QString exMsg;
-                    QDebug(&exMsg) << errPrefix << errPrefix2
-                                   << "Can't convert both parts to number: From" << range.first
-                                   << "to" << range.second;
-                    throw std::invalid_argument(exMsg.toStdString());
-                }
-                else if (!(from <= to)) {
-                    QString exMsg;
-                    QDebug(&exMsg) << errPrefix << errPrefix2
-                                   << "Range is not ordered: From" << range.first
-                                   << "to" << range.second;
-                    throw std::invalid_argument(exMsg.toStdString());
+                if (!(range.lowerBoundValue <= range.upperBoundValue)) {
+                    throw static_cast<std::invalid_argument>(ExceptionBuilder()
+                        << errPrefix << errPrefix2
+                        << "Range is not ordered: From" << range.lowerBoundValue
+                        << "to" << range.upperBoundValue);
                 }
             }
             break;
@@ -413,78 +403,18 @@ void Splitter::handleDiscontEncountered(double pcrPrev)
             else {
                 bool found = false;
                 for (const OutputTemplate::range_type &range : outputTemplate.filter) {
-                    if (!range.first.isValid() && !range.second.isValid()) {
-                        found = true;
-                        break;
+                    if (!(range.compare(discontSegment) == 0))
+                        continue;
+
+                    if (verbose >= 1) {
+                        qInfo().nospace()
+                            << "[" << currentOffset << "] "
+                            << "Template " << outputTemplate.outputFilesFormatString
+                            << " matches due to filter range " << range;
                     }
-                    else if (!range.first.isValid()) {
-                        bool ok = false;
-                        int upperBound = range.second.toInt(&ok);
-                        if (!ok) {
-                            QString exMsg;
-                            QDebug(&exMsg) << "Splitter: Invalid output template discontinuity segment filter range: Can't convert upper bound to number:"
-                                           << range.second;
-                            qFatal("%s", qPrintable(exMsg));
-                        }
 
-                        if (discontSegment <= upperBound) {
-                            if (verbose >= 1) {
-                                qInfo().nospace()
-                                    << "[" << currentOffset << "] "
-                                    << "Template " << outputTemplate.outputFilesFormatString
-                                    << " matches due to filter range up-to " << upperBound;
-                            }
-
-                            found = true;
-                            break;
-                        }
-                    }
-                    else if (!range.second.isValid()) {
-                        bool ok = false;
-                        int lowerBound = range.first.toInt(&ok);
-                        if (!ok) {
-                            QString exMsg;
-                            QDebug(&exMsg) << "Splitter: Invalid output template discontinuity segment filter range: Can't convert lower bound to number:"
-                                           << range.first;
-                            qFatal("%s", qPrintable(exMsg));
-                        }
-
-                        if (lowerBound <= discontSegment) {
-                            if (verbose >= 1) {
-                                qInfo().nospace()
-                                    << "[" << currentOffset << "] "
-                                    << "Template " << outputTemplate.outputFilesFormatString
-                                    << " matches due to filter range from " << lowerBound << " onwards";
-                            }
-
-                            found = true;
-                            break;
-                        }
-                    }
-                    else {
-                        bool okFrom = false, okTo = false;
-                        int from = range.first.toInt(&okFrom);
-                        int to   = range.second.toInt(&okTo);
-                        if (!(okFrom && okTo)) {
-                            QString exMsg;
-                            QDebug(&exMsg) << "Splitter: Invalid output template discontinuity segment filter range: Can't convert both lower and upper bound to number:"
-                                           << "From" << range.first << "to" << range.second;
-                            qFatal("%s", qPrintable(exMsg));
-                        }
-
-                        if (from <= discontSegment && discontSegment <= to) {
-                            if (verbose >= 1) {
-                                qInfo().nospace()
-                                    << "[" << currentOffset << "] "
-                                    << "Template " << outputTemplate.outputFilesFormatString
-                                    << " matches due to filter range from " << from
-                                    << " to " << to;
-                            }
-
-                            found = true;
-                            break;
-                        }
-                    }
+                    found = true;
+                    break;
                 }
 
                 if (!found)
