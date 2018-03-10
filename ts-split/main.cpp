@@ -153,7 +153,7 @@ int main(int argc, char *argv[])
                 const QString value = opt.takeValue();
                 bool ok = false;
                 output.start.startKind = Splitter::StartKind::DiscontinuitySegment;
-                output.start.startDiscontSegment = value.toLongLong(&ok);
+                output.start.startDiscontSegment = value.toInt(&ok);
                 if (!ok) {
                     qCritical().nospace() << errPrefix << " Key " << key << ": Can't convert value to number: " << value;
                     return 2;
@@ -165,7 +165,7 @@ int main(int argc, char *argv[])
                 const QString value = opt.takeValue();
                 bool ok = false;
                 output.length.lenKind = Splitter::LengthKind::Bytes;
-                output.length.lenBytes = value.toInt(&ok);
+                output.length.lenBytes = value.toLongLong(&ok);
                 if (!ok) {
                     qCritical().nospace() << errPrefix << " Key " << key << ": Can't convert value to number: " << value;
                     return 2;
@@ -177,7 +177,7 @@ int main(int argc, char *argv[])
                 const QString value = opt.takeValue();
                 bool ok = false;
                 output.length.lenKind = Splitter::LengthKind::Packets;
-                output.length.lenPackets = value.toInt(&ok);
+                output.length.lenPackets = value.toLongLong(&ok);
                 if (!ok) {
                     qCritical().nospace() << errPrefix << " Key " << key << ": Can't convert value to number: " << value;
                     return 2;
