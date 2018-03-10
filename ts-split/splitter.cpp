@@ -494,32 +494,75 @@ void SplitterImpl::startOutputRequest(Splitter::Output *outRequest, Splitter *th
     }
 }
 
-void SplitterImpl::finishOutputRequest(Splitter::Output *outRequest)
+void SplitterImpl::finishOutputRequest(Splitter::Output *outRequestPtr)
 {
     const QString theLogPrefix = logPrefix();
 
-    if (!outRequest) {
+    if (!outRequestPtr) {
         qCritical() << qPrintable(theLogPrefix) << "Splitter: Internal error: Finish output request called without output request";
         return;
     }
+    Splitter::Output &outRequest(*outRequestPtr);
 
-    if (!outRequest->outputFile) {
+    if (!outRequest.outputFile) {
         qCritical() << qPrintable(theLogPrefix) << "Splitter: Internal error: Finish output request called without output file";
         return;
     }
-    QFile &outputFile(*outRequest->outputFile);
+    QFile &outFile(*outRequest.outputFile);
 
-    if (outputFile.isOpen())
-    {
-        if (verbose >= 0) {
-            qInfo().nospace()
+    if (!outFile.isOpen())
+        // Assume already finished.
+        return;
+
+    Splitter::Output &outResult(findOrDefaultOutputResult(&outFile));
+
+    switch (outRequest.length.lenKind) {
+    case Splitter::LengthKind::Bytes:
+        if (outRequest.length.lenBytes != outResult.length.lenBytesOrDefault()) {
+            qWarning().nospace()
                 << qPrintable(theLogPrefix) << " "
-                << "Closing output file " << outputFile.fileName()
-                << "...";
+                << "Warning: Output file " << outFile.fileName()
+                << " bytes length " << outResult.length.lenBytes
+                << " does not match requested byte length " << outRequest.length.lenBytes
+                << "; difference is " << (outRequest.length.lenBytes - outResult.length.lenBytes) << " bytes.";
         }
-
-        outputFile.close();
+        break;
+    case Splitter::LengthKind::Packets:
+        if (outRequest.length.lenPackets != outResult.length.lenPacketsOrDefault()) {
+            qWarning().nospace()
+                << qPrintable(theLogPrefix) << " "
+                << "Warning: Output file " << outFile.fileName()
+                << " packets length " << outResult.length.lenPackets
+                << " does not match requested packets length " << outRequest.length.lenPackets
+                << "; difference is " << (outRequest.length.lenPackets - outResult.length.lenPackets) << " packets.";
+        }
+        break;
+    case Splitter::LengthKind::DiscontinuitySegments:
+        if (outRequest.length.lenDiscontSegments != outResult.length.lenDiscontSegmentsOrDefault()) {
+            qWarning().nospace()
+                << qPrintable(theLogPrefix) << " "
+                << "Warning: Output file " << outFile.fileName()
+                << " discontinuity segments length " << outResult.length.lenDiscontSegments
+                << " does not match requested discontinuity segments length " << outRequest.length.lenDiscontSegments
+                << "; difference is " << (outRequest.length.lenDiscontSegments - outResult.length.lenDiscontSegments) << " segments.";
+        }
+        break;
+    default:
+        qWarning()
+            << qPrintable(theLogPrefix)
+            << "Warning: Don't know how to check output file" << outFile.fileName()
+            << "length correctness...";
+        break;
     }
+
+    if (verbose >= 0) {
+        qInfo().nospace()
+            << qPrintable(theLogPrefix) << " "
+            << "Closing output file " << outFile.fileName()
+            << "...";
+    }
+
+    outFile.close();
 }
 
 void Splitter::handleDiscontEncountered(double pcrPrev)
