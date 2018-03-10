@@ -1,6 +1,7 @@
 #ifndef NUMERICRANGE_H
 #define NUMERICRANGE_H
 
+#include "numericconverter.h"
 #include "exceptionbuilder.h"
 #include "demangle.h"
 
@@ -10,12 +11,6 @@
 #include <QList>
 
 namespace HumanReadable {
-
-
-template <typename I> I numericConverter(const QString &s, bool *ok = nullptr);
-
-template <>
-inline int numericConverter<int>(const QString &s, bool *ok) { return s.toInt(ok); }
 
 
 template <typename I, I (*toI)(const QString &, bool *) = numericConverter<I>>

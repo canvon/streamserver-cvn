@@ -31,6 +31,7 @@ SOURCES += \
 
 HEADERS += libinfra_global.h \
     humanreadable.h \
+    numericconverter.h \
     numericrange.h \
     exceptionbuilder.h \
     demangle.h \
