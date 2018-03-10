@@ -633,8 +633,22 @@ void Splitter::handleSegmentStarts()
 
 void Splitter::handleEOFEncountered()
 {
-    qInfo() << qPrintable(_implPtr->logPrefix()) << "EOF";
+    const QString logPrefix = _implPtr->logPrefix();
 
+    qInfo() << qPrintable(logPrefix) << "EOF";
+
+
+    // Give output files a last chance to complete, or be left incomplete and warned about.
+
+    _implPtr->increaseDiscontSegmentStats();
+
+    for (Output &outRequest : _implPtr->_outputRequests) {
+        _implPtr->finishOutputRequest(&outRequest);
+    }
+    _implPtr->_outputRequests.clear();
+
+
+    // Leave event loop.
     qApp->exit();
 }
 
