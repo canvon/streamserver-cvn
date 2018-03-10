@@ -37,6 +37,10 @@ public:
             qint64  startPacket;
             int     startDiscontSegment;
         };
+
+        void setStartOffsetOnce(qint64 offset);
+        void setStartPacketOnce(qint64 packet);
+        void setStartDiscontSegmentOnce(int segment);
     };
 
     enum class LengthKind {
@@ -54,6 +58,10 @@ public:
             qint64  lenPackets;
             int     lenDiscontSegments;
         };
+
+        void setLenBytesOnce(qint64 len);
+        void setLenPacketsOnce(qint64 len);
+        void setLenDiscontSegmentsOnce(int len);
     };
 
     struct Output {

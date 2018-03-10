@@ -4,7 +4,9 @@
 #include "tspacket.h"
 #include "log_backend.h"
 #include "humanreadable.h"
+#include "numericconverter.h"
 
+#include <functional>
 #include <QCommandLineParser>
 #include <QFile>
 #include <QTextStream>
@@ -14,6 +16,35 @@ using log::debug_level;
 
 namespace {
     QTextStream out(stdout), errout(stderr);
+
+    using std::placeholders::_1;
+
+    template <typename T, T(*Converter)(const QString &, bool *ok) = HumanReadable::numericConverter<T>>
+    bool convertOptionToNum(const char *errPrefix,
+        std::function<void(T)> setter,
+        const QString &s,
+        std::function<std::remove_pointer_t<decltype(Converter)>> converter = Converter)
+    {
+        try {
+            bool ok = false;
+            T value = converter(s, &ok);
+            if (!ok) {
+                qCritical() << errPrefix << "Can't convert to number:" << s;
+                return false;
+            }
+
+            setter(value);
+            return true;
+        }
+        catch (std::exception &ex) {
+            qCritical() << errPrefix << ex.what();
+            return false;
+        }
+        catch (...) {
+            qCritical() << errPrefix << "(Unrecognized exception)";
+            return false;
+        }
+    }
 }
 
 int main(int argc, char *argv[])
@@ -102,98 +133,44 @@ int main(int argc, char *argv[])
                 return 2;
             }
 
-            auto checkIsStartKindNone = [&]() {
-                if (output.start.startKind == Splitter::StartKind::None)
-                    return true;
-
-                qCritical().nospace()
-                    << errPrefix << " Key " << key << ": "
-                    << "Start kind was already set to " << output.start.startKind
-                    << ": " << outputDesc;
-                return false;
-            };
-            auto checkIsLengthKindNone = [&]() {
-                if (output.length.lenKind == Splitter::LengthKind::None)
-                    return true;
-
-                qCritical().nospace()
-                    << errPrefix << " Key " << key << ": "
-                    << "Length kind was already set to " << output.length.lenKind
-                    << ": " << outputDesc;
-                return false;
-            };
+            QString errPrefix2;
+            QDebug(&errPrefix2).nospace() << errPrefix << " Key " << key << ":";
 
             if (key.compare("startOffset", Qt::CaseInsensitive) == 0) {
-                if (!checkIsStartKindNone())
+                if (!convertOptionToNum<qint64>(qPrintable(errPrefix2),
+                        std::bind(&Splitter::Start::setStartOffsetOnce, &output.start, _1),
+                        opt.takeValue()))
                     return 2;
-                const QString value = opt.takeValue();
-                bool ok = false;
-                output.start.startKind = Splitter::StartKind::Offset;
-                output.start.startOffset = value.toLongLong(&ok);
-                if (!ok) {
-                    qCritical().nospace() << errPrefix << " Key " << key << ": Can't convert value to number: " << value;
-                    return 2;
-                }
             }
             else if (key.compare("startPacket", Qt::CaseInsensitive) == 0) {
-                if (!checkIsStartKindNone())
+                if (!convertOptionToNum<qint64>(qPrintable(errPrefix2),
+                        std::bind(&Splitter::Start::setStartPacketOnce, &output.start, _1),
+                        opt.takeValue()))
                     return 2;
-                const QString value = opt.takeValue();
-                bool ok = false;
-                output.start.startKind = Splitter::StartKind::Packet;
-                output.start.startPacket = value.toLongLong(&ok);
-                if (!ok) {
-                    qCritical().nospace() << errPrefix << " Key " << key << ": Can't convert value to number: " << value;
-                    return 2;
-                }
             }
             else if (key.compare("startDiscontSegment", Qt::CaseInsensitive) == 0) {
-                if (!checkIsStartKindNone())
+                if (!convertOptionToNum<int>(qPrintable(errPrefix2),
+                        std::bind(&Splitter::Start::setStartDiscontSegmentOnce, &output.start, _1),
+                        opt.takeValue()))
                     return 2;
-                const QString value = opt.takeValue();
-                bool ok = false;
-                output.start.startKind = Splitter::StartKind::DiscontinuitySegment;
-                output.start.startDiscontSegment = value.toInt(&ok);
-                if (!ok) {
-                    qCritical().nospace() << errPrefix << " Key " << key << ": Can't convert value to number: " << value;
-                    return 2;
-                }
             }
             else if (key.compare("lenBytes", Qt::CaseInsensitive) == 0) {
-                if (!checkIsLengthKindNone())
+                if (!convertOptionToNum<qint64>(qPrintable(errPrefix2),
+                        std::bind(&Splitter::Length::setLenBytesOnce, &output.length, _1),
+                        opt.takeValue()))
                     return 2;
-                const QString value = opt.takeValue();
-                bool ok = false;
-                output.length.lenKind = Splitter::LengthKind::Bytes;
-                output.length.lenBytes = value.toLongLong(&ok);
-                if (!ok) {
-                    qCritical().nospace() << errPrefix << " Key " << key << ": Can't convert value to number: " << value;
-                    return 2;
-                }
             }
             else if (key.compare("lenPackets", Qt::CaseInsensitive) == 0) {
-                if (!checkIsLengthKindNone())
+                if (!convertOptionToNum<qint64>(qPrintable(errPrefix2),
+                        std::bind(&Splitter::Length::setLenPacketsOnce, &output.length, _1),
+                        opt.takeValue()))
                     return 2;
-                const QString value = opt.takeValue();
-                bool ok = false;
-                output.length.lenKind = Splitter::LengthKind::Packets;
-                output.length.lenPackets = value.toLongLong(&ok);
-                if (!ok) {
-                    qCritical().nospace() << errPrefix << " Key " << key << ": Can't convert value to number: " << value;
-                    return 2;
-                }
             }
             else if (key.compare("lenDiscontSegments", Qt::CaseInsensitive) == 0) {
-                if (!checkIsLengthKindNone())
+                if (!convertOptionToNum<int>(qPrintable(errPrefix2),
+                        std::bind(&Splitter::Length::setLenDiscontSegmentsOnce, &output.length, _1),
+                        opt.takeValue()))
                     return 2;
-                const QString value = opt.takeValue();
-                bool ok = false;
-                output.length.lenKind = Splitter::LengthKind::DiscontinuitySegments;
-                output.length.lenDiscontSegments = value.toInt(&ok);
-                if (!ok) {
-                    qCritical().nospace() << errPrefix << " Key " << key << ": Can't convert value to number: " << value;
-                    return 2;
-                }
             }
             else if (key.compare("fileName", Qt::CaseInsensitive) == 0) {
                 const QString fileName = opt.takeRest();

@@ -41,6 +41,66 @@ Splitter::~Splitter()
 
 }
 
+void Splitter::Start::setStartOffsetOnce(qint64 offset)
+{
+    if (!(startKind == StartKind::None))
+        throw static_cast<std::runtime_error>(ExceptionBuilder()
+            << "Splitter start: Was already set, to" << *this);
+
+    startKind = StartKind::Offset;
+    startOffset = offset;
+}
+
+void Splitter::Start::setStartPacketOnce(qint64 packet)
+{
+    if (!(startKind == StartKind::None))
+        throw static_cast<std::runtime_error>(ExceptionBuilder()
+            << "Splitter start: Was already set, to" << *this);
+
+    startKind = StartKind::Packet;
+    startPacket = packet;
+}
+
+void Splitter::Start::setStartDiscontSegmentOnce(int segment)
+{
+    if (!(startKind == StartKind::None))
+        throw static_cast<std::runtime_error>(ExceptionBuilder()
+            << "Splitter start: Was already set, to" << *this);
+
+    startKind = StartKind::DiscontinuitySegment;
+    startDiscontSegment = segment;
+}
+
+void Splitter::Length::setLenBytesOnce(qint64 len)
+{
+    if (!(lenKind == LengthKind::None))
+        throw static_cast<std::runtime_error>(ExceptionBuilder()
+            << "Splitter length: Was already set, to" << *this);
+
+    lenKind = LengthKind::Bytes;
+    lenBytes = len;
+}
+
+void Splitter::Length::setLenPacketsOnce(qint64 len)
+{
+    if (!(lenKind == LengthKind::None))
+        throw static_cast<std::runtime_error>(ExceptionBuilder()
+            << "Splitter length: Was already set, to" << *this);
+
+    lenKind = LengthKind::Packets;
+    lenPackets = len;
+}
+
+void Splitter::Length::setLenDiscontSegmentsOnce(int len)
+{
+    if (!(lenKind == LengthKind::None))
+        throw static_cast<std::runtime_error>(ExceptionBuilder()
+            << "Splitter length: Was already set, to" << *this);
+
+    lenKind = LengthKind::DiscontinuitySegments;
+    lenDiscontSegments = len;
+}
+
 TS::Reader *Splitter::tsReader()
 {
     return _implPtr->_tsReaderPtr.get();
