@@ -37,7 +37,13 @@ class SplitterImpl {
             QDebug debug(&prefix);
             debug.nospace();
             debug << "[offset=" << reader.tsPacketOffset();
-            debug << ", pkg="   << reader.tsPacketCount();
+
+            const auto packetCount = reader.tsPacketCount();
+            if (packetCount >= 1)
+                debug << ", pkg=" << packetCount;
+            else
+                debug << ", pkg=(not_started)";
+
             debug << ", seg="   << reader.discontSegment();
             debug << "]";
         }
