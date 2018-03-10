@@ -59,6 +59,10 @@ public:
             int     lenDiscontSegments;
         };
 
+        qint64 lenBytesOrDefault();
+        qint64 lenPacketsOrDefault();
+        int    lenDiscontSegmentsOrDefault();
+
         void setLenBytesOnce(qint64 len);
         void setLenPacketsOnce(qint64 len);
         void setLenDiscontSegmentsOnce(int len);

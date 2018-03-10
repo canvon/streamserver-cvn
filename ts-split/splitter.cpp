@@ -71,6 +71,48 @@ void Splitter::Start::setStartDiscontSegmentOnce(int segment)
     startDiscontSegment = segment;
 }
 
+qint64 Splitter::Length::lenBytesOrDefault()
+{
+    if (lenKind == LengthKind::None) {
+        lenKind = LengthKind::Bytes;
+        lenBytes = 0;
+    }
+
+    if (lenKind != LengthKind::Bytes)
+        throw static_cast<std::runtime_error>(ExceptionBuilder()
+            << "Splitter length: Can't access as bytes length, as length kind is" << lenKind);
+
+    return lenBytes;
+}
+
+qint64 Splitter::Length::lenPacketsOrDefault()
+{
+    if (lenKind == LengthKind::None) {
+        lenKind = LengthKind::Packets;
+        lenPackets = 0;
+    }
+
+    if (lenKind != LengthKind::Packets)
+        throw static_cast<std::runtime_error>(ExceptionBuilder()
+            << "Splitter length: Can't access as packets length, as length kind is" << lenKind);
+
+    return lenPackets;
+}
+
+int Splitter::Length::lenDiscontSegmentsOrDefault()
+{
+    if (lenKind == LengthKind::None) {
+        lenKind = LengthKind::DiscontinuitySegments;
+        lenDiscontSegments = 0;
+    }
+
+    if (lenKind != LengthKind::DiscontinuitySegments)
+        throw static_cast<std::runtime_error>(ExceptionBuilder()
+            << "Splitter length: Can't access as discontinuity segments length, as length kind is" << lenKind);
+
+    return lenDiscontSegments;
+}
+
 void Splitter::Length::setLenBytesOnce(qint64 len)
 {
     if (!(lenKind == LengthKind::None))
@@ -340,42 +382,15 @@ void Splitter::handleTSPacketReady(const TSPacket &packet)
         bool isFinished = false;
         switch (outRequest.length.lenKind) {
         case LengthKind::Bytes:
-            if (result.length.lenKind == LengthKind::None) {
-                result.length.lenKind = LengthKind::Bytes;
-                result.length.lenBytes = 0;
-            }
-            if (result.length.lenKind != LengthKind::Bytes) {
-                QString errMsg;
-                QDebug(&errMsg) << "Splitter: Output result length kind expected to be bytes, but was" << result.length.lenKind;
-                qFatal("%s", qPrintable(errMsg));
-            }
-            if (!(result.length.lenBytes < outRequest.length.lenBytes))
+            if (!(result.length.lenBytesOrDefault() < outRequest.length.lenBytes))
                 isFinished = true;
             break;
         case LengthKind::Packets:
-            if (result.length.lenKind == LengthKind::None) {
-                result.length.lenKind = LengthKind::Packets;
-                result.length.lenPackets = 0;
-            }
-            if (result.length.lenKind != LengthKind::Packets) {
-                QString errMsg;
-                QDebug(&errMsg) << "Splitter: Output result length kind expected to be packets, but was" << result.length.lenKind;
-                qFatal("%s", qPrintable(errMsg));
-            }
-            if (!(result.length.lenPackets < outRequest.length.lenPackets))
+            if (!(result.length.lenPacketsOrDefault() < outRequest.length.lenPackets))
                 isFinished = true;
             break;
         case LengthKind::DiscontinuitySegments:
-            if (result.length.lenKind == LengthKind::None) {
-                result.length.lenKind = LengthKind::DiscontinuitySegments;
-                result.length.lenDiscontSegments = 0;
-            }
-            if (result.length.lenKind != LengthKind::DiscontinuitySegments) {
-                QString errMsg;
-                QDebug(&errMsg) << "Splitter: Output result length kind expected to be discontinuity segments, but was" << result.length.lenKind;
-                qFatal("%s", qPrintable(errMsg));
-            }
-            if (!(result.length.lenDiscontSegments < outRequest.length.lenDiscontSegments))
+            if (!(result.length.lenDiscontSegmentsOrDefault() < outRequest.length.lenDiscontSegments))
                 isFinished = true;
             break;
         default:
