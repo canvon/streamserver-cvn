@@ -27,6 +27,23 @@ class SplitterImpl {
 
     Splitter::Output &findOrDefaultOutputResult(QFile *outputFile);
 
+    QString logPrefix() {
+        if (!_tsReaderPtr)
+            return QString();
+
+        TS::Reader &reader(*_tsReaderPtr);
+        QString prefix;
+        {
+            QDebug debug(&prefix);
+            debug.nospace();
+            debug << "[offset=" << reader.tsPacketOffset();
+            debug << ", pkg="   << reader.tsPacketCount();
+            debug << ", seg="   << reader.discontSegment();
+            debug << "]";
+        }
+        return prefix;
+    }
+
     friend Splitter;
 };
 
@@ -223,7 +240,7 @@ void Splitter::appendDiscontSegmentOutputRequest(int discontSegment, const QStri
 
     if (verbose >= 1) {
         qInfo().nospace()
-            << "[" << _implPtr->_tsReaderPtr->tsPacketOffset() << "] "
+            << qPrintable(_implPtr->logPrefix()) << " "
             << "Adding dynamic output request for discontinuity segment " << discontSegment
             << ": " << fileName;
     }
@@ -333,6 +350,8 @@ void Splitter::openInput(QFile *inputFile)
 
 void Splitter::handleTSPacketReady(const TSPacket &packet)
 {
+    const QString logPrefix = _implPtr->logPrefix();
+
     TS::Reader &reader(*_implPtr->_tsReaderPtr);
     const qint64 packetOffset = reader.tsPacketOffset();
     const qint64 packetCount  = reader.tsPacketCount();
@@ -340,9 +359,7 @@ void Splitter::handleTSPacketReady(const TSPacket &packet)
 
     // Dump.
     if (verbose >= 2) {
-        qInfo().nospace()
-            << "[" << packetOffset << "] "
-            << "Packet: " << packet;
+        qInfo() << qPrintable(logPrefix) << "Packet:" << packet;
     }
 
     // Conditionally forward to output files.
@@ -404,7 +421,7 @@ void Splitter::handleTSPacketReady(const TSPacket &packet)
             if (outputFile.isOpen()) {
                 if (verbose >= 0) {
                     qInfo().nospace()
-                        << "[" << packetOffset << "] "
+                        << qPrintable(logPrefix) << " "
                         << "Closing output file " << outputFile.fileName()
                         << "...";
                 }
@@ -425,7 +442,7 @@ void Splitter::handleTSPacketReady(const TSPacket &packet)
 
             if (verbose >= 0) {
                 qInfo().nospace()
-                    << "[" << packetOffset << "] "
+                    << qPrintable(logPrefix) << " "
                     << "Opening output file " << outputFile.fileName()
                     << "...";
             }
@@ -470,13 +487,12 @@ void Splitter::handleTSPacketReady(const TSPacket &packet)
 void Splitter::handleDiscontEncountered(double pcrPrev)
 {
     TS::Reader &reader(*_implPtr->_tsReaderPtr);
-    const qint64 currentOffset = reader.tsPacketOffset();
     const double pcrLast       = reader.pcrLast();
     const int discontSegment   = reader.discontSegment();
 
     if (verbose >= 0) {
         qInfo().nospace()
-            << "[" << currentOffset << "] "
+            << qPrintable(_implPtr->logPrefix()) << " "
             << "Discontinuity encountered "
             << "(" << pcrPrev << " -> " << pcrLast << "): "
             << "Input switches to segment " << discontSegment;
@@ -497,8 +513,7 @@ void Splitter::handleDiscontEncountered(double pcrPrev)
 void Splitter::handleSegmentStarts()
 {
     TS::Reader &reader(*_implPtr->_tsReaderPtr);
-    const qint64 currentOffset = reader.tsPacketOffset();
-    const int discontSegment   = reader.discontSegment();
+    const int discontSegment = reader.discontSegment();
 
     // Allow adding segment-based output files dynamically.
     for (OutputTemplate &outputTemplate : _implPtr->_outputTemplates) {
@@ -509,10 +524,10 @@ void Splitter::handleSegmentStarts()
                 break;  // Break out of the switch, which will continue the for loop.
 
             if (verbose >= 1) {
-                qInfo().nospace()
-                    << "[" << currentOffset << "] "
-                    << "Template " << outputTemplate.outputFilesFormatString
-                    << " filter matched";
+                qInfo()
+                    << qPrintable(_implPtr->logPrefix())
+                    << "Template" << outputTemplate.outputFilesFormatString
+                    << "filter matched";
             }
 
             // Filter matches, so insert a dynamic output request.
