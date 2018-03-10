@@ -44,6 +44,10 @@ class SplitterImpl {
         return prefix;
     }
 
+    void increaseDiscontSegmentStats();
+    void startOutputRequest(Splitter::Output *outRequest, Splitter *that);
+    void finishOutputRequest(Splitter::Output *outRequest);
+
     friend Splitter;
 };
 
@@ -418,16 +422,7 @@ void Splitter::handleTSPacketReady(const TSPacket &packet)
         }
         }
         if (isFinished) {
-            if (outputFile.isOpen()) {
-                if (verbose >= 0) {
-                    qInfo().nospace()
-                        << qPrintable(logPrefix) << " "
-                        << "Closing output file " << outputFile.fileName()
-                        << "...";
-                }
-
-                outputFile.close();
-            }
+            _implPtr->finishOutputRequest(&outRequest);
 
             // For efficiency, don't iterate over this output request anymore (but remove it).
             removeRequestIndices.push(i);
@@ -435,31 +430,9 @@ void Splitter::handleTSPacketReady(const TSPacket &packet)
             continue;
         }
 
-        SplitterImpl::_writerPtr_type writerPtr;
-        if (!outputFile.isOpen()) {
-            if (outputFile.exists())
-                qFatal("Splitter: Output file exists: %s", qPrintable(outputFile.fileName()));
+        _implPtr->startOutputRequest(&outRequest, this);
 
-            if (verbose >= 0) {
-                qInfo().nospace()
-                    << qPrintable(logPrefix) << " "
-                    << "Opening output file " << outputFile.fileName()
-                    << "...";
-            }
-
-            if (!outputFile.open(QFile::WriteOnly)) {
-                qFatal("Splitter: Error opening output file \"%s\": %s",
-                       qPrintable(outputFile.fileName()),
-                       qPrintable(outputFile.errorString()));
-            }
-
-            writerPtr = std::make_shared<TS::Writer>(&outputFile, this);
-            _implPtr->_outputWriters.insert(&outputFile, writerPtr);
-        }
-        else {
-            writerPtr = _implPtr->_outputWriters.value(&outputFile);
-        }
-
+        SplitterImpl::_writerPtr_type writerPtr = _implPtr->_outputWriters.value(&outputFile);
         if (!writerPtr) {
             qFatal("Splitter: TS writer missing for output file \"%s\"",
                    qPrintable(outputFile.fileName()));
@@ -484,6 +457,71 @@ void Splitter::handleTSPacketReady(const TSPacket &packet)
         outputRequests.removeAt(removeRequestIndices.pop());
 }
 
+void SplitterImpl::startOutputRequest(Splitter::Output *outRequest, Splitter *that)
+{
+    const QString theLogPrefix = logPrefix();
+
+    if (!outRequest) {
+        qCritical() << qPrintable(theLogPrefix) << "Splitter: Internal error: Start output request called without output request";
+        return;
+    }
+
+    if (!outRequest->outputFile) {
+        qCritical() << qPrintable(theLogPrefix) << "Splitter: Internal error: Start output request called without output file";
+        return;
+    }
+    QFile &outputFile(*outRequest->outputFile);
+
+    if (!outputFile.isOpen()) {
+        if (outputFile.exists())
+            qFatal("Splitter: Output file exists: %s", qPrintable(outputFile.fileName()));
+
+        if (verbose >= 0) {
+            qInfo().nospace()
+                << qPrintable(theLogPrefix) << " "
+                << "Opening output file " << outputFile.fileName()
+                << "...";
+        }
+
+        if (!outputFile.open(QFile::WriteOnly)) {
+            qFatal("Splitter: Error opening output file \"%s\": %s",
+                   qPrintable(outputFile.fileName()),
+                   qPrintable(outputFile.errorString()));
+        }
+
+        _outputWriters.insert(&outputFile,
+            std::make_shared<TS::Writer>(&outputFile, that));
+    }
+}
+
+void SplitterImpl::finishOutputRequest(Splitter::Output *outRequest)
+{
+    const QString theLogPrefix = logPrefix();
+
+    if (!outRequest) {
+        qCritical() << qPrintable(theLogPrefix) << "Splitter: Internal error: Finish output request called without output request";
+        return;
+    }
+
+    if (!outRequest->outputFile) {
+        qCritical() << qPrintable(theLogPrefix) << "Splitter: Internal error: Finish output request called without output file";
+        return;
+    }
+    QFile &outputFile(*outRequest->outputFile);
+
+    if (outputFile.isOpen())
+    {
+        if (verbose >= 0) {
+            qInfo().nospace()
+                << qPrintable(theLogPrefix) << " "
+                << "Closing output file " << outputFile.fileName()
+                << "...";
+        }
+
+        outputFile.close();
+    }
+}
+
 void Splitter::handleDiscontEncountered(double pcrPrev)
 {
     TS::Reader &reader(*_implPtr->_tsReaderPtr);
@@ -498,16 +536,21 @@ void Splitter::handleDiscontEncountered(double pcrPrev)
             << "Input switches to segment " << discontSegment;
     }
 
-    for (Output &outputResult : _implPtr->_outputResults) {
+    _implPtr->increaseDiscontSegmentStats();
+
+    handleSegmentStarts();
+}
+
+void SplitterImpl::increaseDiscontSegmentStats()
+{
+    for (Splitter::Output &outputResult : _outputResults) {
         // Only increase counts on output files that are currently open.
         if (!(outputResult.outputFile && outputResult.outputFile->isOpen()))
             continue;
 
-        if (outputResult.length.lenKind == LengthKind::DiscontinuitySegments)
+        if (outputResult.length.lenKind == Splitter::LengthKind::DiscontinuitySegments)
             outputResult.length.lenDiscontSegments++;
     }
-
-    handleSegmentStarts();
 }
 
 void Splitter::handleSegmentStarts()
