@@ -547,18 +547,20 @@ void Splitter::handleSegmentStarts()
 
 void Splitter::handleEOFEncountered()
 {
-    qInfo() << "EOF";
+    qInfo() << qPrintable(_implPtr->logPrefix()) << "EOF";
 
     qApp->exit();
 }
 
 void Splitter::handleErrorEncountered(TS::Reader::ErrorKind errorKind, QString errorMessage)
 {
+    const QString logPrefix = _implPtr->logPrefix();
+
     switch (errorKind) {
     case TS::Reader::ErrorKind::IO:
-        qFatal("Splitter: IO error: %s", qPrintable(errorMessage));
+        qFatal("%s Splitter: IO error: %s", qPrintable(logPrefix), qPrintable(errorMessage));
     case TS::Reader::ErrorKind::TS:
-        qWarning() << "Splitter: Ignoring TS error:" << errorMessage;
+        qWarning() << qPrintable(logPrefix) << "Splitter: Ignoring TS error:" << errorMessage;
         break;
     }
 }
