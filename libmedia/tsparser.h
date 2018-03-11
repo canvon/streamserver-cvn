@@ -63,17 +63,17 @@ using bslbf8 = bslbf<8, quint8>;  // 8 bits, aka a byte.
 // Extract & store bits from a bit source.
 
 template <int Bits, typename R>
-BitStream &operator>>(BitStream &bits, bslbf<Bits, R> &outBSLBF)
+BitStream &operator>>(BitStream &bitSource, bslbf<Bits, R> &outBSLBF)
 {
     throw std::runtime_error("TS bit stream output to bslbf: General case not implemented");
 }
 
 // Specialization for single-bit (e.g., bit flag).
 template <>
-BitStream &operator>> <1, bool>(BitStream &bits, bslbf1 &outBSLBF)
+BitStream &operator>> <1, bool>(BitStream &bitSource, bslbf1 &outBSLBF)
 {
-    outBSLBF.value = bits.takeBit();
-    return bits;
+    outBSLBF.value = bitSource.takeBit();
+    return bitSource;
 }
 
 
