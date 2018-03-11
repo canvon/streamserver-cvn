@@ -38,7 +38,10 @@ public:
 template <int Bits, typename R>
 struct bslbf_base {
     using type = R;
+    static constexpr int bit_size = Bits;
+
     R  value;
+
     static_assert(1 <= Bits, "TS bslbf: Bits must at least be 1");
     static_assert(Bits <= 8 * sizeof(R), "TS bslbf: Result type not large enough");
 };
@@ -60,6 +63,23 @@ using bslbf1 = bslbf<1, bool>;    // Single-bit (e.g., bit flag).
 using bslbf8 = bslbf<8, quint8>;  // 8 bits, aka a byte.
 
 
+// Store unsigned integer:
+// uimsbf is MPEG-TS mnemonic for "unsigned integer, most significant bit first".
+//
+// This is just like bslbf in implementation, just without specialization for bit flag.
+
+template <int Bits, typename R>
+struct uimsbf {
+    using type = R;
+    static constexpr int bit_size = Bits;
+
+    R  value;
+
+    static_assert(1 <= Bits, "TS uimsbf: Bits must at least be 1");
+    static_assert(Bits <= 8 * sizeof(R), "TS uimsbf: Result type not large enough");
+};
+
+
 // Extract & store bits from a bit source.
 
 template <int Bits, typename R, typename = std::enable_if_t<Bits <= 8>>
@@ -78,6 +98,19 @@ template <>
 BitStream &operator>> <1, bool>(BitStream &bitSource, bslbf1 &outBSLBF)
 {
     outBSLBF.value = bitSource.takeBit();
+    return bitSource;
+}
+
+// uimsbf is like bslbf, just without specialization for <1, bool>,
+// and without need for a cast from tmp as we'll work in the result type, directly.
+template <int Bits, typename R>
+BitStream &operator>>(BitStream &bitSource, uimsbf<Bits, R> &outUIMSBF)
+{
+    R tmp = 0;
+    for (int bitsLeft = Bits; bitsLeft > 0; bitsLeft--) {
+        tmp = (tmp << 1) | (bitSource.takeBit() ? 1 : 0);
+    }
+    outUIMSBF.value = tmp;
     return bitSource;
 }
 
