@@ -8,6 +8,8 @@ QT       += testlib
 
 QT       -= gui
 
+CONFIG += c++14
+
 TARGET = tst_tsparsertest
 CONFIG   += console
 CONFIG   -= app_bundle
@@ -28,3 +30,20 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += tst_tsparsertest.cpp
 DEFINES += SRCDIR=\\\"$$PWD/\\\"
+
+
+# Link against libinfra.
+win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../libinfra/release/ -linfra
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../libinfra/debug/ -linfra
+else:unix: LIBS += -L$$OUT_PWD/../libinfra/ -linfra
+
+# Link against libmedia.
+win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../libmedia/release/ -lmedia
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../libmedia/debug/ -lmedia
+else:unix: LIBS += -L$$OUT_PWD/../libmedia/ -lmedia
+
+!isEmpty(QMAKE_REL_RPATH_BASE): QMAKE_RPATHDIR += . ../libmedia ../libinfra
+unix: QMAKE_RPATHDIR += /usr/lib/streamserver-cvn
+
+INCLUDEPATH += $$PWD/../libinfra $$PWD/../libmedia
+DEPENDPATH += $$PWD/../libinfra $$PWD/../libmedia
