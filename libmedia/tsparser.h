@@ -80,6 +80,21 @@ struct uimsbf {
 };
 
 
+// Store signed integer:
+// tcimsbf is MPEG-TS mnemonic for "two's complement integer, msb (sign) bit first".
+
+template <int Bits, typename R>
+struct tcimsbf {
+    using type = R;
+    static constexpr int bit_size = Bits;
+
+    R  value;
+
+    static_assert(2 <= Bits, "TS tcimsbf: Bits must at least be 2");  // Needs one bit more for sign.
+    static_assert(Bits <= 8 * sizeof(R), "TS tcimsbf: Result type not large enough");
+};
+
+
 // Extract & store bits from a bit source.
 
 template <int Bits, typename R, typename = std::enable_if_t<Bits <= 8>>
@@ -111,6 +126,24 @@ BitStream &operator>>(BitStream &bitSource, uimsbf<Bits, R> &outUIMSBF)
         tmp = (tmp << 1) | (bitSource.takeBit() ? 1 : 0);
     }
     outUIMSBF.value = tmp;
+    return bitSource;
+}
+
+// tcimsbf is like uimsbf, but interprets first (sign) bit specially.
+template <int Bits, typename R>
+BitStream &operator>>(BitStream &bitSource, tcimsbf<Bits, R> &outTCIMSBF)
+{
+    R tmp;
+    for (int bitsLeft = Bits; bitsLeft > 0; bitsLeft--) {
+        if (bitsLeft == Bits) {
+            // Do sign extension.
+            tmp = bitSource.takeBit() ? -1 : 0;
+            continue;
+        }
+
+        tmp = (tmp << 1) | (bitSource.takeBit() ? 1 : 0);
+    }
+    outTCIMSBF.value = tmp;
     return bitSource;
 }
 
