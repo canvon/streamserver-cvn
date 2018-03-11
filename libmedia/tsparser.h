@@ -7,16 +7,16 @@
 namespace TS {
 
 namespace impl {
-class ParserImpl;
+class BitStreamImpl;
 }
 
-class Parser
+class BitStream
 {
-    std::unique_ptr<impl::ParserImpl>  _implPtr;
+    std::unique_ptr<impl::BitStreamImpl>  _implPtr;
 
 public:
-    explicit Parser(const QByteArray &bytes);
-    ~Parser();
+    explicit BitStream(const QByteArray &bytes);
+    ~BitStream();
 
     const QByteArray &bytes() const;
     int offsetBytes() const;

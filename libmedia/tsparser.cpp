@@ -5,14 +5,14 @@
 namespace TS {
 
 namespace impl {
-class ParserImpl {
+class BitStreamImpl {
     QByteArray  _bytes;
     quint8      _curByte     = 0;
     int         _offsetBytes = -1;
     int         _bitsLeft    = 0;
 
 public:
-    ParserImpl(const QByteArray &bytes) : _bytes(bytes)
+    BitStreamImpl(const QByteArray &bytes) : _bytes(bytes)
     {
 
     }
@@ -20,37 +20,37 @@ public:
 private:
     void _nextByte();
 
-    friend Parser;
+    friend BitStream;
 };
 }
 
-Parser::Parser(const QByteArray &bytes) :
-    _implPtr(std::make_unique<impl::ParserImpl>(bytes))
+BitStream::BitStream(const QByteArray &bytes) :
+    _implPtr(std::make_unique<impl::BitStreamImpl>(bytes))
 {
 
 }
 
-Parser::~Parser()
+BitStream::~BitStream()
 {
 
 }
 
-const QByteArray &Parser::bytes() const
+const QByteArray &BitStream::bytes() const
 {
     return _implPtr->_bytes;
 }
 
-int Parser::offsetBytes() const
+int BitStream::offsetBytes() const
 {
     return _implPtr->_offsetBytes;
 }
 
-int Parser::bitsLeft() const
+int BitStream::bitsLeft() const
 {
     return _implPtr->_bitsLeft;
 }
 
-bool Parser::atEnd() const
+bool BitStream::atEnd() const
 {
     if (_implPtr->_bitsLeft > 0)
         return false;
@@ -61,7 +61,7 @@ bool Parser::atEnd() const
     return true;
 }
 
-void impl::ParserImpl::_nextByte()
+void impl::BitStreamImpl::_nextByte()
 {
     if (!(++_offsetBytes < _bytes.length()))
         throw std::runtime_error("TS parser: Input bytes exceeded");
@@ -70,11 +70,11 @@ void impl::ParserImpl::_nextByte()
     _bitsLeft = 8;
 }
 
-bool Parser::takeBit()
+bool BitStream::takeBit()
 {
     if (!_implPtr)
         throw std::runtime_error("TS parser: Internal error: Implementation data missing");
-    impl::ParserImpl &impl(*_implPtr);
+    impl::BitStreamImpl &impl(*_implPtr);
 
     if (!(impl._bitsLeft > 0))
         impl._nextByte();
@@ -82,11 +82,11 @@ bool Parser::takeBit()
     return (impl._curByte >> --impl._bitsLeft) & 0x01;
 }
 
-quint8 Parser::takeByteAligned()
+quint8 BitStream::takeByteAligned()
 {
     if (!_implPtr)
         throw std::runtime_error("TS parser: Internal error: Implementation data missing");
-    impl::ParserImpl &impl(*_implPtr);
+    impl::BitStreamImpl &impl(*_implPtr);
 
     if (!(impl._bitsLeft > 0))
         impl._nextByte();
