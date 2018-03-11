@@ -62,10 +62,15 @@ using bslbf8 = bslbf<8, quint8>;  // 8 bits, aka a byte.
 
 // Extract & store bits from a bit source.
 
-template <int Bits, typename R>
+template <int Bits, typename R, typename = std::enable_if_t<Bits <= 8>>
 BitStream &operator>>(BitStream &bitSource, bslbf<Bits, R> &outBSLBF)
 {
-    throw std::runtime_error("TS bit stream output to bslbf: General case not implemented");
+    quint8 tmp = 0;
+    for (int bitsLeft = Bits; bitsLeft > 0; bitsLeft--) {
+        tmp = (tmp << 1) | (bitSource.takeBit() ? 1 : 0);
+    }
+    outBSLBF.value = static_cast<R>(tmp);
+    return bitSource;
 }
 
 // Specialization for single-bit (e.g., bit flag).
