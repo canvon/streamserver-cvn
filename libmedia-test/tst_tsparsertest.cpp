@@ -17,6 +17,8 @@ private Q_SLOTS:
     void bitStreamBitwiseRead();
     void bslbf1Assign();
     void bslbfAdaptationFieldControl();
+    void uimsbf13();
+    void tcimsbfTest();
 };
 
 TSParserTest::TSParserTest()
@@ -62,6 +64,43 @@ void TSParserTest::bslbfAdaptationFieldControl()
     TS::BitStream tsBits3(QByteArray(1, 0xc0));
     tsBits3 >> afc;
     QVERIFY(afc.value == TSPacket::AdaptationFieldControlType::AdaptationFieldThenPayload);
+}
+
+void TSParserTest::uimsbf13()
+{
+    TS::uimsbf<13, quint16> myInt;
+    TS::BitStream tsBits(QByteArray(1, 0x00) + QByteArray(1, 23));
+
+    // Throw away the first 3 bits, so the 13-bit uint read is right-aligned
+    // to a byte boundary.
+    TS::bslbf<3, quint8> foo;
+    tsBits >> foo;
+
+    tsBits >> myInt;
+    QCOMPARE(myInt.value, (quint16)23);
+}
+
+void TSParserTest::tcimsbfTest()
+{
+    TS::tcimsbf<7, qint8> mySignedInt;
+    TS::BitStream tsBits9(QByteArray(1, 9));
+    TS::BitStream tsBitsMinus7(QByteArray(1, -7));
+    TS::BitStream tsBitsMinus1Indirectly(QByteArray(1, 127));
+
+    // Throw away one bit.
+    TS::bslbf1 foo;
+    tsBits9                >> foo;
+    tsBitsMinus7           >> foo;
+    tsBitsMinus1Indirectly >> foo;
+
+    tsBits9 >> mySignedInt;
+    QCOMPARE(mySignedInt.value, (qint8)9);
+
+    tsBitsMinus7 >> mySignedInt;
+    QCOMPARE(mySignedInt.value, (qint8)-7);
+
+    tsBitsMinus1Indirectly >> mySignedInt;
+    QCOMPARE(mySignedInt.value, (qint8)-1);
 }
 
 QTEST_APPLESS_MAIN(TSParserTest)
