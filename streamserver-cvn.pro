@@ -5,4 +5,5 @@ SUBDIRS += \
     libmedia \
     streamserver-cvn-cli \
     ts-dump \
-    ts-split
+    ts-split \
+    libmedia-test
