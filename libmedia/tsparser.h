@@ -133,7 +133,7 @@ BitStream &operator>>(BitStream &bitSource, uimsbf<Bits, R> &outUIMSBF)
 template <int Bits, typename R>
 BitStream &operator>>(BitStream &bitSource, tcimsbf<Bits, R> &outTCIMSBF)
 {
-    R tmp;
+    R tmp = 0;
     for (int bitsLeft = Bits; bitsLeft > 0; bitsLeft--) {
         if (bitsLeft == Bits) {
             // Do sign extension.
