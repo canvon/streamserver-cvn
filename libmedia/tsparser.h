@@ -47,12 +47,18 @@ struct bslbf_base {
 };
 
 template <int Bits, typename R>
-struct bslbf : public bslbf_base<Bits, R> { };
+struct bslbf : public bslbf_base<Bits, R> {
+    using base = bslbf_base<Bits, R>;
+    bslbf(R value) : base { value } { }
+};
 
 // Specialization for single-bit (e.g., bit flag):
 // Allow easy access to value.
 template<>
-struct bslbf<1, bool> : bslbf_base<1, bool> {
+struct bslbf<1, bool> : public bslbf_base<1, bool> {
+    using base = bslbf_base;
+    bslbf(bool value) : base { value } { }
+
     operator bool()
     {
         return value;
