@@ -79,21 +79,65 @@ QDebug operator<<(QDebug debug, const PacketV2 &packet)
     debug << " transportPriority="         << packet.transportPriority.value;
     debug << " PID="                       << packet.pid.value;
 
-    if (packet.isNullPacket()) {
-        debug << " NullPacket";
-    }
-    else {
-        debug << " " << packet.transportScramblingControl.value;
-        debug << " " << packet.adaptationFieldControl.value;
-        debug << " continuityCounter=" << packet.continuityCounter.value;
+    if (packet.isNullPacket())
+        return debug << " NullPacket)";
 
-        if (packet.adaptationFieldControl.value == TS::PacketV2::AdaptationFieldControlType::AdaptationFieldOnly ||
-            packet.adaptationFieldControl.value == TS::PacketV2::AdaptationFieldControlType::AdaptationFieldThenPayload)
-        {
-            // TODO: Add dump of AdaptationField.
-            debug << " TODO=adaptationField";
-        }
+    debug << " " << packet.transportScramblingControl.value;
+    debug << " " << packet.adaptationFieldControl.value;
+    debug << " continuityCounter=" << packet.continuityCounter.value;
+
+    if (packet.adaptationFieldControl.value == TS::PacketV2::AdaptationFieldControlType::AdaptationFieldOnly ||
+        packet.adaptationFieldControl.value == TS::PacketV2::AdaptationFieldControlType::AdaptationFieldThenPayload)
+    {
+        // Dump adaptation field.
+        debug << packet.adaptationField;
     }
+
+    if (packet.adaptationFieldControl.value == TS::PacketV2::AdaptationFieldControlType::PayloadOnly ||
+        packet.adaptationFieldControl.value == TS::PacketV2::AdaptationFieldControlType::AdaptationFieldThenPayload)
+    {
+        // Dump payload data.
+        debug << HumanReadable::Hexdump { packet.payloadDataBytes }.enableAll();
+    }
+
+    debug << ")";
+    return debug;
+}
+
+QDebug operator<<(QDebug debug, const PacketV2::AdaptationField &af)
+{
+    QDebugStateSaver saver(debug);
+    debug.nospace() << "TS::PacketV2::AdaptationField(";
+
+    debug << "adaptationFieldLength=" << af.adaptationFieldLength.value;
+    if (!(af.adaptationFieldLength.value > 0))
+        return debug << ")";
+
+    debug << " discontinuityIndicator="            << af.discontinuityIndicator.value;
+    debug << " randomAccessIndicator="             << af.randomAccessIndicator.value;
+    debug << " elementaryStreamPriorityIndicator=" << af.elementaryStreamPriorityIndicator.value;
+    debug << " pcrFlag="                           << af.pcrFlag.value;
+    debug << " opcrFlag="                          << af.opcrFlag.value;
+    debug << " splicingPointFlag="                 << af.splicingPointFlag.value;
+    debug << " transportPrivateDataFlag="          << af.transportPrivateDataFlag.value;
+    debug << " adaptationFieldExtensionFlag="      << af.adaptationFieldExtensionFlag.value;
+
+    if (af.pcrFlag)
+        debug << " programClockReference=" << af.programClockReference;
+    if (af.opcrFlag)
+        debug << " originalProgramClockReference=" << af.originalProgramClockReference;
+
+    if (af.splicingPointFlag)
+        debug << " spliceCountdown=" << af.spliceCountdown.value;
+
+    if (af.transportPrivateDataFlag)
+        debug << " transportPrivateData=" << HumanReadable::Hexdump { af.transportPrivateDataBytes }.enableAll();
+
+    if (af.adaptationFieldExtensionFlag)
+        debug << " adaptationFieldExtension=" << HumanReadable::Hexdump { af.adaptationFieldExtensionBytes }.enableAll();
+
+    if (!af.stuffingBytes.isEmpty())
+        debug << " stuffingBytes=" << HumanReadable::Hexdump { af.stuffingBytes }.enableAll();
 
     debug << ")";
     return debug;

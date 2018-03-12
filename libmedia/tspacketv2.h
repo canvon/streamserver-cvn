@@ -111,6 +111,7 @@ public:
 };
 
 LIBMEDIASHARED_EXPORT QDebug operator<<(QDebug debug, const PacketV2 &packet);
+LIBMEDIASHARED_EXPORT QDebug operator<<(QDebug debug, const PacketV2::AdaptationField &af);
 
 
 namespace impl {
