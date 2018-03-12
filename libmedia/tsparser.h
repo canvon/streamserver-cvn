@@ -65,7 +65,7 @@ struct bslbf<1, bool> : public bslbf_base<1, bool> {
     bslbf(const bslbf &other) : base(other) { }
     bslbf(bool value) : base { value } { }
 
-    operator bool()
+    operator bool() const
     {
         return value;
     }
