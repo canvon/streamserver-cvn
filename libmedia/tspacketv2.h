@@ -74,7 +74,35 @@ public:
 
     uimsbf<4, quint8>  continuityCounter { 0 };
 
-    // TODO: Add AdaptationField.
+    struct AdaptationField
+    {
+        uimsbf<8, quint8>  adaptationFieldLength  { 0 };
+        bslbf1  discontinuityIndicator            { false };
+        bslbf1  randomAccessIndicator             { false };
+        bslbf1  elementaryStreamPriorityIndicator { false };
+        bslbf1  pcrFlag                           { false };
+        bslbf1  opcrFlag                          { false };
+        bslbf1  splicingPointFlag                 { false };
+        bslbf1  transportPrivateDataFlag          { false };
+        bslbf1  adaptationFieldExtensionFlag      { false };
+
+        ProgramClockReference  programClockReference, originalProgramClockReference;
+
+        tcimsbf<8, qint8>  spliceCountdown { 0 };
+
+        uimsbf<8, quint8>  transportPrivateDataLength { 0 };
+        QByteArray         transportPrivateDataBytes;
+
+        // TODO: Actually implement adaptation field extension.
+        uimsbf<8, quint8>  adaptationFieldExtensionLength { 0 };
+        QByteArray         adaptationFieldExtensionBytes;
+
+        QByteArray  stuffingBytes;
+    };
+    AdaptationField  adaptationField;
+
+    QByteArray  payloadDataBytes;
+
 
     PacketV2();
 

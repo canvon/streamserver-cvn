@@ -104,6 +104,8 @@ namespace impl {
 class PacketV2ParserImpl {
     int  _tsPacketSize = PacketV2::sizeBasic;
 
+    bool parseAdaptationField(BitStream *bitSourcePtr, PacketV2Parser::Parse *output);
+
     friend PacketV2Parser;
 };
 }
@@ -192,18 +194,97 @@ bool PacketV2Parser::parse(const QByteArray &bytes, PacketV2Parser::Parse *outpu
     if (packet.adaptationFieldControl.value == PacketV2::AdaptationFieldControlType::AdaptationFieldOnly ||
         packet.adaptationFieldControl.value == PacketV2::AdaptationFieldControlType::AdaptationFieldThenPayload)
     {
-        // TODO: Parse AdaptationField, too.
-        output->errorMessage = "Parsing AdaptationField not implemented, yet";
-        return false;
+        try {
+            // Parse adaptation field.
+            if (!_implPtr->parseAdaptationField(&bitSource, output))
+                throw std::runtime_error("Parse failed");
+        }
+        catch (std::exception &ex) {
+            QDebug(&output->errorMessage)
+                << "Error parsing adaptation field:" << ex.what();
+            return false;
+        }
     }
 
     if (packet.adaptationFieldControl.value == PacketV2::AdaptationFieldControlType::PayloadOnly ||
         packet.adaptationFieldControl.value == PacketV2::AdaptationFieldControlType::AdaptationFieldThenPayload)
     {
-        // TODO: Somehow return payload data.
-        output->errorMessage = "Payload data not supported, yet";
+        try {
+            int N = 184 - (packet.adaptationFieldControl.value == PacketV2::AdaptationFieldControlType::AdaptationFieldThenPayload ?
+                               packet.adaptationField.adaptationFieldLength.value + 1 : 0);
+            packet.payloadDataBytes = bitSource.takeByteArrayAligned(N);
+        }
+        catch (std::exception &ex) {
+            QDebug(&output->errorMessage)
+                << "Error extracting payload data:" << ex.what();
+            return false;
+        }
+    }
+
+    if (!bitSource.atEnd()) {
+        QDebug(&output->errorMessage)
+            << "Expected end of bit source, but"
+            << bitSource.bytesLeft() << "bytes and"
+            << bitSource.bitsLeft() << "bits left";
         return false;
     }
+
+    return true;
+}
+
+bool impl::PacketV2ParserImpl::parseAdaptationField(BitStream *bitSourcePtr, PacketV2Parser::Parse *output)
+{
+    BitStream &bitSource(*bitSourcePtr);
+    PacketV2 &packet(output->packet);
+    PacketV2::AdaptationField &af(packet.adaptationField);
+
+    auto &afLen(af.adaptationFieldLength);
+    bitSource >> afLen;
+    if (!(afLen.value > 0))
+        // (== 0 is used for a single stuffing byte, the adaptation field length)
+        return true;
+
+    const QByteArray afBytes = bitSource.takeByteArrayAligned(afLen.value);
+    BitStream afBitSource(afBytes);
+
+    afBitSource
+        >> af.discontinuityIndicator
+        >> af.randomAccessIndicator
+        >> af.elementaryStreamPriorityIndicator
+        >> af.pcrFlag
+        >> af.opcrFlag
+        >> af.splicingPointFlag
+        >> af.transportPrivateDataFlag
+        >> af.adaptationFieldExtensionFlag;
+
+    if (af.pcrFlag)
+        afBitSource >> af.programClockReference;
+
+    if (af.opcrFlag)
+        afBitSource >> af.originalProgramClockReference;
+
+    if (af.splicingPointFlag)
+        afBitSource >> af.spliceCountdown;
+
+    if (af.transportPrivateDataFlag) {
+        auto &tpdLen(af.transportPrivateDataLength);
+        afBitSource >> tpdLen;
+        af.transportPrivateDataBytes = afBitSource.takeByteArrayAligned(tpdLen.value);
+    }
+
+    if (af.adaptationFieldExtensionFlag) {
+        auto &afeLen(af.adaptationFieldExtensionLength);
+        afBitSource >> afeLen;
+        af.adaptationFieldExtensionBytes = afBitSource.takeByteArrayAligned(afeLen.value);
+    }
+
+    af.stuffingBytes = afBitSource.takeByteArrayAligned(-1);
+
+    if (!afBitSource.atEnd())
+        throw static_cast<std::runtime_error>(ExceptionBuilder()
+            << "Expected end of bit source, but"
+            << afBitSource.bytesLeft() << "bytes and"
+            << afBitSource.bitsLeft() << "bits left");
 
     return true;
 }
