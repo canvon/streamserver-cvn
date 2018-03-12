@@ -98,7 +98,7 @@ struct tcimsbf {
 // Extract & store bits from a bit source.
 
 template <int Bits, typename R, typename = std::enable_if_t<Bits <= 8>>
-BitStream &operator>>(BitStream &bitSource, bslbf<Bits, R> &outBSLBF)
+inline BitStream &operator>>(BitStream &bitSource, bslbf<Bits, R> &outBSLBF)
 {
     quint8 tmp = 0;
     for (int bitsLeft = Bits; bitsLeft > 0; bitsLeft--) {
@@ -110,7 +110,7 @@ BitStream &operator>>(BitStream &bitSource, bslbf<Bits, R> &outBSLBF)
 
 // Specialization for single-bit (e.g., bit flag).
 template <>
-BitStream &operator>> <1, bool>(BitStream &bitSource, bslbf1 &outBSLBF)
+inline BitStream &operator>> <1, bool>(BitStream &bitSource, bslbf1 &outBSLBF)
 {
     outBSLBF.value = bitSource.takeBit();
     return bitSource;
@@ -119,7 +119,7 @@ BitStream &operator>> <1, bool>(BitStream &bitSource, bslbf1 &outBSLBF)
 // uimsbf is like bslbf, just without specialization for <1, bool>,
 // and without need for a cast from tmp as we'll work in the result type, directly.
 template <int Bits, typename R>
-BitStream &operator>>(BitStream &bitSource, uimsbf<Bits, R> &outUIMSBF)
+inline BitStream &operator>>(BitStream &bitSource, uimsbf<Bits, R> &outUIMSBF)
 {
     R tmp = 0;
     for (int bitsLeft = Bits; bitsLeft > 0; bitsLeft--) {
@@ -131,7 +131,7 @@ BitStream &operator>>(BitStream &bitSource, uimsbf<Bits, R> &outUIMSBF)
 
 // tcimsbf is like uimsbf, but interprets first (sign) bit specially.
 template <int Bits, typename R>
-BitStream &operator>>(BitStream &bitSource, tcimsbf<Bits, R> &outTCIMSBF)
+inline BitStream &operator>>(BitStream &bitSource, tcimsbf<Bits, R> &outTCIMSBF)
 {
     R tmp = 0;
     for (int bitsLeft = Bits; bitsLeft > 0; bitsLeft--) {
