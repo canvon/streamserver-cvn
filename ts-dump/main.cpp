@@ -166,9 +166,11 @@ int main(int argc, char *argv[])
                 if (doOffset)
                     out << "count=" << ++tsPacketCount << " ";
 
-                QString outStr;
-                QDebug(&outStr) << packet;
-                out << outStr << endl;
+                if (verbose >= 0) {
+                    QString outStr;
+                    QDebug(&outStr) << packet;
+                    out << outStr << endl;
+                }
 
                 QString errMsg = packet.errorMessage();
                 if (!errMsg.isEmpty()) {
@@ -191,9 +193,11 @@ int main(int argc, char *argv[])
                 if (doOffset)
                     out << "count=" << ++tsPacketCount << " ";
 
-                QString outStr;
-                QDebug(&outStr) << parse.packet;
-                out << outStr << endl;
+                if (verbose >= 0) {
+                    QString outStr;
+                    QDebug(&outStr) << parse.packet;
+                    out << outStr << endl;
+                }
 
                 if (!success)
                     out << "^ TS packet error: " << parse.errorMessage << endl;
