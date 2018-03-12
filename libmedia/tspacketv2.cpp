@@ -67,7 +67,7 @@ bool PacketV2::isNullPacket() const
 QDebug operator<<(QDebug debug, const PacketV2 &packet)
 {
     QDebugStateSaver saver(debug);
-    debug.nospace() << "TS::Packet2(";
+    debug.nospace() << "TS::PacketV2(";
 
     if (packet.isSyncByteFixedValue())
         debug << "syncByte";
@@ -90,14 +90,14 @@ QDebug operator<<(QDebug debug, const PacketV2 &packet)
         packet.adaptationFieldControl.value == TS::PacketV2::AdaptationFieldControlType::AdaptationFieldThenPayload)
     {
         // Dump adaptation field.
-        debug << packet.adaptationField;
+        debug << " " << packet.adaptationField;
     }
 
     if (packet.adaptationFieldControl.value == TS::PacketV2::AdaptationFieldControlType::PayloadOnly ||
         packet.adaptationFieldControl.value == TS::PacketV2::AdaptationFieldControlType::AdaptationFieldThenPayload)
     {
         // Dump payload data.
-        debug << HumanReadable::Hexdump { packet.payloadDataBytes }.enableAll();
+        debug << " payloadData=" << HumanReadable::Hexdump { packet.payloadDataBytes }.enableAll();
     }
 
     debug << ")";
