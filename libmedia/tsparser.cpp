@@ -97,12 +97,39 @@ quint8 BitStream::takeByteAligned()
         impl._nextByte();
 
     if (impl._bitsLeft != 8)
-        throw std::runtime_error("TS parser: Not byte-aligned");
+        throw std::runtime_error("TS parser: Not byte-aligned for take byte");
 
     quint8 byte = impl._curByte;
     impl._bitsLeft -= 8;
 
     return byte;
+}
+
+QByteArray BitStream::takeByteArrayAligned(int bytesCount)
+{
+    if (!_implPtr)
+        throw std::runtime_error("TS parser: Internal error: Implementation data missing");
+    impl::BitStreamImpl &impl(*_implPtr);
+
+    if (!(impl._bitsLeft == 0))
+        throw std::runtime_error("TS parser: Not byte-aligned for take byte array");
+
+    if (bytesCount < 0) {
+        QByteArray ret = impl._bytes.mid(impl._offsetBytes + 1);
+        impl._offsetBytes = impl._bytes.length() - 1;
+        return ret;
+    }
+
+    if (!(impl._bytes.length() - impl._offsetBytes + 1 < bytesCount))
+        throw std::runtime_error("TS parser: Not enough input bytes available");
+
+    QByteArray ret = impl._bytes.mid(impl._offsetBytes + 1, bytesCount);
+    if (ret.length() != bytesCount)
+        throw std::runtime_error("TS parser: Internal error: Check against taking too many bytes failed");
+
+    impl._offsetBytes += bytesCount;
+
+    return ret;
 }
 
 }  // namespace TS

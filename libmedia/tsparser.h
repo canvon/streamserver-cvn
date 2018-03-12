@@ -30,6 +30,7 @@ public:
 
     bool   takeBit();
     quint8 takeByteAligned();
+    QByteArray takeByteArrayAligned(int bytesCount);
 };
 
 
