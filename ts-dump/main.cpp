@@ -1,6 +1,7 @@
 #include <QCoreApplication>
 
 #include "tspacket.h"
+#include "tspacket2.h"
 
 #include <QCommandLineParser>
 #include <QDebug>
@@ -17,6 +18,7 @@ int main(int argc, char *argv[])
     int ret = 0;
     bool doOffset = false;
     qint64 tsPacketSize = TSPacket::lengthBasic;
+    int tsPacketClassVersion = 1;
 
     QCommandLineParser parser;
     parser.setApplicationDescription("Dump MPEG-TS packet contents");
@@ -28,6 +30,9 @@ int main(int argc, char *argv[])
         { { "s", "ts-packet-size" },
           "MPEG-TS packet size (e.g., 188 bytes)",
           "SIZE" },
+        { "ts-packet-class-version",
+          "Version of TS packet class to use: 1 or 2",
+          "VERSION" },
     });
     parser.process(a);
 
@@ -51,12 +56,43 @@ int main(int argc, char *argv[])
         }
     }
 
+    // TS packet class version
+    {
+        QString valueStr = parser.value("ts-packet-class-version");
+        if (!valueStr.isNull()) {
+            bool ok = false;
+            tsPacketClassVersion = valueStr.toInt(&ok);
+            if (!ok) {
+                errout << a.applicationName() << ": "
+                       << "TS packet class version: Can't convert to number: \""
+                       << valueStr << "\""
+                       << endl;
+                return 2;
+            }
+            else if (!(1 <= tsPacketClassVersion && tsPacketClassVersion <= 2)) {
+                errout << a.applicationName() << ": "
+                       << "Invalid TS packet class version: Has to be 1 or 2, but got "
+                       << tsPacketClassVersion
+                       << endl;
+                return 2;
+            }
+        }
+    }
+
     auto args = parser.positionalArguments();
     if (!(args.length() > 0)) {
         errout << a.applicationName()
                << ": Invalid arguments"
                << endl;
         return 2;
+    }
+
+    std::unique_ptr<TS::Packet2Parser> tsPacket2ParserPtr;
+    if (tsPacketClassVersion == 2) {
+        tsPacket2ParserPtr = std::make_unique<TS::Packet2Parser>();
+
+        if (tsPacketSize != TS::Packet2::sizeBasic)
+            tsPacket2ParserPtr->setTSPacketSize(tsPacketSize);
     }
 
     for (QString arg : args) {
@@ -112,17 +148,53 @@ int main(int argc, char *argv[])
                 break;
             }
 
-            TSPacket packet(buf);
-            if (doOffset)
-                out << "count=" << ++tsPacketCount << " ";
+            switch (tsPacketClassVersion) {
+            case 1:
+            {
+                TSPacket packet(buf);
+                if (doOffset)
+                    out << "count=" << ++tsPacketCount << " ";
 
-            QString outStr;
-            QDebug(&outStr) << packet;
-            out << outStr << endl;
+                QString outStr;
+                QDebug(&outStr) << packet;
+                out << outStr << endl;
 
-            QString errMsg = packet.errorMessage();
-            if (!errMsg.isEmpty()) {
-                out << "^ TS packet error: " << errMsg << endl;
+                QString errMsg = packet.errorMessage();
+                if (!errMsg.isEmpty()) {
+                    out << "^ TS packet error: " << errMsg << endl;
+                }
+
+                break;
+            }
+            case 2:
+            {
+                if (!tsPacket2ParserPtr) {
+                    errout << a.applicationName() << ": "
+                           << "TS packet v2 parser missing"
+                           << endl;
+                    return 1;
+                }
+
+                TS::Packet2Parser::Parse parse;
+                bool success = tsPacket2ParserPtr->parse(buf, &parse);
+                if (doOffset)
+                    out << "count=" << ++tsPacketCount << " ";
+
+                QString outStr;
+                QDebug(&outStr) << parse.packet;
+                out << outStr << endl;
+
+                if (!success)
+                    out << "^ TS packet error: " << parse.errorMessage << endl;
+
+                break;
+            }
+            default:
+                errout << a.applicationName() << ": "
+                       << "Unsupported TS packet class version "
+                       << tsPacketClassVersion
+                       << endl;
+                return 1;
             }
 
             if (doOffset)
