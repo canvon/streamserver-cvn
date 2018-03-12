@@ -6,9 +6,13 @@
 #include <QObject>
 
 #include "tsparser.h"
+#include <memory>
+#include <QByteArray>
+#include <QString>
 #include <QDebug>
 
 namespace TS {
+
 
 class LIBMEDIASHARED_EXPORT Packet2
 {
@@ -54,6 +58,32 @@ public:
 };
 
 LIBMEDIASHARED_EXPORT QDebug operator<<(QDebug debug, const Packet2 &packet);
+
+
+namespace impl {
+class Packet2ParserImpl;
+}
+
+class LIBMEDIASHARED_EXPORT Packet2Parser
+{
+    std::unique_ptr<impl::Packet2ParserImpl>  _implPtr;
+
+public:
+    struct Parse {
+        QByteArray  bytes;
+        Packet2     packet;
+        QString     errorMessage;
+    };
+
+    explicit Packet2Parser();
+    ~Packet2Parser();
+
+    int tsPacketSize() const;
+    void setTSPacketSize(int size);
+
+    bool parse(const QByteArray &bytes, Parse *output);
+};
+
 
 }  // namespace TS
 
