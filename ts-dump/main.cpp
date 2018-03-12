@@ -1,7 +1,7 @@
 #include <QCoreApplication>
 
 #include "tspacket.h"
-#include "tspacket2.h"
+#include "tspacketv2.h"
 
 #include <QCommandLineParser>
 #include <QDebug>

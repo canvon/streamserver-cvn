@@ -28,14 +28,14 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
     tsparser.cpp \
     tspacket.cpp \
-    tspacket2.cpp \
+    tspacketv2.cpp \
     tsreader.cpp \
     tswriter.cpp
 
 HEADERS += libmedia_global.h \
     tsparser.h \
     tspacket.h \
-    tspacket2.h \
+    tspacketv2.h \
     tsreader.h \
     tswriter.h
 
