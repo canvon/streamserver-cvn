@@ -197,7 +197,8 @@ bool PacketV2Parser::parse(const QByteArray &bytes, PacketV2Parser::Parse *outpu
         try {
             // Parse adaptation field.
             if (!_implPtr->parseAdaptationField(&bitSource, output))
-                throw std::runtime_error("Parse failed");
+                throw std::runtime_error(output->errorMessage.isEmpty() ?
+                    "Parse failed" : qPrintable(output->errorMessage));
         }
         catch (std::exception &ex) {
             QDebug(&output->errorMessage)
