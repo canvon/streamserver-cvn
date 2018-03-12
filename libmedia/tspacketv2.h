@@ -14,7 +14,7 @@
 namespace TS {
 
 
-class LIBMEDIASHARED_EXPORT Packet2
+class LIBMEDIASHARED_EXPORT PacketV2
 {
     Q_GADGET
 
@@ -51,32 +51,32 @@ public:
 
     // TODO: Add AdaptationField.
 
-    Packet2();
+    PacketV2();
 
     bool isSyncByteFixedValue() const;
     bool isNullPacket() const;
 };
 
-LIBMEDIASHARED_EXPORT QDebug operator<<(QDebug debug, const Packet2 &packet);
+LIBMEDIASHARED_EXPORT QDebug operator<<(QDebug debug, const PacketV2 &packet);
 
 
 namespace impl {
-class Packet2ParserImpl;
+class PacketV2ParserImpl;
 }
 
-class LIBMEDIASHARED_EXPORT Packet2Parser
+class LIBMEDIASHARED_EXPORT PacketV2Parser
 {
-    std::unique_ptr<impl::Packet2ParserImpl>  _implPtr;
+    std::unique_ptr<impl::PacketV2ParserImpl>  _implPtr;
 
 public:
     struct Parse {
         QByteArray  bytes;
-        Packet2     packet;
+        PacketV2    packet;
         QString     errorMessage;
     };
 
-    explicit Packet2Parser();
-    ~Packet2Parser();
+    explicit PacketV2Parser();
+    ~PacketV2Parser();
 
     int tsPacketSize() const;
     void setTSPacketSize(int size);

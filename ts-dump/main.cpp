@@ -87,12 +87,12 @@ int main(int argc, char *argv[])
         return 2;
     }
 
-    std::unique_ptr<TS::Packet2Parser> tsPacket2ParserPtr;
+    std::unique_ptr<TS::PacketV2Parser> tsPacketV2ParserPtr;
     if (tsPacketClassVersion == 2) {
-        tsPacket2ParserPtr = std::make_unique<TS::Packet2Parser>();
+        tsPacketV2ParserPtr = std::make_unique<TS::PacketV2Parser>();
 
-        if (tsPacketSize != TS::Packet2::sizeBasic)
-            tsPacket2ParserPtr->setTSPacketSize(tsPacketSize);
+        if (tsPacketSize != TS::PacketV2::sizeBasic)
+            tsPacketV2ParserPtr->setTSPacketSize(tsPacketSize);
     }
 
     for (QString arg : args) {
@@ -168,15 +168,15 @@ int main(int argc, char *argv[])
             }
             case 2:
             {
-                if (!tsPacket2ParserPtr) {
+                if (!tsPacketV2ParserPtr) {
                     errout << a.applicationName() << ": "
                            << "TS packet v2 parser missing"
                            << endl;
                     return 1;
                 }
 
-                TS::Packet2Parser::Parse parse;
-                bool success = tsPacket2ParserPtr->parse(buf, &parse);
+                TS::PacketV2Parser::Parse parse;
+                bool success = tsPacketV2ParserPtr->parse(buf, &parse);
                 if (doOffset)
                     out << "count=" << ++tsPacketCount << " ";
 

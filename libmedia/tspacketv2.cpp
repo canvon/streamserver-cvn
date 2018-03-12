@@ -7,22 +7,22 @@
 namespace TS {
 
 
-Packet2::Packet2()
+PacketV2::PacketV2()
 {
 
 }
 
-bool Packet2::isSyncByteFixedValue() const
+bool PacketV2::isSyncByteFixedValue() const
 {
     return syncByte.value == syncByteFixedValue;
 }
 
-bool Packet2::isNullPacket() const
+bool PacketV2::isNullPacket() const
 {
     return pid.value == pidNullPacket;
 }
 
-QDebug operator<<(QDebug debug, const Packet2 &packet)
+QDebug operator<<(QDebug debug, const PacketV2 &packet)
 {
     QDebugStateSaver saver(debug);
     debug.nospace() << "TS::Packet2(";
@@ -45,8 +45,8 @@ QDebug operator<<(QDebug debug, const Packet2 &packet)
         debug << " " << packet.adaptationFieldControl.value;
         debug << " continuityCounter=" << packet.continuityCounter.value;
 
-        if (packet.adaptationFieldControl.value == TS::Packet2::AdaptationFieldControlType::AdaptationFieldOnly ||
-            packet.adaptationFieldControl.value == TS::Packet2::AdaptationFieldControlType::AdaptationFieldThenPayload)
+        if (packet.adaptationFieldControl.value == TS::PacketV2::AdaptationFieldControlType::AdaptationFieldOnly ||
+            packet.adaptationFieldControl.value == TS::PacketV2::AdaptationFieldControlType::AdaptationFieldThenPayload)
         {
             // TODO: Add dump of AdaptationField.
             debug << " TODO=adaptationField";
@@ -59,36 +59,36 @@ QDebug operator<<(QDebug debug, const Packet2 &packet)
 
 
 namespace impl {
-class Packet2ParserImpl {
-    int  _tsPacketSize = Packet2::sizeBasic;
+class PacketV2ParserImpl {
+    int  _tsPacketSize = PacketV2::sizeBasic;
 
-    friend Packet2Parser;
+    friend PacketV2Parser;
 };
 }
 
-Packet2Parser::Packet2Parser() :
-    _implPtr(std::make_unique<impl::Packet2ParserImpl>())
+PacketV2Parser::PacketV2Parser() :
+    _implPtr(std::make_unique<impl::PacketV2ParserImpl>())
 {
 
 }
 
-Packet2Parser::~Packet2Parser()
+PacketV2Parser::~PacketV2Parser()
 {
 
 }
 
-int Packet2Parser::tsPacketSize() const
+int PacketV2Parser::tsPacketSize() const
 {
     return _implPtr->_tsPacketSize;
 }
 
-void Packet2Parser::setTSPacketSize(int size)
+void PacketV2Parser::setTSPacketSize(int size)
 {
     // FIXME: Implement
     throw std::runtime_error("TS packet v2 parser: Setting TS packet size not implemented, yet");
 }
 
-bool Packet2Parser::parse(const QByteArray &bytes, Packet2Parser::Parse *output)
+bool PacketV2Parser::parse(const QByteArray &bytes, PacketV2Parser::Parse *output)
 {
     if (!output)
         throw std::invalid_argument("TS packet v2 parser: Output can't be null");
@@ -96,7 +96,7 @@ bool Packet2Parser::parse(const QByteArray &bytes, Packet2Parser::Parse *output)
     output->errorMessage.clear();
     output->bytes = bytes;
     BitStream bitSource(output->bytes);
-    Packet2 &packet(output->packet);
+    PacketV2 &packet(output->packet);
 
     if (bytes.length() != _implPtr->_tsPacketSize) {
         QDebug(&output->errorMessage)
@@ -109,7 +109,7 @@ bool Packet2Parser::parse(const QByteArray &bytes, Packet2Parser::Parse *output)
         bitSource >> packet.syncByte;
         if (!packet.isSyncByteFixedValue())
             throw static_cast<std::runtime_error>(ExceptionBuilder()
-                << "No sync byte" << HumanReadable::Hexdump { QByteArray(1, Packet2::syncByteFixedValue) }
+                << "No sync byte" << HumanReadable::Hexdump { QByteArray(1, PacketV2::syncByteFixedValue) }
                 << "-- starts with" << HumanReadable::Hexdump { output->bytes.left(8) }.enableAll());
     }
     catch (std::exception &ex) {
@@ -147,16 +147,16 @@ bool Packet2Parser::parse(const QByteArray &bytes, Packet2Parser::Parse *output)
         return false;
     }
 
-    if (packet.adaptationFieldControl.value == Packet2::AdaptationFieldControlType::AdaptationFieldOnly ||
-        packet.adaptationFieldControl.value == Packet2::AdaptationFieldControlType::AdaptationFieldThenPayload)
+    if (packet.adaptationFieldControl.value == PacketV2::AdaptationFieldControlType::AdaptationFieldOnly ||
+        packet.adaptationFieldControl.value == PacketV2::AdaptationFieldControlType::AdaptationFieldThenPayload)
     {
         // TODO: Parse AdaptationField, too.
         output->errorMessage = "Parsing AdaptationField not implemented, yet";
         return false;
     }
 
-    if (packet.adaptationFieldControl.value == Packet2::AdaptationFieldControlType::PayloadOnly ||
-        packet.adaptationFieldControl.value == Packet2::AdaptationFieldControlType::AdaptationFieldThenPayload)
+    if (packet.adaptationFieldControl.value == PacketV2::AdaptationFieldControlType::PayloadOnly ||
+        packet.adaptationFieldControl.value == PacketV2::AdaptationFieldControlType::AdaptationFieldThenPayload)
     {
         // TODO: Somehow return payload data.
         output->errorMessage = "Payload data not supported, yet";
