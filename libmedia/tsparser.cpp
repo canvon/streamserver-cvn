@@ -120,7 +120,7 @@ QByteArray BitStream::takeByteArrayAligned(int bytesCount)
         return ret;
     }
 
-    if (!(impl._bytes.length() - impl._offsetBytes + 1 < bytesCount))
+    if (!(bytesLeft() >= bytesCount))
         throw std::runtime_error("TS parser: Not enough input bytes available");
 
     QByteArray ret = impl._bytes.mid(impl._offsetBytes + 1, bytesCount);
