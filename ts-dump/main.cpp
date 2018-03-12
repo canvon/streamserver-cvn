@@ -16,6 +16,7 @@ int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
     int ret = 0;
+    int verbose = 0;
     bool doOffset = false;
     qint64 tsPacketSize = TSPacket::lengthBasic;
     int tsPacketClassVersion = 1;
@@ -25,6 +26,8 @@ int main(int argc, char *argv[])
     parser.addHelpOption();
     parser.addPositionalArgument("FILE", "File to parse as MPEG-TS stream", "FILE [...]");
     parser.addOptions({
+        { { "v", "verbose" }, "Increase verbose level" },
+        { { "q", "quiet"   }, "Decrease verbose level" },
         { "offset",
           "Output file offset of TS packet" },
         { { "s", "ts-packet-size" },
@@ -35,6 +38,14 @@ int main(int argc, char *argv[])
           "VERSION" },
     });
     parser.process(a);
+
+    // Apply incremental options.
+    for (QString opt : parser.optionNames()) {
+        if (opt == "v" || opt == "verbose")
+            verbose++;
+        else if (opt == "q" || opt == "quiet")
+            verbose--;
+    }
 
     // offset
     if (parser.isSet("offset"))
