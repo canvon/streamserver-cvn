@@ -49,6 +49,8 @@ struct bslbf_base {
 template <int Bits, typename R>
 struct bslbf : public bslbf_base<Bits, R> {
     using base = bslbf_base<Bits, R>;
+    bslbf() : base() { }
+    bslbf(const bslbf &other) : base(other) { }
     bslbf(R value) : base { value } { }
 };
 
@@ -57,6 +59,8 @@ struct bslbf : public bslbf_base<Bits, R> {
 template<>
 struct bslbf<1, bool> : public bslbf_base<1, bool> {
     using base = bslbf_base;
+    bslbf() : base() { }
+    bslbf(const bslbf &other) : base(other) { }
     bslbf(bool value) : base { value } { }
 
     operator bool()
