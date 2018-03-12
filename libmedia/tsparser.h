@@ -24,6 +24,7 @@ public:
 
     const QByteArray &bytes() const;
     int offsetBytes() const;
+    int bytesLeft() const;
     int bitsLeft() const;
     bool atEnd() const;
 

@@ -45,6 +45,11 @@ int BitStream::offsetBytes() const
     return _implPtr->_offsetBytes;
 }
 
+int BitStream::bytesLeft() const
+{
+    return _implPtr->_bytes.length() - (_implPtr->_offsetBytes + 1);
+}
+
 int BitStream::bitsLeft() const
 {
     return _implPtr->_bitsLeft;
@@ -52,10 +57,10 @@ int BitStream::bitsLeft() const
 
 bool BitStream::atEnd() const
 {
-    if (_implPtr->_bitsLeft > 0)
+    if (bitsLeft() > 0)
         return false;
 
-    if (_implPtr->_offsetBytes + 1 < _implPtr->_bytes.length())
+    if (bytesLeft() > 0)
         return false;
 
     return true;
