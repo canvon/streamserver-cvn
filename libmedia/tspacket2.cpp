@@ -107,7 +107,7 @@ bool Packet2Parser::parse(const QByteArray &bytes, Packet2Parser::Parse *output)
 
     try {
         bitSource >> packet.syncByte;
-        if (packet.isSyncByteFixedValue())
+        if (!packet.isSyncByteFixedValue())
             throw static_cast<std::runtime_error>(ExceptionBuilder()
                 << "No sync byte" << HumanReadable::Hexdump { QByteArray(1, Packet2::syncByteFixedValue) }
                 << "-- starts with" << HumanReadable::Hexdump { output->bytes.left(8) }.enableAll());
