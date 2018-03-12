@@ -7,6 +7,48 @@
 namespace TS {
 
 
+quint64 ProgramClockReference::pcrValue() const
+{
+    return pcrBase.value * pcrBaseFactor + pcrExtension.value;
+}
+
+quint64 ProgramClockReference::toNanosecs() const
+{
+    return pcrValue() * 1000000000LL / systemClockFrequencyHz;
+}
+
+double ProgramClockReference::toSecs() const
+{
+    return static_cast<double>(pcrValue()) / static_cast<double>(systemClockFrequencyHz);
+}
+
+QDebug operator<<(QDebug debug, const ProgramClockReference &pcr)
+{
+    QDebugStateSaver saver(debug);
+    debug.nospace() << "TS::ProgramClockReference(";
+
+    debug <<  "base=" << pcr.pcrBase.value;
+
+    if (!(pcr.reserved1.value == pcr.reserved1FixedValue))
+        debug << " reserved=" << pcr.reserved1.value
+              << "/0x" << qPrintable(QString::number(pcr.reserved1.value, 16));
+
+    debug << " extension=" << pcr.pcrExtension.value;
+
+    // TODO: Use an output format of, e.g., 01:23:45.67
+    debug << " computedSeconds=" << pcr.toSecs();
+
+    debug << ")";
+    return debug;
+}
+
+BitStream &operator>>(BitStream &bitSource, ProgramClockReference &pcr)
+{
+    bitSource >> pcr.pcrBase >> pcr.reserved1 >> pcr.pcrExtension;
+    return bitSource;
+}
+
+
 PacketV2::PacketV2()
 {
 

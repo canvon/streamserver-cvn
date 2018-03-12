@@ -14,6 +14,31 @@
 namespace TS {
 
 
+// Store timestamp:
+// PCR is MPEG-TS mnemonic for "program clock reference"
+
+struct ProgramClockReference
+{
+    static constexpr quint64 systemClockFrequencyHz = 27000000;  // 27 MHz
+    static constexpr quint64 pcrBaseFactor = 300;
+    static constexpr quint8  reserved1FixedValue = 0x3f;  // all-one bits
+
+    uimsbf<33, quint64>  pcrBase      { 0 };
+    bslbf < 6, quint8 >  reserved1    { reserved1FixedValue };
+    uimsbf< 9, quint16>  pcrExtension { 0 };
+
+    quint64 pcrValue() const;
+    quint64 toNanosecs() const;
+    double toSecs() const;
+};
+
+QDebug operator<<(QDebug debug, const ProgramClockReference &pcr);
+
+BitStream &operator>>(BitStream &bitSource, ProgramClockReference &pcr);
+
+
+// An MPEG-TS packet, streamserver-cvn API version V2.
+
 class LIBMEDIASHARED_EXPORT PacketV2
 {
     Q_GADGET
