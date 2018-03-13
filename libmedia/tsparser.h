@@ -109,15 +109,41 @@ struct tcimsbf {
 
 // Extract & store bits from a bit source.
 
+namespace impl {
+
+template <typename Dest, typename Source>
+inline void assignMaybeCast(Dest &dst, Source &src) { dst = static_cast<Dest>(src); }
+
+template <typename Dest, typename Source, typename = std::enable_if_t<typeid(Dest) == typeid(Source)>>
+inline void assignMaybeCast(Dest &dst, Source &src) { dst = src; }
+
+template <typename T,
+          typename Tmp = typename T::type,
+          bool SignExtend = std::numeric_limits<Tmp>::is_signed>
+inline BitStream &doInputFromBitStream(BitStream &bitSource, T &outT)
+{
+    Tmp tmp = 0;
+
+    for (int bitsLeft = T::bit_size; bitsLeft > 0; bitsLeft--) {
+        if (SignExtend && bitsLeft == T::bit_size) {
+            // Do sign extension.
+            tmp = bitSource.takeBit() ? -1 : 0;
+            continue;
+        }
+
+        tmp = (tmp << 1) | (bitSource.takeBit() ? 1 : 0);
+    }
+
+    assignMaybeCast(outT.value, tmp);
+    return bitSource;
+}
+
+}  // namespace impl
+
 template <int Bits, typename R, typename = std::enable_if_t<Bits <= 8>>
 inline BitStream &operator>>(BitStream &bitSource, bslbf<Bits, R> &outBSLBF)
 {
-    quint8 tmp = 0;
-    for (int bitsLeft = Bits; bitsLeft > 0; bitsLeft--) {
-        tmp = (tmp << 1) | (bitSource.takeBit() ? 1 : 0);
-    }
-    outBSLBF.value = static_cast<R>(tmp);
-    return bitSource;
+    return impl::doInputFromBitStream<bslbf<Bits, R>, quint8, false>(bitSource, outBSLBF);
 }
 
 // Specialization for single-bit (e.g., bit flag).
@@ -133,30 +159,14 @@ inline BitStream &operator>> <1, bool>(BitStream &bitSource, bslbf1 &outBSLBF)
 template <int Bits, typename R>
 inline BitStream &operator>>(BitStream &bitSource, uimsbf<Bits, R> &outUIMSBF)
 {
-    R tmp = 0;
-    for (int bitsLeft = Bits; bitsLeft > 0; bitsLeft--) {
-        tmp = (tmp << 1) | (bitSource.takeBit() ? 1 : 0);
-    }
-    outUIMSBF.value = tmp;
-    return bitSource;
+    return impl::doInputFromBitStream(bitSource, outUIMSBF);
 }
 
 // tcimsbf is like uimsbf, but interprets first (sign) bit specially.
 template <int Bits, typename R>
 inline BitStream &operator>>(BitStream &bitSource, tcimsbf<Bits, R> &outTCIMSBF)
 {
-    R tmp = 0;
-    for (int bitsLeft = Bits; bitsLeft > 0; bitsLeft--) {
-        if (bitsLeft == Bits) {
-            // Do sign extension.
-            tmp = bitSource.takeBit() ? -1 : 0;
-            continue;
-        }
-
-        tmp = (tmp << 1) | (bitSource.takeBit() ? 1 : 0);
-    }
-    outTCIMSBF.value = tmp;
-    return bitSource;
+    return impl::doInputFromBitStream(bitSource, outTCIMSBF);
 }
 
 
