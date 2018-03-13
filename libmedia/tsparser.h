@@ -26,6 +26,7 @@ public:
     int offsetBytes() const;
     int bytesLeft() const;
     int bitsLeft() const;
+    bool isByteAligned() const;
     bool atEnd() const;
 
     bool   takeBit();

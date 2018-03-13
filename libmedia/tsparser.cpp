@@ -55,6 +55,11 @@ int BitStream::bitsLeft() const
     return _implPtr->_bitsLeft;
 }
 
+bool BitStream::isByteAligned() const
+{
+    return _implPtr->_bitsLeft == 0 || _implPtr->_bitsLeft == 8;
+}
+
 bool BitStream::atEnd() const
 {
     if (bitsLeft() > 0)
