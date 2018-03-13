@@ -159,14 +159,14 @@ inline BitStream &operator>> <1, bool>(BitStream &bitSource, bslbf1 &outBSLBF)
 template <int Bits, typename R>
 inline BitStream &operator>>(BitStream &bitSource, uimsbf<Bits, R> &outUIMSBF)
 {
-    return impl::doInputFromBitStream(bitSource, outUIMSBF);
+    return impl::doInputFromBitStream<uimsbf<Bits, R>, R, false>(bitSource, outUIMSBF);
 }
 
 // tcimsbf is like uimsbf, but interprets first (sign) bit specially.
 template <int Bits, typename R>
 inline BitStream &operator>>(BitStream &bitSource, tcimsbf<Bits, R> &outTCIMSBF)
 {
-    return impl::doInputFromBitStream(bitSource, outTCIMSBF);
+    return impl::doInputFromBitStream<tcimsbf<Bits, R>, R, true>(bitSource, outTCIMSBF);
 }
 
 
