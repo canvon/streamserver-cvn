@@ -125,14 +125,25 @@ inline BitStream &doInputFromBitStream(BitStream &bitSource, T &outT)
 {
     Tmp tmp = 0;
 
-    for (int bitsLeft = T::bit_size; bitsLeft > 0; bitsLeft--) {
-        if (SignExtend && bitsLeft == T::bit_size) {
-            // Do sign extension.
-            tmp = bitSource.takeBit() ? -1 : 0;
-            continue;
-        }
+    bool aligned = bitSource.isByteAligned();
+    if (T::bit_size == 8 && aligned) {
+        tmp = bitSource.takeByteAligned();
+    }
+    else if (T::bit_size == 16 && aligned) {
+        tmp = (static_cast<quint16>(bitSource.takeByteAligned()) << 8) |
+               static_cast<quint16>(bitSource.takeByteAligned());
+    }
+    else {
+        // General case.
+        for (int bitsLeft = T::bit_size; bitsLeft > 0; bitsLeft--) {
+            if (SignExtend && bitsLeft == T::bit_size) {
+                // Do sign extension.
+                tmp = bitSource.takeBit() ? -1 : 0;
+                continue;
+            }
 
-        tmp = (tmp << 1) | (bitSource.takeBit() ? 1 : 0);
+            tmp = (tmp << 1) | (bitSource.takeBit() ? 1 : 0);
+        }
     }
 
     assignMaybeCast(outT.value, tmp);
