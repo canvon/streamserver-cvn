@@ -142,7 +142,16 @@ inline BitStream &doInputFromBitStream(BitStream &bitSource, T &outT)
                 continue;
             }
 
-            tmp = (tmp << 1) | (bitSource.takeBit() ? 1 : 0);
+            if (bitsLeft >= 8 && bitSource.isByteAligned()) {
+                // Temporarily switch to byte-wise mode.
+                tmp = (tmp << 8) | bitSource.takeByteAligned();
+                // This means we'll have to adjust the loop variable manually
+                // by so many extra bits...
+                bitsLeft -= 7;
+            }
+            else {
+                tmp = (tmp << 1) | (bitSource.takeBit() ? 1 : 0);
+            }
         }
     }
 
