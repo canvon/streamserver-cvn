@@ -1,7 +1,7 @@
 #ifndef TSPARSER_H
 #define TSPARSER_H
 
-#include <memory>
+#include <typeinfo>
 #include <stdexcept>
 #include <QByteArray>
 
@@ -10,28 +10,88 @@ namespace TS {
 
 // A source of bits.
 
-namespace impl {
-class BitStreamImpl;
-}
-
 class BitStream
 {
-    std::unique_ptr<impl::BitStreamImpl>  _implPtr;
+    QByteArray  _bytes;
+    quint8      _curByte     = 0;
+    int         _offsetBytes = -1;
+    int         _bitsLeft    = 0;
 
 public:
-    explicit BitStream(const QByteArray &bytes);
-    ~BitStream();
+    explicit BitStream(const QByteArray &bytes) : _bytes(bytes) { }
 
-    const QByteArray &bytes() const;
-    int offsetBytes() const;
-    int bytesLeft() const;
-    int bitsLeft() const;
-    bool isByteAligned() const;
-    bool atEnd() const;
+    const QByteArray &bytes() const { return _bytes; }
+    int offsetBytes() const         { return _offsetBytes; }
+    int bytesLeft() const           { return _bytes.length() - (_offsetBytes + 1); }
+    int bitsLeft() const            { return _bitsLeft; }
+    bool isByteAligned() const      { return _bitsLeft == 0 || _bitsLeft == 8; }
 
-    bool   takeBit();
-    quint8 takeByteAligned();
-    QByteArray takeByteArrayAligned(int bytesCount);
+    bool atEnd() const
+    {
+        if (_bitsLeft > 0)
+            return false;
+
+        if (bytesLeft() > 0)
+            return false;
+
+        return true;
+    }
+
+private:
+    void _nextByte()
+    {
+        if (!(++_offsetBytes < _bytes.length()))
+            throw std::runtime_error("TS bit stream: Input bytes exceeded");
+
+        _curByte = _bytes.at(_offsetBytes);
+        _bitsLeft = 8;
+    }
+
+public:
+    bool takeBit()
+    {
+        if (!(_bitsLeft > 0))
+            _nextByte();
+
+        return (_curByte >> --_bitsLeft) & 0x01;
+    }
+
+    quint8 takeByteAligned()
+    {
+        if (!(_bitsLeft > 0))
+            _nextByte();
+
+        if (_bitsLeft != 8)
+            throw std::runtime_error("TS bit stream: Not byte-aligned for take byte");
+
+        quint8 byte = _curByte;
+        _bitsLeft -= 8;
+
+        return byte;
+    }
+
+    QByteArray takeByteArrayAligned(int bytesCount)
+    {
+        if (!(_bitsLeft == 0))
+            throw std::runtime_error("TS bit source: Not byte-aligned for take byte array");
+
+        if (bytesCount < 0) {
+            QByteArray ret = _bytes.mid(_offsetBytes + 1);
+            _offsetBytes = _bytes.length() - 1;
+            return ret;
+        }
+
+        if (!(bytesLeft() >= bytesCount))
+            throw std::runtime_error("TS bit source: Not enough input bytes available");
+
+        QByteArray ret = _bytes.mid(_offsetBytes + 1, bytesCount);
+        if (ret.length() != bytesCount)
+            throw std::runtime_error("TS bit source: Internal error: Check against taking too many bytes failed");
+
+        _offsetBytes += bytesCount;
+
+        return ret;
+    }
 };
 
 
