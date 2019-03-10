@@ -26,14 +26,13 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
-    tsparser.cpp \
     tspacket.cpp \
     tspacketv2.cpp \
     tsreader.cpp \
     tswriter.cpp
 
 HEADERS += libmedia_global.h \
-    tsparser.h \
+    tsprimitive.h \
     tspacket.h \
     tspacketv2.h \
     tsreader.h \

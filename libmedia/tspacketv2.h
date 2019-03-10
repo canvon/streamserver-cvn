@@ -5,7 +5,7 @@
 
 #include <QObject>
 
-#include "tsparser.h"
+#include "tsprimitive.h"
 #include <memory>
 #include <QByteArray>
 #include <QString>

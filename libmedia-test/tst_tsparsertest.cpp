@@ -1,7 +1,7 @@
 #include <QString>
 #include <QtTest>
 
-#include "tsparser.h"
+#include "tsprimitive.h"
 #include "tspacket.h"
 
 #include <QTextStream>

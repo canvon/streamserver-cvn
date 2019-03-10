@@ -1,5 +1,5 @@
-#ifndef TSPARSER_H
-#define TSPARSER_H
+#ifndef TSPRIMITIVE_H
+#define TSPRIMITIVE_H
 
 #include <typeinfo>
 #include <stdexcept>
@@ -253,4 +253,4 @@ inline BitStream &operator>>(BitStream &bitSource, tcimsbf<Bits, R> &outTCIMSBF)
 
 }  // namespace TS
 
-#endif // TSPARSER_H
+#endif // TSPRIMITIVE_H
