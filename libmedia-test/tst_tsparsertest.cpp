@@ -19,6 +19,8 @@ private Q_SLOTS:
     void bslbfAdaptationFieldControl();
     void uimsbf13();
     void tcimsbfTest();
+
+    void sinkTest();
 };
 
 TSParserTest::TSParserTest()
@@ -101,6 +103,23 @@ void TSParserTest::tcimsbfTest()
 
     tsBitsMinus1Indirectly >> mySignedInt;
     QCOMPARE(mySignedInt.value, (qint8)-1);
+}
+
+void TSParserTest::sinkTest()
+{
+    TS::BitStream bs(QByteArray(1, 0xf4));
+
+    bs.putBit(false);  // Clear MSB, 0xf -> 0x7
+    TS::bslbf<3, quint8> dummy;
+    bs >> dummy;  // Skip rest of nibble.
+
+    // Set bits 3 and 1, clear 2 and 0 => 0x8 + 0x2 == 0xa
+    bs.putBit(true);
+    bs.putBit(false);
+    bs.putBit(true);
+    bs.putBit(false);
+
+    QCOMPARE(bs.bytes().at(0), (char)0x7a);
 }
 
 QTEST_APPLESS_MAIN(TSParserTest)

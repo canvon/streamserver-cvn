@@ -1,6 +1,8 @@
 #ifndef TSPRIMITIVE_H
 #define TSPRIMITIVE_H
 
+#include "exceptionbuilder.h"
+
 #include <typeinfo>
 #include <stdexcept>
 #include <QByteArray>
@@ -13,6 +15,7 @@ namespace TS {
 class BitStream
 {
     QByteArray  _bytes;
+    bool        _isDirty     = false;
     quint8      _curByte     = 0;
     int         _offsetBytes = -1;
     int         _bitsLeft    = 0;
@@ -20,7 +23,8 @@ class BitStream
 public:
     explicit BitStream(const QByteArray &bytes) : _bytes(bytes) { }
 
-    const QByteArray &bytes() const { return _bytes; }
+    const QByteArray &bytes()       { if (_isDirty) _flush(); return _bytes; }
+    const QByteArray &bytes() const { if (_isDirty) throw std::runtime_error("TS bit stream: Caller forgot to call flush"); return _bytes; }
     int offsetBytes() const         { return _offsetBytes; }
     int bytesLeft() const           { return _bytes.length() - (_offsetBytes + 1); }
     int bitsLeft() const            { return _bitsLeft; }
@@ -38,10 +42,31 @@ public:
     }
 
 private:
+    void _flush()
+    {
+        if (!_isDirty)
+            return;
+
+        if (!(0 <= _offsetBytes && _offsetBytes < _bytes.length()))
+            throw static_cast<std::runtime_error>(ExceptionBuilder()
+                << "TS bit stream: Can't flush dirty byte: Offset" << _offsetBytes << "out of range");
+
+        _bytes[_offsetBytes] = _curByte;
+        _isDirty = false;
+        _curByte = 0;
+    }
+
     void _nextByte()
     {
+        if (_isDirty) {
+            // Put back previous value. It seems to have been changed...
+            _flush();
+        }
+
         if (!(++_offsetBytes < _bytes.length()))
-            throw std::runtime_error("TS bit stream: Input bytes exceeded");
+            throw static_cast<std::runtime_error>(ExceptionBuilder()
+                << "TS bit stream: Input/output bytes exceeded"
+                << "at offset" << _offsetBytes);
 
         _curByte = _bytes.at(_offsetBytes);
         _bitsLeft = 8;
@@ -54,6 +79,22 @@ public:
             _nextByte();
 
         return (_curByte >> --_bitsLeft) & 0x01;
+    }
+
+    void putBit(bool value)
+    {
+        if (!(_bitsLeft > 0))
+            _nextByte();
+
+        const quint8 mask = 0x01 << --_bitsLeft;
+        if (value)
+            // Set bit.
+            _curByte |= mask;
+        else
+            // Clear bit.
+            _curByte &= ~mask;
+
+        _isDirty = true;
     }
 
     quint8 takeByteAligned()
