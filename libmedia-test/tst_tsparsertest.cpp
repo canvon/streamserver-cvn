@@ -107,19 +107,38 @@ void TSParserTest::tcimsbfTest()
 
 void TSParserTest::sinkTest()
 {
-    TS::BitStream bs(QByteArray(1, 0xf4));
+    const QByteArray test_input(1, 0xf4);
 
-    bs.putBit(false);  // Clear MSB, 0xf -> 0x7
-    TS::bslbf<3, quint8> dummy;
-    bs >> dummy;  // Skip rest of nibble.
+    auto prepareBS = [](TS::BitStream &bs) {
+        bs.putBit(false);  // Clear MSB, 0xf -> 0x7
+        TS::bslbf<3, quint8> dummy;
+        bs >> dummy;  // Skip rest of nibble.
 
-    // Set bits 3 and 1, clear 2 and 0 => 0x8 + 0x2 == 0xa
-    bs.putBit(true);
-    bs.putBit(false);
-    bs.putBit(true);
-    bs.putBit(false);
+        // Set bits 3 and 1, clear 2 and 0 => 0x8 + 0x2 == 0xa
+        bs.putBit(true);
+        bs.putBit(false);
+        bs.putBit(true);
+        bs.putBit(false);
+    };
 
-    QCOMPARE(bs.bytes().at(0), (char)0x7a);
+    const char expected_result = 0x7a;
+
+
+    // Test exception on missing flush & fix by explicit flush.
+    TS::BitStream bs1(test_input);
+    prepareBS(bs1);
+    {
+        const TS::BitStream &bs1_const(bs1);
+        QVERIFY_EXCEPTION_THROWN(bs1_const.bytes(), std::exception);
+
+        bs1.flush();
+        QCOMPARE(bs1_const.bytes().at(0), expected_result);
+    }
+
+    // Test auto-flush.
+    TS::BitStream bs2(test_input);
+    prepareBS(bs2);
+    QCOMPARE(bs2.bytes().at(0), expected_result);
 }
 
 QTEST_APPLESS_MAIN(TSParserTest)

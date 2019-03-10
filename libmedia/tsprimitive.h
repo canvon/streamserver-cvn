@@ -23,7 +23,7 @@ class BitStream
 public:
     explicit BitStream(const QByteArray &bytes) : _bytes(bytes) { }
 
-    const QByteArray &bytes()       { if (_isDirty) _flush(); return _bytes; }
+    const QByteArray &bytes()       { if (_isDirty) flush(); return _bytes; }
     const QByteArray &bytes() const { if (_isDirty) throw std::runtime_error("TS bit stream: Caller forgot to call flush"); return _bytes; }
     int offsetBytes() const         { return _offsetBytes; }
     int bytesLeft() const           { return _bytes.length() - (_offsetBytes + 1); }
@@ -41,8 +41,7 @@ public:
         return true;
     }
 
-private:
-    void _flush()
+    void flush()
     {
         if (!_isDirty)
             return;
@@ -56,11 +55,12 @@ private:
         _curByte = 0;
     }
 
+private:
     void _nextByte()
     {
         if (_isDirty) {
             // Put back previous value. It seems to have been changed...
-            _flush();
+            flush();
         }
 
         if (!(++_offsetBytes < _bytes.length()))
