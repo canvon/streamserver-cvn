@@ -238,6 +238,11 @@ bool PacketV2Parser::parse(const QByteArray &bytes, PacketV2Parser::Parse *outpu
             >> packet.transportScramblingControl
             >> packet.adaptationFieldControl
             >> packet.continuityCounter;
+
+        if (packet.transportScramblingControl.value == PacketV2::TransportScramblingControlType::Reserved1)
+            throw std::runtime_error("Field transportScramblingControl has reserved value");
+        if (packet.adaptationFieldControl.value == PacketV2::AdaptationFieldControlType::Reserved1)
+            throw std::runtime_error("Field adaptationFieldControl has reserved value");
     }
     catch (std::exception &ex) {
         QDebug(&output->errorMessage)
