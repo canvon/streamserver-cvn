@@ -108,6 +108,8 @@ public:
 
     bool isSyncByteFixedValue() const;
     bool isNullPacket() const;
+    bool hasAdaptationField() const;
+    bool hasPayload() const;
 };
 
 LIBMEDIASHARED_EXPORT QDebug operator<<(QDebug debug, const PacketV2 &packet);

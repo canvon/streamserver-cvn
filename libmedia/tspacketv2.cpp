@@ -64,6 +64,18 @@ bool PacketV2::isNullPacket() const
     return pid.value == pidNullPacket;
 }
 
+bool PacketV2::hasAdaptationField() const
+{
+    return adaptationFieldControl.value == AdaptationFieldControlType::AdaptationFieldOnly ||
+           adaptationFieldControl.value == AdaptationFieldControlType::AdaptationFieldThenPayload;
+}
+
+bool PacketV2::hasPayload() const
+{
+    return adaptationFieldControl.value == AdaptationFieldControlType::PayloadOnly ||
+           adaptationFieldControl.value == AdaptationFieldControlType::AdaptationFieldThenPayload;
+}
+
 QDebug operator<<(QDebug debug, const PacketV2 &packet)
 {
     QDebugStateSaver saver(debug);
@@ -86,15 +98,13 @@ QDebug operator<<(QDebug debug, const PacketV2 &packet)
     debug << " " << packet.adaptationFieldControl.value;
     debug << " continuityCounter=" << packet.continuityCounter.value;
 
-    if (packet.adaptationFieldControl.value == TS::PacketV2::AdaptationFieldControlType::AdaptationFieldOnly ||
-        packet.adaptationFieldControl.value == TS::PacketV2::AdaptationFieldControlType::AdaptationFieldThenPayload)
+    if (packet.hasAdaptationField())
     {
         // Dump adaptation field.
         debug << " " << packet.adaptationField;
     }
 
-    if (packet.adaptationFieldControl.value == TS::PacketV2::AdaptationFieldControlType::PayloadOnly ||
-        packet.adaptationFieldControl.value == TS::PacketV2::AdaptationFieldControlType::AdaptationFieldThenPayload)
+    if (packet.hasPayload())
     {
         // Dump payload data.
         debug << " payloadData=" << HumanReadable::Hexdump { packet.payloadDataBytes }.enableAll();
@@ -235,8 +245,7 @@ bool PacketV2Parser::parse(const QByteArray &bytes, PacketV2Parser::Parse *outpu
         return false;
     }
 
-    if (packet.adaptationFieldControl.value == PacketV2::AdaptationFieldControlType::AdaptationFieldOnly ||
-        packet.adaptationFieldControl.value == PacketV2::AdaptationFieldControlType::AdaptationFieldThenPayload)
+    if (packet.hasAdaptationField())
     {
         try {
             // Parse adaptation field.
@@ -251,8 +260,7 @@ bool PacketV2Parser::parse(const QByteArray &bytes, PacketV2Parser::Parse *outpu
         }
     }
 
-    if (packet.adaptationFieldControl.value == PacketV2::AdaptationFieldControlType::PayloadOnly ||
-        packet.adaptationFieldControl.value == PacketV2::AdaptationFieldControlType::AdaptationFieldThenPayload)
+    if (packet.hasPayload())
     {
         try {
             int N = 184 - (packet.adaptationFieldControl.value == PacketV2::AdaptationFieldControlType::AdaptationFieldThenPayload ?
