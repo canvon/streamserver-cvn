@@ -298,6 +298,51 @@ inline BitStream &operator>>(BitStream &bitSource, tcimsbf<StreamBitSize, Workin
 }
 
 
+// Compose source bits to a bit sink.
+
+// bslbf.
+template <size_t StreamBitSize, typename WorkingType>
+inline BitStream &operator<<(BitStream &bitSink, const bslbf<StreamBitSize, WorkingType> &inBSLBF)
+{
+    for (WorkingType mask = 1u << (StreamBitSize - 1); mask; mask >>= 1) {
+        bitSink.putBit(inBSLBF.value & mask);
+    }
+    return bitSink;
+}
+
+// bslbf: Specialization for single-bit (e.g., bit flag).
+template <>
+inline BitStream &operator<< <1, bool>(BitStream &bitSink, const bslbf1 &inBSLBF)
+{
+    bitSink.putBit(inBSLBF.value);
+    return bitSink;
+}
+
+// uimsbf.
+template <size_t StreamBitSize, typename WorkingType>
+inline BitStream &operator<<(BitStream &bitSink, const uimsbf<StreamBitSize, WorkingType> &inUIMSBF)
+{
+    for (WorkingType mask = 1u << (StreamBitSize - 1); mask; mask >>= 1) {
+        bitSink.putBit(inUIMSBF.value & mask);
+    }
+    return bitSink;
+}
+
+// tcimsbf: Treat sign bit specially.
+template <size_t StreamBitSize, typename WorkingType>
+inline BitStream &operator<<(BitStream &bitSink, const tcimsbf<StreamBitSize, WorkingType> &inTCIMSBF)
+{
+    bool signBit = inTCIMSBF.value & (1u << inTCIMSBF.working_bit_size - 1);
+    bitSink.putBit(signBit);
+
+    for (WorkingType mask = 1u << (StreamBitSize - 1 /* sign bit: */ - 1); mask; mask >>= 1) {
+        bitSink.putBit(inTCIMSBF.value & mask);
+    }
+
+    return bitSink;
+}
+
+
 }  // namespace TS
 
 #endif // TSPRIMITIVE_H
