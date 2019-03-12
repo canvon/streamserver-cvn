@@ -322,9 +322,25 @@ inline BitStream &operator<< <1, bool>(BitStream &bitSink, const bslbf1 &inBSLBF
 template <size_t StreamBitSize, typename WorkingType>
 inline BitStream &operator<<(BitStream &bitSink, const uimsbf<StreamBitSize, WorkingType> &inUIMSBF)
 {
-    for (WorkingType mask = 1u << (StreamBitSize - 1); mask; mask >>= 1) {
-        bitSink.putBit(inUIMSBF.value & mask);
+    for (size_t workingBitsLeft = inUIMSBF.working_bit_size; workingBitsLeft > 0; --workingBitsLeft) {
+        const size_t workingBitIndex = workingBitsLeft - 1;
+        const WorkingType mask = 1u << workingBitIndex;
+        const bool bit = inUIMSBF.value & mask;
+
+        if (workingBitsLeft > inUIMSBF.stream_bit_size) {
+            if (bit) {
+                QString errmsg;
+                QDebug(&errmsg).nospace() << "TS bit stream: uimsbf<" << StreamBitSize << "> to bit sink: "
+                    << "Invalid bit set at bit " << workingBitIndex << "; "
+                    << "value " << inUIMSBF.value << " out of range!";
+                throw std::runtime_error(errmsg.toStdString());
+            }
+        }
+        else {
+            bitSink.putBit(bit);
+        }
     }
+
     return bitSink;
 }
 
