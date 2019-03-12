@@ -139,23 +139,25 @@ public:
 // Store finite number of bits:
 // bslbf is MPEG-TS mnemonic for "bit string, left bit first".
 
-template <int Bits, typename R>
+template <size_t StreamBitSize, typename WorkingType>
 struct bslbf_base {
-    using type = R;
-    static constexpr int bit_size = Bits;
+    static constexpr size_t stream_bit_size = StreamBitSize;
 
-    R  value;
+    using working_type = WorkingType;
+    static constexpr size_t working_bit_size = 8u * sizeof(working_type);
 
-    static_assert(1 <= Bits, "TS bslbf: Bits must at least be 1");
-    static_assert(Bits <= 8 * sizeof(R), "TS bslbf: Result type not large enough");
+    working_type  value;
+
+    static_assert(1 <= stream_bit_size, "TS bslbf: Stream bit size must at least be 1");
+    static_assert(stream_bit_size <= working_bit_size, "TS bslbf: Working type not large enough");
 };
 
-template <int Bits, typename R>
-struct bslbf : public bslbf_base<Bits, R> {
-    using base = bslbf_base<Bits, R>;
+template <size_t StreamBitSize, typename WorkingType>
+struct bslbf : public bslbf_base<StreamBitSize, WorkingType> {
+    using base = bslbf_base<StreamBitSize, WorkingType>;
     bslbf() : base() { }
     bslbf(const bslbf &other) : base(other) { }
-    bslbf(R value) : base { value } { }
+    bslbf(WorkingType value) : base { value } { }
 };
 
 // Specialization for single-bit (e.g., bit flag):
@@ -182,30 +184,34 @@ using bslbf8 = bslbf<8, quint8>;  // 8 bits, aka a byte.
 //
 // This is just like bslbf in implementation, just without specialization for bit flag.
 
-template <int Bits, typename R>
+template <size_t StreamBitSize, typename WorkingType>
 struct uimsbf {
-    using type = R;
-    static constexpr int bit_size = Bits;
+    static constexpr size_t stream_bit_size = StreamBitSize;
 
-    R  value;
+    using working_type = WorkingType;
+    static constexpr size_t working_bit_size = 8u * sizeof(working_type);
 
-    static_assert(1 <= Bits, "TS uimsbf: Bits must at least be 1");
-    static_assert(Bits <= 8 * sizeof(R), "TS uimsbf: Result type not large enough");
+    working_type  value;
+
+    static_assert(1 <= stream_bit_size, "TS uimsbf: Stream bit size must at least be 1");
+    static_assert(stream_bit_size <= working_bit_size, "TS uimsbf: Working type not large enough");
 };
 
 
 // Store signed integer:
 // tcimsbf is MPEG-TS mnemonic for "two's complement integer, msb (sign) bit first".
 
-template <int Bits, typename R>
+template <size_t StreamBitSize, typename WorkingType>
 struct tcimsbf {
-    using type = R;
-    static constexpr int bit_size = Bits;
+    static constexpr size_t stream_bit_size = StreamBitSize;
 
-    R  value;
+    using working_type = WorkingType;
+    static constexpr size_t working_bit_size = 8u * sizeof(working_type);
 
-    static_assert(2 <= Bits, "TS tcimsbf: Bits must at least be 2");  // Needs one bit more for sign.
-    static_assert(Bits <= 8 * sizeof(R), "TS tcimsbf: Result type not large enough");
+    working_type  value;
+
+    static_assert(2 <= stream_bit_size, "TS tcimsbf: Stream bit size must at least be 2");  // Needs one bit more for sign.
+    static_assert(stream_bit_size <= working_bit_size, "TS tcimsbf: Working type not large enough");
 };
 
 
@@ -220,24 +226,24 @@ template <typename Dest, typename Source, typename = std::enable_if_t<typeid(Des
 inline void assignMaybeCast(Dest &dst, Source &src) { dst = src; }
 
 template <typename T,
-          typename Tmp = typename T::type,
+          typename Tmp = typename T::working_type,
           bool SignExtend = std::numeric_limits<Tmp>::is_signed>
 inline BitStream &doInputFromBitStream(BitStream &bitSource, T &outT)
 {
     Tmp tmp = 0;
 
     bool aligned = bitSource.isByteAligned();
-    if (T::bit_size == 8 && aligned) {
+    if (T::stream_bit_size == 8u && aligned) {
         tmp = bitSource.takeByteAligned();
     }
-    else if (T::bit_size == 16 && aligned) {
+    else if (T::stream_bit_size == 16u && aligned) {
         tmp = (static_cast<quint16>(bitSource.takeByteAligned()) << 8) |
                static_cast<quint16>(bitSource.takeByteAligned());
     }
     else {
         // General case.
-        for (int bitsLeft = T::bit_size; bitsLeft > 0; bitsLeft--) {
-            if (SignExtend && bitsLeft == T::bit_size) {
+        for (size_t bitsLeft = T::stream_bit_size; bitsLeft > 0; bitsLeft--) {
+            if (SignExtend && bitsLeft == T::stream_bit_size) {
                 // Do sign extension.
                 tmp = bitSource.takeBit() ? -1 : 0;
                 continue;
@@ -262,10 +268,10 @@ inline BitStream &doInputFromBitStream(BitStream &bitSource, T &outT)
 
 }  // namespace impl
 
-template <int Bits, typename R, typename = std::enable_if_t<Bits <= 8>>
-inline BitStream &operator>>(BitStream &bitSource, bslbf<Bits, R> &outBSLBF)
+template <size_t StreamBitSize, typename WorkingType, typename = std::enable_if_t<StreamBitSize <= 8>>
+inline BitStream &operator>>(BitStream &bitSource, bslbf<StreamBitSize, WorkingType> &outBSLBF)
 {
-    return impl::doInputFromBitStream<bslbf<Bits, R>, quint8, false>(bitSource, outBSLBF);
+    return impl::doInputFromBitStream<bslbf<StreamBitSize, WorkingType>, quint8, false>(bitSource, outBSLBF);
 }
 
 // Specialization for single-bit (e.g., bit flag).
@@ -278,17 +284,17 @@ inline BitStream &operator>> <1, bool>(BitStream &bitSource, bslbf1 &outBSLBF)
 
 // uimsbf is like bslbf, just without specialization for <1, bool>,
 // and without need for a cast from tmp as we'll work in the result type, directly.
-template <int Bits, typename R>
-inline BitStream &operator>>(BitStream &bitSource, uimsbf<Bits, R> &outUIMSBF)
+template <size_t StreamBitSize, typename WorkingType>
+inline BitStream &operator>>(BitStream &bitSource, uimsbf<StreamBitSize, WorkingType> &outUIMSBF)
 {
-    return impl::doInputFromBitStream<uimsbf<Bits, R>, R, false>(bitSource, outUIMSBF);
+    return impl::doInputFromBitStream<uimsbf<StreamBitSize, WorkingType>, WorkingType, false>(bitSource, outUIMSBF);
 }
 
 // tcimsbf is like uimsbf, but interprets first (sign) bit specially.
-template <int Bits, typename R>
-inline BitStream &operator>>(BitStream &bitSource, tcimsbf<Bits, R> &outTCIMSBF)
+template <size_t StreamBitSize, typename WorkingType>
+inline BitStream &operator>>(BitStream &bitSource, tcimsbf<StreamBitSize, WorkingType> &outTCIMSBF)
 {
-    return impl::doInputFromBitStream<tcimsbf<Bits, R>, R, true>(bitSource, outTCIMSBF);
+    return impl::doInputFromBitStream<tcimsbf<StreamBitSize, WorkingType>, WorkingType, true>(bitSource, outTCIMSBF);
 }
 
 
