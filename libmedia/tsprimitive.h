@@ -328,15 +328,32 @@ inline BitStream &operator<<(BitStream &bitSink, const uimsbf<StreamBitSize, Wor
     return bitSink;
 }
 
-// tcimsbf: Treat sign bit specially.
+// tcimsbf: Treat sign bit specially, check for proper sign extension.
 template <size_t StreamBitSize, typename WorkingType>
 inline BitStream &operator<<(BitStream &bitSink, const tcimsbf<StreamBitSize, WorkingType> &inTCIMSBF)
 {
-    bool signBit = inTCIMSBF.value & (1u << inTCIMSBF.working_bit_size - 1);
-    bitSink.putBit(signBit);
+    bool signBit;
+    for (size_t workingBitsLeft = inTCIMSBF.working_bit_size; workingBitsLeft > 0; --workingBitsLeft) {
+        const size_t workingBitIndex = workingBitsLeft - 1;
+        const WorkingType mask = 1u << workingBitIndex;
+        const bool bit = inTCIMSBF.value & mask;
 
-    for (WorkingType mask = 1u << (StreamBitSize - 1 /* sign bit: */ - 1); mask; mask >>= 1) {
-        bitSink.putBit(inTCIMSBF.value & mask);
+        if (workingBitsLeft == inTCIMSBF.working_bit_size) {
+            signBit = bit;
+            bitSink.putBit(bit);
+        }
+        else if (workingBitsLeft > inTCIMSBF.stream_bit_size /* sign bit: */ - 1) {
+            if (bit != signBit) {
+                QString errmsg;
+                QDebug(&errmsg).nospace() << "TS bit stream: tcimsbf<" << StreamBitSize << "> to bit sink: "
+                    << "No proper sign extension at bit " << workingBitIndex << "; "
+                    << "value " << inTCIMSBF.value << " out of range!";
+                throw std::runtime_error(errmsg.toStdString());
+            }
+        }
+        else {
+            bitSink.putBit(bit);
+        }
     }
 
     return bitSink;
