@@ -280,7 +280,7 @@ int main(int argc, char *argv[])
     if (!outputTemplates.isEmpty())
         splitter.setOutputTemplates(outputTemplates);
     splitter.openInput(&inputFile);
-    splitter.tsReader()->setTSPacketSize(tsPacketSize);
+    splitter.tsReader()->bytesReader()->setTSPacketSize(tsPacketSize);
 
     int ret = a.exec();
 

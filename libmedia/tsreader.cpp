@@ -11,88 +11,68 @@
 
 namespace TS {
 
+
+//
+// TS::BytesReader
+//
+
 namespace impl {
-class ReaderImpl {
+class BytesReaderImpl {
     QPointer<QIODevice>               _devPtr;
     std::unique_ptr<QSocketNotifier>  _notifierPtr;
     QByteArray                        _buf;
     qint64                            _tsPacketSize = TSPacket::lengthBasic;
-    qint64                            _tsPacketOffset = 0;
-    qint64                            _tsPacketCount  = 0;
-    int                               _discontSegment = 1;
-    bool                              _discontLastPCRValid = false;
-    double                            _discontLastPCR;
-    friend Reader;
 
 public:
-    explicit ReaderImpl(QIODevice *dev) : _devPtr(dev)
+    explicit BytesReaderImpl(QIODevice *dev) : _devPtr(dev)
     {
 
     }
 
-    bool checkIsDiscontinuity(const TSPacket &packet);
+    friend BytesReader;
 };
 }  // namespace TS::impl
 
-Reader::Reader(QIODevice *dev, QObject *parent) :
-    QObject(parent), _implPtr(std::make_unique<impl::ReaderImpl>(dev))
+BytesReader::BytesReader(QIODevice *dev, QObject *parent) :
+    QObject(parent),
+    _implPtr(std::make_unique<impl::BytesReaderImpl>(dev))
 {
     if (!dev)
-        throw std::invalid_argument("TS reader ctor: Device can't be null");
+        throw std::invalid_argument("TS bytes reader ctor: Device can't be null");
 
     // Set up signals.
     auto filePtr = dynamic_cast<QFile *>(dev);
     if (filePtr) {
         _implPtr->_notifierPtr = std::make_unique<QSocketNotifier>(filePtr->handle(), QSocketNotifier::Read, this);
-        connect(_implPtr->_notifierPtr.get(), &QSocketNotifier::activated, this, &Reader::readData);
+        connect(_implPtr->_notifierPtr.get(), &QSocketNotifier::activated, this, &BytesReader::readData);
     }
     else {
-        connect(dev, &QIODevice::readyRead, this, &Reader::readData);
+        connect(dev, &QIODevice::readyRead, this, &BytesReader::readData);
     }
 }
 
-Reader::~Reader()
+BytesReader::~BytesReader()
 {
 
 }
 
-qint64 Reader::tsPacketSize() const
+qint64 BytesReader::tsPacketSize() const
 {
     return _implPtr->_tsPacketSize;
 }
 
-void Reader::setTSPacketSize(qint64 size)
+void BytesReader::setTSPacketSize(qint64 size)
 {
     if (!(size >= TSPacket::lengthBasic))
-        throw std::invalid_argument("TS reader: Set TS packet size: Invalid size " + std::to_string(size));
+        throw std::invalid_argument("TS bytes reader: Set TS packet size: Invalid size " + std::to_string(size));
 
     _implPtr->_tsPacketSize = size;
 }
 
-qint64 Reader::tsPacketOffset() const
-{
-    return _implPtr->_tsPacketOffset;
-}
-
-qint64 Reader::tsPacketCount() const
-{
-    return _implPtr->_tsPacketCount;
-}
-
-int Reader::discontSegment() const
-{
-    return _implPtr->_discontSegment;
-}
-
-double Reader::pcrLast() const
-{
-    return _implPtr->_discontLastPCRValid ? _implPtr->_discontLastPCR : NAN;
-}
-
-void Reader::readData()
+void BytesReader::readData()
 {
     if (!_implPtr->_devPtr) {
-        emit errorEncountered(ErrorKind::IO, "Device is gone");
+        emit errorEncountered("Device is gone");
         return;
     }
     QIODevice &dev(*_implPtr->_devPtr);
@@ -106,7 +86,7 @@ void Reader::readData()
             qint64 readResult = dev.read(buf.data() + bufLenPrev, bufLenTarget - bufLenPrev);
             if (readResult < 0) {
                 buf.resize(bufLenPrev);
-                emit errorEncountered(ErrorKind::IO, dev.errorString());
+                emit errorEncountered(dev.errorString());
                 return;
             }
             else if (readResult == 0) {
@@ -123,30 +103,106 @@ void Reader::readData()
             // A full read!
         }
 
-        // Try to interpret as TS packet.
-        TSPacket packet(buf);
+        emit tsBytesReady(buf);
         buf.clear();
-        _implPtr->_tsPacketCount++;
-
-        double pcrPrev = pcrLast();
-        if (_implPtr->checkIsDiscontinuity(packet)) {
-            _implPtr->_discontSegment++;
-
-            emit discontEncountered(pcrPrev);
-        }
-
-        const QString errMsg = packet.errorMessage();
-        if (!errMsg.isNull()) {
-            emit errorEncountered(ErrorKind::TS, errMsg);
-        }
-
-        emit tsPacketReady(packet);
-
-        _implPtr->_tsPacketOffset += packet.bytes().length();
     } while (true);
 }
 
-bool impl::ReaderImpl::checkIsDiscontinuity(const TSPacket &packet)
+
+//
+// TS::PacketReader
+//
+
+namespace impl {
+class PacketReaderImpl {
+    QPointer<BytesReader>             _bytesReader;
+    qint64                            _tsPacketOffset = 0;
+    qint64                            _tsPacketCount  = 0;
+    int                               _discontSegment = 1;
+    bool                              _discontLastPCRValid = false;
+    double                            _discontLastPCR;
+    friend PacketReader;
+
+public:
+    bool checkIsDiscontinuity(const TSPacket &packet);
+};
+}  // namespace TS::impl
+
+PacketReader::PacketReader(QObject *parent) :
+    QObject(parent), _implPtr(std::make_unique<impl::PacketReaderImpl>())
+{
+
+}
+
+PacketReader::PacketReader(QIODevice *dev, QObject *parent) :
+    PacketReader(parent)
+{
+    if (!dev)
+        throw std::invalid_argument("TS packet reader: dev can't be null");
+
+    auto &bytesReader(_implPtr->_bytesReader);
+    bytesReader = new BytesReader(dev, this);
+
+    // Setup signals.
+    connect(bytesReader, &BytesReader::tsBytesReady, this, &PacketReader::handleTSBytes);
+    connect(bytesReader, &BytesReader::eofEncountered, this, &PacketReader::handleEOF);
+    connect(bytesReader, &BytesReader::errorEncountered, this, &PacketReader::handleError);
+}
+
+PacketReader::~PacketReader()
+{
+
+}
+
+BytesReader *PacketReader::bytesReader() const
+{
+    return _implPtr->_bytesReader;
+}
+
+qint64 PacketReader::tsPacketOffset() const
+{
+    return _implPtr->_tsPacketOffset;
+}
+
+qint64 PacketReader::tsPacketCount() const
+{
+    return _implPtr->_tsPacketCount;
+}
+
+int PacketReader::discontSegment() const
+{
+    return _implPtr->_discontSegment;
+}
+
+double PacketReader::pcrLast() const
+{
+    return _implPtr->_discontLastPCRValid ? _implPtr->_discontLastPCR : NAN;
+}
+
+void PacketReader::handleTSBytes(const QByteArray &bytes)
+{
+    // Try to interpret as TS packet.
+    TSPacket packet(bytes);
+    _implPtr->_tsPacketCount++;
+
+    double pcrPrev = pcrLast();
+    if (_implPtr->checkIsDiscontinuity(packet)) {
+        _implPtr->_discontSegment++;
+
+        emit discontEncountered(pcrPrev);
+    }
+
+    const QString errMsg = packet.errorMessage();
+    if (!errMsg.isNull()) {
+        emit errorEncountered(ErrorKind::TS, errMsg);
+    }
+
+    emit tsPacketReady(packet);
+
+    _implPtr->_tsPacketOffset += packet.bytes().length();
+}
+
+bool impl::PacketReaderImpl::checkIsDiscontinuity(const TSPacket &packet)
 {
     if (!(packet.validity() >= TSPacket::ValidityType::AdaptationField))
         return false;
@@ -189,5 +245,16 @@ bool impl::ReaderImpl::checkIsDiscontinuity(const TSPacket &packet)
 
     return true;
 }
+
+void PacketReader::handleEOF()
+{
+    emit eofEncountered();
+}
+
+void PacketReader::handleError(const QString &errorMessage)
+{
+    emit errorEncountered(ErrorKind::IO, errorMessage);
+}
+
 
 }  // namespace TS
