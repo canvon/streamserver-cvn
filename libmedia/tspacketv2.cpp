@@ -158,49 +158,35 @@ namespace impl {
 class PacketV2ParserImpl {
     int  _tsPacketSize = PacketV2::sizeBasic;
 
-    bool parseAdaptationField(BitStream *bitSourcePtr, PacketV2Parser::Parse *output);
+    struct ParseState {
+        BitStream  bitSource;
+        PacketV2  *packetPtr;
+        QString   *errorMessagePtr;
+    };
+
+    bool parsePacket(ParseState *statePtr);
+    bool parseAdaptationField(ParseState *statePtr);
 
     friend PacketV2Parser;
 };
 }
 
-PacketV2Parser::PacketV2Parser() :
-    _implPtr(std::make_unique<impl::PacketV2ParserImpl>())
+bool impl::PacketV2ParserImpl::parsePacket(ParseState *statePtr)
 {
+    BitStream &bitSource(statePtr->bitSource);
+    PacketV2 &packet(*statePtr->packetPtr);
+    QString *errMsgPtr = statePtr->errorMessagePtr;
 
-}
-
-PacketV2Parser::~PacketV2Parser()
-{
-
-}
-
-int PacketV2Parser::tsPacketSize() const
-{
-    return _implPtr->_tsPacketSize;
-}
-
-void PacketV2Parser::setTSPacketSize(int size)
-{
-    // FIXME: Implement
-    throw std::runtime_error("TS packet v2 parser: Setting TS packet size not implemented, yet");
-}
-
-bool PacketV2Parser::parse(const QByteArray &bytes, PacketV2Parser::Parse *output)
-{
-    if (!output)
-        throw std::invalid_argument("TS packet v2 parser: Output can't be null");
-
-    output->errorMessage.clear();
-    output->bytes = bytes;
-    BitStream bitSource(output->bytes);
-    PacketV2 &packet(output->packet);
-
-    if (bytes.length() != _implPtr->_tsPacketSize) {
-        QDebug(&output->errorMessage)
-            << "Expected TS packet size" << _implPtr->_tsPacketSize
-            << "but got" << bytes.length();
-        return false;
+    {
+        const int bytesLeft = bitSource.bytesLeft();
+        if (bytesLeft != PacketV2::sizeBasic) {
+            if (errMsgPtr) {
+                QDebug(errMsgPtr)
+                    << "Not enough bytes left to parse packet: Need" << PacketV2::sizeBasic
+                    << "but got" << bytesLeft;
+            }
+            return false;
+        }
     }
 
     try {
@@ -208,11 +194,13 @@ bool PacketV2Parser::parse(const QByteArray &bytes, PacketV2Parser::Parse *outpu
         if (!packet.isSyncByteFixedValue())
             throw static_cast<std::runtime_error>(ExceptionBuilder()
                 << "No sync byte" << HumanReadable::Hexdump { QByteArray(1, PacketV2::syncByteFixedValue) }
-                << "-- starts with" << HumanReadable::Hexdump { output->bytes.left(8) }.enableAll());
+                << "-- starts with" << HumanReadable::Hexdump { bitSource.bytes().left(8) }.enableAll());
     }
     catch (std::exception &ex) {
-        QDebug(&output->errorMessage)
-            << "Error at sync byte:" << ex.what();
+        if (errMsgPtr) {
+            QDebug(errMsgPtr)
+                << "Error at sync byte:" << ex.what();
+        }
         return false;
     }
 
@@ -228,8 +216,10 @@ bool PacketV2Parser::parse(const QByteArray &bytes, PacketV2Parser::Parse *outpu
             return true;
     }
     catch (std::exception &ex) {
-        QDebug(&output->errorMessage)
-            << "Error between transportErrorIndicator and PID:" << ex.what();
+        if (errMsgPtr) {
+            QDebug(errMsgPtr)
+                << "Error between transportErrorIndicator and PID:" << ex.what();
+        }
         return false;
     }
 
@@ -245,8 +235,10 @@ bool PacketV2Parser::parse(const QByteArray &bytes, PacketV2Parser::Parse *outpu
             throw std::runtime_error("Field adaptationFieldControl has reserved value");
     }
     catch (std::exception &ex) {
-        QDebug(&output->errorMessage)
-            << "Error between transportScramblingControl and continuityCounter:" << ex.what();
+        if (errMsgPtr) {
+            QDebug(errMsgPtr)
+                << "Error between transportScramblingControl and continuityCounter:" << ex.what();
+        }
         return false;
     }
 
@@ -254,13 +246,15 @@ bool PacketV2Parser::parse(const QByteArray &bytes, PacketV2Parser::Parse *outpu
     {
         try {
             // Parse adaptation field.
-            if (!_implPtr->parseAdaptationField(&bitSource, output))
-                throw std::runtime_error(output->errorMessage.isEmpty() ?
-                    "Parse failed" : qPrintable(output->errorMessage));
+            if (!parseAdaptationField(statePtr))
+                throw std::runtime_error(!errMsgPtr || errMsgPtr->isEmpty() ?
+                    "Parse failed" : qPrintable(*errMsgPtr));
         }
         catch (std::exception &ex) {
-            QDebug(&output->errorMessage)
-                << "Error parsing adaptation field:" << ex.what();
+            if (errMsgPtr) {
+                QDebug(errMsgPtr)
+                    << "Error parsing adaptation field:" << ex.what();
+            }
             return false;
         }
     }
@@ -273,27 +267,31 @@ bool PacketV2Parser::parse(const QByteArray &bytes, PacketV2Parser::Parse *outpu
             packet.payloadDataBytes = bitSource.takeByteArrayAligned(N);
         }
         catch (std::exception &ex) {
-            QDebug(&output->errorMessage)
-                << "Error extracting payload data:" << ex.what();
+            if (errMsgPtr) {
+                QDebug(errMsgPtr)
+                    << "Error extracting payload data:" << ex.what();
+            }
             return false;
         }
     }
 
     if (!bitSource.atEnd()) {
-        QDebug(&output->errorMessage)
-            << "Expected end of bit source, but"
-            << bitSource.bytesLeft() << "bytes and"
-            << bitSource.bitsLeft() << "bits left";
+        if (errMsgPtr) {
+            QDebug(errMsgPtr)
+                << "Expected end of bit source, but"
+                << bitSource.bytesLeft() << "bytes and"
+                << bitSource.bitsLeft() << "bits left";
+        }
         return false;
     }
 
     return true;
 }
 
-bool impl::PacketV2ParserImpl::parseAdaptationField(BitStream *bitSourcePtr, PacketV2Parser::Parse *output)
+bool impl::PacketV2ParserImpl::parseAdaptationField(ParseState *statePtr)
 {
-    BitStream &bitSource(*bitSourcePtr);
-    PacketV2 &packet(output->packet);
+    BitStream &bitSource(statePtr->bitSource);
+    PacketV2 &packet(*statePtr->packetPtr);
     PacketV2::AdaptationField &af(packet.adaptationField);
 
     auto &afLen(af.adaptationFieldLength);
@@ -345,6 +343,52 @@ bool impl::PacketV2ParserImpl::parseAdaptationField(BitStream *bitSourcePtr, Pac
             << afBitSource.bitsLeft() << "bits left");
 
     return true;
+}
+
+PacketV2Parser::PacketV2Parser() :
+    _implPtr(std::make_unique<impl::PacketV2ParserImpl>())
+{
+
+}
+
+PacketV2Parser::~PacketV2Parser()
+{
+
+}
+
+int PacketV2Parser::tsPacketSize() const
+{
+    return _implPtr->_tsPacketSize;
+}
+
+void PacketV2Parser::setTSPacketSize(int size)
+{
+    // FIXME: Implement
+    throw std::runtime_error("TS packet v2 parser: Setting TS packet size not implemented, yet");
+}
+
+bool PacketV2Parser::parse(const QByteArray &bytes, PacketV2 *packet, QString *errorMessage)
+{
+    if (!packet)
+        throw std::invalid_argument("TS packet v2 parser: Packet can't be null");
+
+    if (errorMessage)
+        errorMessage->clear();
+
+    {
+        const int bytesLen = bytes.length();
+        if (bytesLen != _implPtr->_tsPacketSize) {
+            if (errorMessage) {
+                QDebug(errorMessage)
+                    << "Expected TS packet size" << _implPtr->_tsPacketSize
+                    << "but got" << bytesLen;
+            }
+            return false;
+        }
+    }
+
+    impl::PacketV2ParserImpl::ParseState state { bytes, packet, errorMessage };
+    return _implPtr->parsePacket(&state);
 }
 
 

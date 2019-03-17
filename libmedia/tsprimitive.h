@@ -21,7 +21,7 @@ class BitStream
     int         _bitsLeft    = 0;
 
 public:
-    explicit BitStream(const QByteArray &bytes) : _bytes(bytes) { }
+    BitStream(const QByteArray &bytes) : _bytes(bytes) { }
 
     const QByteArray &bytes()       { if (_isDirty) flush(); return _bytes; }
     const QByteArray &bytes() const { if (_isDirty) throw std::runtime_error("TS bit stream: Caller forgot to call flush"); return _bytes; }

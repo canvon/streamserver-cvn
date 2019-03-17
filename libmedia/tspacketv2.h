@@ -125,19 +125,13 @@ class LIBMEDIASHARED_EXPORT PacketV2Parser
     std::unique_ptr<impl::PacketV2ParserImpl>  _implPtr;
 
 public:
-    struct Parse {
-        QByteArray  bytes;
-        PacketV2    packet;
-        QString     errorMessage;
-    };
-
     explicit PacketV2Parser();
     ~PacketV2Parser();
 
     int tsPacketSize() const;
     void setTSPacketSize(int size);
 
-    bool parse(const QByteArray &bytes, Parse *output);
+    bool parse(const QByteArray &bytes, PacketV2 *packet, QString *errorMessage = nullptr);
 };
 
 

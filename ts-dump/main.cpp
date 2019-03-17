@@ -188,19 +188,20 @@ int main(int argc, char *argv[])
                     return 1;
                 }
 
-                TS::PacketV2Parser::Parse parse;
-                bool success = tsPacketV2ParserPtr->parse(buf, &parse);
+                TS::PacketV2 packet;
+                QString errorMessage;
+                bool success = tsPacketV2ParserPtr->parse(buf, &packet, &errorMessage);
                 if (doOffset)
                     out << "count=" << ++tsPacketCount << " ";
 
                 if (verbose >= 0) {
                     QString outStr;
-                    QDebug(&outStr) << parse.packet;
+                    QDebug(&outStr) << packet;
                     out << outStr << endl;
                 }
 
                 if (!success)
-                    out << "^ TS packet error: " << parse.errorMessage << endl;
+                    out << "^ TS packet error: " << errorMessage << endl;
 
                 break;
             }
