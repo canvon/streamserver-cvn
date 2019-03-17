@@ -133,6 +133,22 @@ public:
 
         return ret;
     }
+
+    void putByteArrayAligned(const QByteArray &bytes)
+    {
+        if (!(_bitsLeft == 0))
+            throw std::runtime_error("TS bit stream: Not byte-aligned for put byte array");
+
+        if (bytes.isEmpty())
+            return;
+
+        const int bytesCount = bytes.length();
+        if (!(bytesCount <= bytesLeft()))
+            throw std::runtime_error("TS bit stream: Not enough output bytes available");
+
+        _bytes.replace(_offsetBytes + 1, bytesCount, bytes);
+        _offsetBytes += bytesCount;
+    }
 };
 
 
@@ -304,8 +320,13 @@ inline BitStream &operator>>(BitStream &bitSource, tcimsbf<StreamBitSize, Workin
 template <size_t StreamBitSize, typename WorkingType>
 inline BitStream &operator<<(BitStream &bitSink, const bslbf<StreamBitSize, WorkingType> &inBSLBF)
 {
-    for (WorkingType mask = 1u << (StreamBitSize - 1); mask; mask >>= 1) {
-        bitSink.putBit(inBSLBF.value & mask);
+    using mask_type = unsigned int;
+    static constexpr size_t mask_bit_size = 8u * sizeof(mask_type);
+
+    static_assert(StreamBitSize <= mask_bit_size, "bslbf size too large");
+
+    for (mask_type mask = 1u << (StreamBitSize - 1); mask; mask >>= 1) {
+        bitSink.putBit(static_cast<mask_type>(inBSLBF.value) & mask);
     }
     return bitSink;
 }

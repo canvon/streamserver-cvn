@@ -48,6 +48,12 @@ BitStream &operator>>(BitStream &bitSource, ProgramClockReference &pcr)
     return bitSource;
 }
 
+BitStream &operator<<(BitStream &bitSink, const ProgramClockReference &pcr)
+{
+    bitSink << pcr.pcrBase << pcr.reserved1 << pcr.pcrExtension;
+    return bitSink;
+}
+
 
 PacketV2::PacketV2()
 {
@@ -389,6 +395,261 @@ bool PacketV2Parser::parse(const QByteArray &bytes, PacketV2 *packet, QString *e
 
     impl::PacketV2ParserImpl::ParseState state { bytes, packet, errorMessage };
     return _implPtr->parsePacket(&state);
+}
+
+
+namespace impl {
+
+class PacketV2GeneratorImpl {
+    struct GenerateState {
+        const PacketV2 &packet;
+        BitStream       bitSink;
+        QString        *errorMessagePtr;
+    };
+
+    bool generatePacket(GenerateState *statePtr);
+    bool generateAdaptationField(GenerateState *statePtr);
+
+    friend PacketV2Generator;
+};
+
+bool PacketV2GeneratorImpl::generatePacket(GenerateState *statePtr)
+{
+    const PacketV2 &packet(statePtr->packet);
+    BitStream &bitSink(statePtr->bitSink);
+    QString *errMsgPtr = statePtr->errorMessagePtr;
+
+    {
+        const int bytesLeft = bitSink.bytesLeft();
+        if (bytesLeft != PacketV2::sizeBasic) {
+            if (errMsgPtr) {
+                QDebug(errMsgPtr)
+                    << "Not enough bytes left to generate packet: Need" << PacketV2::sizeBasic
+                    << "but got" << bytesLeft;
+            }
+            return false;
+        }
+    }
+
+    const int posBegin = bitSink.offsetBytes();
+
+    try {
+        if (!packet.isSyncByteFixedValue()) {
+            throw static_cast<std::runtime_error>(ExceptionBuilder()
+                << "Invalid sync byte" << packet.syncByte.value);
+        }
+
+        bitSink << packet.syncByte;
+    }
+    catch (const std::exception &ex) {
+        if (errMsgPtr) {
+            QDebug(errMsgPtr) << "Error at sync byte:" << ex.what();
+        }
+        return false;
+    }
+
+    try {
+        bitSink
+            << packet.transportErrorIndicator
+            << packet.payloadUnitStartIndicator
+            << packet.transportPriority
+            << packet.pid;
+
+        if (packet.isNullPacket())
+            // Stop generating here. Rest will be left uninitialized and/or at zero-bits. (?)
+            return true;
+    }
+    catch (const std::exception &ex) {
+        if (errMsgPtr) {
+            QDebug(errMsgPtr)
+                << "Error between transportErrorIndicator and PID:" << ex.what();
+        }
+        return false;
+    }
+
+    try {
+        if (packet.transportScramblingControl.value == PacketV2::TransportScramblingControlType::Reserved1)
+            throw std::runtime_error("Field transportScramblingControl has reserved value");
+        if (packet.adaptationFieldControl.value == PacketV2::AdaptationFieldControlType::Reserved1)
+            throw std::runtime_error("Field adaptationFieldControl has reserved value");
+
+        bitSink
+            << packet.transportScramblingControl
+            << packet.adaptationFieldControl
+            << packet.continuityCounter;
+    }
+    catch (const std::exception &ex) {
+        if (errMsgPtr) {
+            QDebug(errMsgPtr)
+                << "Error between transportScramblingControl and continuityCounter:" << ex.what();
+        }
+        return false;
+    }
+
+    if (packet.hasAdaptationField()) {
+        try {
+            // Generate adaptation field.
+            if (!generateAdaptationField(statePtr))
+                throw std::runtime_error(!errMsgPtr || errMsgPtr->isEmpty() ?
+                    "Generate failed" : qPrintable(*errMsgPtr));
+        }
+        catch (const std::exception &ex) {
+            if (errMsgPtr) {
+                QDebug(errMsgPtr)
+                    << "Error generating adaptation field:" << ex.what();
+            }
+            return false;
+        }
+    }
+
+    if (packet.hasPayload())
+    {
+        try {
+            const int N = 184 - (packet.adaptationFieldControl.value == PacketV2::AdaptationFieldControlType::AdaptationFieldThenPayload ?
+                                     packet.adaptationField.adaptationFieldLength.value + 1 : 0);
+
+            const int payloadDataBytesLen = packet.payloadDataBytes.length();
+            if (payloadDataBytesLen != N) {
+                throw static_cast<std::runtime_error>(ExceptionBuilder()
+                    << "Payload data bytes length computed to be" << N << "bytes long,"
+                    << "but got" << payloadDataBytesLen << "bytes");
+            }
+
+            bitSink.putByteArrayAligned(packet.payloadDataBytes);
+        }
+        catch (const std::exception &ex) {
+            if (errMsgPtr) {
+                QDebug(errMsgPtr)
+                    << "Error generating payload data:" << ex.what();
+            }
+            return false;
+        }
+    }
+
+    const int posEnd = bitSink.offsetBytes();
+
+    if (posEnd - posBegin != PacketV2::sizeBasic) {
+        if (errMsgPtr) {
+            QDebug(errMsgPtr)
+                << "Intended to put" << PacketV2::sizeBasic << "bytes into bit sink, but"
+                << "actually put" << (posEnd - posBegin) << "bytes";
+        }
+        return false;
+    }
+
+    return true;
+}
+
+bool PacketV2GeneratorImpl::generateAdaptationField(PacketV2GeneratorImpl::GenerateState *statePtr)
+{
+    const PacketV2                  &packet(statePtr->packet);
+    const PacketV2::AdaptationField &af(packet.adaptationField);
+    BitStream                       &bitSink(statePtr->bitSink);
+
+    const auto &afLen(af.adaptationFieldLength);
+    bitSink << afLen;
+    if (!(afLen.value > 0))
+        // (== 0 is used for a single stuffing byte, the adaptation field length)
+        return true;
+
+    const int posBegin = bitSink.offsetBytes();
+
+    bitSink
+        << af.discontinuityIndicator
+        << af.randomAccessIndicator
+        << af.elementaryStreamPriorityIndicator
+        << af.pcrFlag
+        << af.opcrFlag
+        << af.splicingPointFlag
+        << af.transportPrivateDataFlag
+        << af.adaptationFieldExtensionFlag;
+
+    if (af.pcrFlag)
+        bitSink << af.programClockReference;
+
+    if (af.opcrFlag)
+        bitSink << af.originalProgramClockReference;
+
+    if (af.splicingPointFlag)
+        bitSink << af.spliceCountdown;
+
+    if (af.transportPrivateDataFlag) {
+        const auto &tpdLen(af.transportPrivateDataLength);
+        bitSink << tpdLen;
+
+        const auto &tpdBytes(af.transportPrivateDataBytes);
+
+        const int tpdBytesLen = tpdBytes.length();
+        if (tpdBytesLen != tpdLen.value) {
+            throw static_cast<std::runtime_error>(ExceptionBuilder()
+                << "transportPrivateDataBytes length intended to be" << tpdLen.value
+                << "but got" << tpdBytesLen);
+        }
+
+        bitSink.putByteArrayAligned(tpdBytes);
+    }
+
+    if (af.adaptationFieldExtensionFlag) {
+        const auto &afeLen(af.adaptationFieldExtensionLength);
+        bitSink << afeLen;
+
+        const auto &afeBytes(af.adaptationFieldExtensionBytes);
+
+        const int afeBytesLen = afeBytes.length();
+        if (afeBytesLen != afeLen.value) {
+            throw static_cast<std::runtime_error>(ExceptionBuilder()
+                << "adaptationFieldExtensionBytes length intended to be" << afeLen.value
+                << "but got" << afeBytesLen);
+        }
+
+        bitSink.putByteArrayAligned(afeBytes);
+    }
+
+    if (!af.stuffingBytes.isEmpty())
+        bitSink.putByteArrayAligned(af.stuffingBytes);
+
+
+    const int posEnd = bitSink.offsetBytes();
+
+    if (posEnd - posBegin != afLen.value) {
+        throw static_cast<std::runtime_error>(ExceptionBuilder()
+            << "Intended to put" << afLen.value << "bytes into bit sink, but"
+            << "actually put" << (posEnd - posBegin) << "bytes");
+    }
+
+
+    return true;
+}
+
+}  // namespace TS::impl
+
+
+PacketV2Generator::PacketV2Generator() :
+    _implPtr(std::make_unique<impl::PacketV2GeneratorImpl>())
+{
+
+}
+
+PacketV2Generator::~PacketV2Generator()
+{
+
+}
+
+bool PacketV2Generator::generate(const PacketV2 &packet, QByteArray *bytes, QString *errorMessage)
+{
+    if (!bytes)
+        throw std::invalid_argument("TS packet v2 generator: Bytes can't be null");
+
+    if (errorMessage)
+        errorMessage->clear();
+
+    impl::PacketV2GeneratorImpl::GenerateState state { packet, QByteArray(PacketV2::sizeBasic, 0x00), errorMessage };
+
+    if (!_implPtr->generatePacket(&state))
+        return false;
+
+    bytes->append(state.bitSink.bytes());
+    return true;
 }
 
 

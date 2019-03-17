@@ -35,6 +35,7 @@ struct ProgramClockReference
 QDebug operator<<(QDebug debug, const ProgramClockReference &pcr);
 
 BitStream &operator>>(BitStream &bitSource, ProgramClockReference &pcr);
+BitStream &operator<<(BitStream &bitSink, const ProgramClockReference &pcr);
 
 
 // An MPEG-TS packet, streamserver-cvn API version V2.
@@ -132,6 +133,22 @@ public:
     void setTSPacketSize(int size);
 
     bool parse(const QByteArray &bytes, PacketV2 *packet, QString *errorMessage = nullptr);
+};
+
+
+namespace impl {
+class PacketV2GeneratorImpl;
+}
+
+class LIBMEDIASHARED_EXPORT PacketV2Generator
+{
+    std::unique_ptr<impl::PacketV2GeneratorImpl>  _implPtr;
+
+public:
+    explicit PacketV2Generator();
+    ~PacketV2Generator();
+
+    bool generate(const PacketV2 &packet, QByteArray *bytes, QString *errorMessage = nullptr);
 };
 
 
