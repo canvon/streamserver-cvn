@@ -110,99 +110,166 @@ void BytesReader::readData()
 
 
 //
-// TS::PacketReader
+// TS::PacketReaderBase
 //
 
 namespace impl {
-class PacketReaderImpl {
+
+class PacketReaderBaseImpl
+{
+protected:
+    QPointer<PacketReaderBase>        _apiPtr;
     QPointer<BytesReader>             _bytesReader;
     qint64                            _tsPacketOffset = 0;
     qint64                            _tsPacketCount  = 0;
     int                               _discontSegment = 1;
     bool                              _discontLastPCRValid = false;
     double                            _discontLastPCR;
-    friend PacketReader;
+
+    PacketReaderBaseImpl(PacketReaderBase *api = nullptr);
+    PacketReaderBaseImpl(QIODevice *dev, PacketReaderBase *api = nullptr);
+public:
+    virtual ~PacketReaderBaseImpl();
 
 public:
-    bool checkIsDiscontinuity(const TSPacket &packet);
-};
-}  // namespace TS::impl
+    double pcrLast() const;
 
-PacketReader::PacketReader(QObject *parent) :
-    QObject(parent), _implPtr(std::make_unique<impl::PacketReaderImpl>())
+    friend PacketReaderBase;
+};
+
+PacketReaderBaseImpl::PacketReaderBaseImpl(PacketReaderBase *api) :
+    _apiPtr(api)
 {
 
 }
 
-PacketReader::PacketReader(QIODevice *dev, QObject *parent) :
-    PacketReader(parent)
+PacketReaderBaseImpl::PacketReaderBaseImpl(QIODevice *dev, PacketReaderBase *api) :
+    PacketReaderBaseImpl(api)
 {
     if (!dev)
-        throw std::invalid_argument("TS packet reader: dev can't be null");
+        throw std::invalid_argument("TS packet reader base: dev can't be null");
 
-    auto &bytesReader(_implPtr->_bytesReader);
-    bytesReader = new BytesReader(dev, this);
+    auto *const q = _apiPtr.data();
+    if (!q)
+        throw std::invalid_argument("TS packet reader base: Missing API back-pointer");
+
+    _bytesReader = new BytesReader(dev, q);
 
     // Setup signals.
-    connect(bytesReader, &BytesReader::tsBytesReady, this, &PacketReader::handleTSBytes);
-    connect(bytesReader, &BytesReader::eofEncountered, this, &PacketReader::handleEOF);
-    connect(bytesReader, &BytesReader::errorEncountered, this, &PacketReader::handleError);
+    q->connect(_bytesReader, &BytesReader::tsBytesReady, q, &PacketReaderBase::handleTSBytes);
+    q->connect(_bytesReader, &BytesReader::eofEncountered, q, &PacketReaderBase::handleEOF);
+    q->connect(_bytesReader, &BytesReader::errorEncountered, q, &PacketReaderBase::handleError);
 }
 
-PacketReader::~PacketReader()
+PacketReaderBaseImpl::~PacketReaderBaseImpl()
 {
 
 }
 
-BytesReader *PacketReader::bytesReader() const
+double PacketReaderBaseImpl::pcrLast() const
+{
+    return _discontLastPCRValid ? _discontLastPCR : NAN;
+}
+
+}  // namespace TS::impl
+
+PacketReaderBase::PacketReaderBase(impl::PacketReaderBaseImpl &impl, QObject *parent) :
+    QObject(parent), _implPtr(&impl)
+{
+
+}
+
+PacketReaderBase::~PacketReaderBase()
+{
+
+}
+
+BytesReader *PacketReaderBase::bytesReader() const
 {
     return _implPtr->_bytesReader;
 }
 
-qint64 PacketReader::tsPacketOffset() const
+qint64 PacketReaderBase::tsPacketOffset() const
 {
     return _implPtr->_tsPacketOffset;
 }
 
-qint64 PacketReader::tsPacketCount() const
+qint64 PacketReaderBase::tsPacketCount() const
 {
     return _implPtr->_tsPacketCount;
 }
 
-int PacketReader::discontSegment() const
+int PacketReaderBase::discontSegment() const
 {
     return _implPtr->_discontSegment;
 }
 
-double PacketReader::pcrLast() const
+double PacketReaderBase::pcrLast() const
 {
-    return _implPtr->_discontLastPCRValid ? _implPtr->_discontLastPCR : NAN;
+    return _implPtr->pcrLast();
 }
 
-void PacketReader::handleTSBytes(const QByteArray &bytes)
+void PacketReaderBase::handleEOF()
 {
+    emit eofEncountered();
+}
+
+void PacketReaderBase::handleError(const QString &errorMessage)
+{
+    emit errorEncountered(ErrorKind::IO, errorMessage);
+}
+
+
+//
+// TS::PacketReader
+//
+
+namespace impl {
+
+class PacketReaderImpl : public PacketReaderBaseImpl
+{
+protected:
+    inline auto _api()       { return dynamic_cast<      PacketReader *>(_apiPtr.data()); }
+    inline auto _api() const { return dynamic_cast<const PacketReader *>(_apiPtr.data()); }
+
+    using PacketReaderBaseImpl::PacketReaderBaseImpl;
+
+public:
+    void handleTSBytes(const QByteArray &bytes);
+    bool checkIsDiscontinuity(const TSPacket &packet);
+
+    friend PacketReader;
+};
+
+void PacketReaderImpl::handleTSBytes(const QByteArray &bytes)
+{
+    auto *const q = _api();
+
     // Try to interpret as TS packet.
     TSPacket packet(bytes);
-    _implPtr->_tsPacketCount++;
+    _tsPacketCount++;
 
     double pcrPrev = pcrLast();
-    if (_implPtr->checkIsDiscontinuity(packet)) {
-        _implPtr->_discontSegment++;
+    if (checkIsDiscontinuity(packet)) {
+        _discontSegment++;
 
-        emit discontEncountered(pcrPrev);
+        if (q)
+            emit q->discontEncountered(pcrPrev);
     }
 
     const QString errMsg = packet.errorMessage();
     if (!errMsg.isNull()) {
-        emit errorEncountered(ErrorKind::TS, errMsg);
+        if (q)
+            emit q->errorEncountered(PacketReader::ErrorKind::TS, errMsg);
     }
 
-    emit tsPacketReady(packet);
+    if (q)
+        emit q->tsPacketReady(packet);
 
-    _implPtr->_tsPacketOffset += packet.bytes().length();
+    _tsPacketOffset += packet.bytes().length();
 }
 
-bool impl::PacketReaderImpl::checkIsDiscontinuity(const TSPacket &packet)
+bool PacketReaderImpl::checkIsDiscontinuity(const TSPacket &packet)
 {
     if (!(packet.validity() >= TSPacket::ValidityType::AdaptationField))
         return false;
@@ -246,14 +313,42 @@ bool impl::PacketReaderImpl::checkIsDiscontinuity(const TSPacket &packet)
     return true;
 }
 
-void PacketReader::handleEOF()
+}  // namespace TS::impl
+
+impl::PacketReaderImpl *PacketReader::_impl()
 {
-    emit eofEncountered();
+    return dynamic_cast<impl::PacketReaderImpl *>(_implPtr.get());
 }
 
-void PacketReader::handleError(const QString &errorMessage)
+const impl::PacketReaderImpl *PacketReader::_impl() const
 {
-    emit errorEncountered(ErrorKind::IO, errorMessage);
+    return dynamic_cast<const impl::PacketReaderImpl *>(_implPtr.get());
+}
+
+PacketReader::PacketReader(QObject *parent) :
+    PacketReaderBase(*new impl::PacketReaderImpl(this), parent)
+{
+
+}
+
+PacketReader::PacketReader(QIODevice *dev, QObject *parent) :
+    PacketReaderBase(*new impl::PacketReaderImpl(dev, this), parent)
+{
+
+}
+
+PacketReader::~PacketReader()
+{
+
+}
+
+void PacketReader::handleTSBytes(const QByteArray &bytes)
+{
+    auto *const d = _impl();
+    if (!d)
+        return;
+
+    d->handleTSBytes(bytes);
 }
 
 
