@@ -151,7 +151,7 @@ PacketReaderBaseImpl::PacketReaderBaseImpl(QIODevice *dev, PacketReaderBase *api
 
     auto *const q = _apiPtr.data();
     if (!q)
-        throw std::invalid_argument("TS packet reader base: Missing API back-pointer");
+        throw std::runtime_error("TS packet reader base: Missing API back-pointer");
 
     _bytesReader = new BytesReader(dev, q);
 
