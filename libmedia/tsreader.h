@@ -11,6 +11,8 @@ class TSPacket;
 
 namespace TS {
 
+class PacketV2;
+
 
 namespace impl {
 class BytesReaderImpl;
@@ -41,6 +43,7 @@ public slots:
 namespace impl {
 class PacketReaderBaseImpl;
 class PacketReaderImpl;
+class PacketV2ReaderImpl;
 }
 
 class PacketReaderBase : public QObject
@@ -94,6 +97,26 @@ public:
 
 signals:
     void tsPacketReady(const TSPacket &packet);
+
+public slots:
+    virtual void handleTSBytes(const QByteArray &bytes) override;
+};
+
+class PacketV2Reader : public PacketReaderBase
+{
+    Q_OBJECT
+
+protected:
+    impl::PacketV2ReaderImpl *_impl();
+    const impl::PacketV2ReaderImpl *_impl() const;
+
+public:
+    explicit PacketV2Reader(QObject *parent = nullptr);
+    explicit PacketV2Reader(QIODevice *dev, QObject *parent = nullptr);
+    virtual ~PacketV2Reader();
+
+signals:
+    void tsPacketV2Ready(const TS::PacketV2 &packet);
 
 public slots:
     virtual void handleTSBytes(const QByteArray &bytes) override;

@@ -1,6 +1,7 @@
 #include "tsreader.h"
 
 #include "tspacket.h"
+#include "tspacketv2.h"
 
 #include <cmath>
 #include <stdexcept>
@@ -343,6 +344,147 @@ PacketReader::~PacketReader()
 }
 
 void PacketReader::handleTSBytes(const QByteArray &bytes)
+{
+    auto *const d = _impl();
+    if (!d)
+        return;
+
+    d->handleTSBytes(bytes);
+}
+
+
+//
+// TS::PacketV2Reader
+//
+
+namespace impl {
+
+class PacketV2ReaderImpl : public PacketReaderBaseImpl
+{
+protected:
+    std::unique_ptr<PacketV2Parser>  _parserPtr;
+
+    inline auto _api()       { return dynamic_cast<      PacketV2Reader *>(_apiPtr.data()); }
+    inline auto _api() const { return dynamic_cast<const PacketV2Reader *>(_apiPtr.data()); }
+
+    PacketV2ReaderImpl(PacketReaderBase *api = nullptr);
+    PacketV2ReaderImpl(QIODevice *dev, PacketReaderBase *api = nullptr);
+
+public:
+    void handleTSBytes(const QByteArray &bytes);
+    bool checkIsDiscontinuity(const PacketV2 &packet);
+
+    friend PacketV2Reader;
+};
+
+PacketV2ReaderImpl::PacketV2ReaderImpl(PacketReaderBase *api) :
+    PacketReaderBaseImpl(api),
+    _parserPtr(std::make_unique<PacketV2Parser>())
+{
+
+}
+
+PacketV2ReaderImpl::PacketV2ReaderImpl(QIODevice *dev, PacketReaderBase *api) :
+    PacketReaderBaseImpl(dev, api),
+    _parserPtr(std::make_unique<PacketV2Parser>())
+{
+
+}
+
+void PacketV2ReaderImpl::handleTSBytes(const QByteArray &bytes)
+{
+    auto *const q = _api();
+
+    // Try to interpret as TS packet v2.
+    PacketV2 packet;
+    QString errMsg;
+    const bool success = _parserPtr->parse(bytes, &packet, &errMsg);
+    _tsPacketCount++;
+
+    double pcrPrev = pcrLast();
+    if (checkIsDiscontinuity(packet)) {
+        _discontSegment++;
+
+        if (q)
+            emit q->discontEncountered(pcrPrev);
+    }
+
+    if (!success) {
+        if (q)
+            emit q->errorEncountered(PacketV2Reader::ErrorKind::TS, errMsg);
+    }
+
+    if (q)
+        emit q->tsPacketV2Ready(packet);
+
+    _tsPacketOffset += bytes.length();
+}
+
+bool PacketV2ReaderImpl::checkIsDiscontinuity(const PacketV2 &packet)
+{
+    if (packet.isNullPacket())
+        return false;
+
+    if (!packet.hasAdaptationField())
+        return false;
+
+    const auto &af(packet.adaptationField);
+    if (!af.pcrFlag)
+        return false;
+
+    // We got a valid PCR!
+    const auto &pcr(af.programClockReference);
+    const double pcrSec = pcr.toSecs();
+
+    // Previous PCR available? If not, just remember the new one for later.
+    if (!_discontLastPCRValid) {
+        _discontLastPCR = pcrSec;
+        _discontLastPCRValid = true;
+        return false;
+    }
+
+    double lastPCRSec = _discontLastPCR;
+    _discontLastPCR = pcrSec;
+
+    if (lastPCRSec <= pcrSec && pcrSec <= lastPCRSec + 1) {
+        // Everything within parameters.
+        return false;
+    }
+
+    // Discontinuity detected.
+    return true;
+}
+
+}  // namespace TS::impl
+
+impl::PacketV2ReaderImpl *PacketV2Reader::_impl()
+{
+    return dynamic_cast<impl::PacketV2ReaderImpl *>(_implPtr.get());
+}
+
+const impl::PacketV2ReaderImpl *PacketV2Reader::_impl() const
+{
+    return dynamic_cast<const impl::PacketV2ReaderImpl *>(_implPtr.get());
+}
+
+PacketV2Reader::PacketV2Reader(QObject *parent) :
+    PacketReaderBase(*new impl::PacketV2ReaderImpl(this), parent)
+{
+
+}
+
+PacketV2Reader::PacketV2Reader(QIODevice *dev, QObject *parent) :
+    PacketReaderBase(*new impl::PacketV2ReaderImpl(dev, this), parent)
+{
+
+}
+
+PacketV2Reader::~PacketV2Reader()
+{
+
+}
+
+void PacketV2Reader::handleTSBytes(const QByteArray &bytes)
 {
     auto *const d = _impl();
     if (!d)
