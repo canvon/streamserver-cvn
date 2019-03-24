@@ -37,6 +37,7 @@ HEADERS += libmedia_global.h \
     tsprimitive.h \
     tspacket.h \
     tspacketv2.h \
+    tspacket_compat.h \
     tsreader.h \
     tswriter.h
 

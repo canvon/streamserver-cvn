@@ -1,6 +1,10 @@
 #include "tsreader.h"
 
+#ifndef TS_PACKET_V2
 #include "tspacket.h"
+#else
+#include "tspacketv2.h"
+#endif
 
 #include <cmath>
 #include <stdexcept>
@@ -16,7 +20,13 @@ class ReaderImpl {
     QPointer<QIODevice>               _devPtr;
     std::unique_ptr<QSocketNotifier>  _notifierPtr;
     QByteArray                        _buf;
-    qint64                            _tsPacketSize = TSPacket::lengthBasic;
+    qint64                            _tsPacketSize
+#ifndef TS_PACKET_V2
+        = TSPacket::lengthBasic;
+#else
+        = PacketV2::sizeBasic;
+    std::unique_ptr<PacketV2Parser>   _tsParserPtr;
+#endif
     qint64                            _tsPacketOffset = 0;
     qint64                            _tsPacketCount  = 0;
     int                               _discontSegment = 1;
@@ -26,11 +36,14 @@ class ReaderImpl {
 
 public:
     explicit ReaderImpl(QIODevice *dev) : _devPtr(dev)
+#ifdef TS_PACKET_V2
+        , _tsParserPtr(std::make_unique<PacketV2Parser>())
+#endif
     {
 
     }
 
-    bool checkIsDiscontinuity(const TSPacket &packet);
+    bool checkIsDiscontinuity(const Packet &packet);
 };
 }  // namespace TS::impl
 
@@ -63,7 +76,11 @@ qint64 Reader::tsPacketSize() const
 
 void Reader::setTSPacketSize(qint64 size)
 {
+#ifndef TS_PACKET_V2
     if (!(size >= TSPacket::lengthBasic))
+#else
+    if (!(size >= PacketV2::sizeBasic))
+#endif
         throw std::invalid_argument("TS reader: Set TS packet size: Invalid size " + std::to_string(size));
 
     _implPtr->_tsPacketSize = size;
@@ -124,7 +141,16 @@ void Reader::readData()
         }
 
         // Try to interpret as TS packet.
+#ifndef TS_PACKET_V2
         TSPacket packet(buf);
+        const QString errMsg = packet.errorMessage();
+        const bool success = errMsg.isNull();
+#else
+        PacketV2 packet;
+        QString errMsg;
+        const bool success = _implPtr->_tsParserPtr->parse(buf, &packet, &errMsg);
+#endif
+        const int packetLen = buf.length();
         buf.clear();
         _implPtr->_tsPacketCount++;
 
@@ -135,19 +161,19 @@ void Reader::readData()
             emit discontEncountered(pcrPrev);
         }
 
-        const QString errMsg = packet.errorMessage();
-        if (!errMsg.isNull()) {
+        if (!success) {
             emit errorEncountered(ErrorKind::TS, errMsg);
         }
 
         emit tsPacketReady(packet);
 
-        _implPtr->_tsPacketOffset += packet.bytes().length();
+        _implPtr->_tsPacketOffset += packetLen;
     } while (true);
 }
 
-bool impl::ReaderImpl::checkIsDiscontinuity(const TSPacket &packet)
+bool impl::ReaderImpl::checkIsDiscontinuity(const Packet &packet)
 {
+#ifndef TS_PACKET_V2
     if (!(packet.validity() >= TSPacket::ValidityType::AdaptationField))
         return false;
 
@@ -169,6 +195,19 @@ bool impl::ReaderImpl::checkIsDiscontinuity(const TSPacket &packet)
     auto pcrPtr = afPtr->PCR();
     if (!pcrPtr)
         return false;
+#else
+    if (packet.isNullPacket())
+        return false;
+
+    if (!packet.hasAdaptationField())
+        return false;
+
+    const auto &af(packet.adaptationField);
+    if (!af.pcrFlag)
+        return false;
+
+    const auto *const pcrPtr = &af.programClockReference;
+#endif
 
     // We got a valid PCR!
     double pcr = pcrPtr->toSecs();

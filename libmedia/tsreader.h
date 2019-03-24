@@ -3,10 +3,9 @@
 
 #include <QObject>
 
+#include "tspacket_compat.h"
 #include <memory>
 #include <QIODevice>
-
-class TSPacket;
 
 namespace TS {
 
@@ -37,7 +36,7 @@ public:
     double pcrLast() const;
 
 signals:
-    void tsPacketReady(const TSPacket &packet);
+    void tsPacketReady(const Packet &packet);
     void discontEncountered(double pcrPrev);
     void eofEncountered();
     void errorEncountered(ErrorKind errorKind, QString errorMessage);
