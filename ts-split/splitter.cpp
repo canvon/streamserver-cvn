@@ -1,6 +1,10 @@
 #include "splitter.h"
 
+#ifndef TS_PACKET_V2
 #include "tspacket.h"
+#else
+#include "tspacketv2.h"
+#endif
 #include "tsreader.h"
 #include "tswriter.h"
 #include "log.h"
@@ -358,8 +362,10 @@ void Splitter::openInput(QFile *inputFile)
     handleSegmentStarts();
 }
 
-void Splitter::handleTSPacketReady(const TSPacket &packet)
+void Splitter::handleTSPacketReady(const Upconvert<QByteArray, TS::Packet> &packetUpconvert)
 {
+    const TS::Packet &packet(packetUpconvert.result);
+
     const QString logPrefix = _implPtr->logPrefix();
 
     TS::Reader &reader(*_implPtr->_tsReaderPtr);
@@ -444,12 +450,12 @@ void Splitter::handleTSPacketReady(const TSPacket &packet)
                    qPrintable(outputFile.fileName()));
         }
 
-        writerPtr->queueTSPacket(packet);
+        writerPtr->queueTSPacket(packetUpconvert);
         writerPtr->writeData();
 
         switch (result.length.lenKind) {
         case LengthKind::Bytes:
-            result.length.lenBytes += packet.bytes().length();
+            result.length.lenBytes += packetUpconvert.source.length();
             break;
         case LengthKind::Packets:
             result.length.lenPackets++;

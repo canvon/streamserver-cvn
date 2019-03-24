@@ -3,6 +3,8 @@
 
 #include <QObject>
 
+#include "conversionstore.h"
+#include "tspacket_compat.h"
 #include "tsreader.h"
 #include "numericrange.h"
 
@@ -12,7 +14,6 @@
 #include <QDebug>
 
 class QFile;
-class TSPacket;
 
 class SplitterImpl;
 
@@ -104,7 +105,7 @@ signals:
 
 public slots:
     void openInput(QFile *inputFile);
-    void handleTSPacketReady(const TSPacket &packet);
+    void handleTSPacketReady(const Upconvert<QByteArray, TS::Packet> &packetUpconvert);
     void handleDiscontEncountered(double pcrPrev);
     void handleSegmentStarts();
     void handleEOFEncountered();

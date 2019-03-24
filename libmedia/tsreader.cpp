@@ -142,30 +142,30 @@ void Reader::readData()
 
         // Try to interpret as TS packet.
 #ifndef TS_PACKET_V2
-        TSPacket packet(buf);
-        const QString errMsg = packet.errorMessage();
-        const bool success = errMsg.isNull();
+        Upconvert<QByteArray, TSPacket> packetUpconvert { buf, TSPacket(buf) };
+        const QString errMsg = packetUpconvert.result.errorMessage();
+        packetUpconvert.success = errMsg.isNull();
 #else
-        PacketV2 packet;
+        Upconvert<QByteArray, Packet> packetUpconvert { buf };
         QString errMsg;
-        const bool success = _implPtr->_tsParserPtr->parse(buf, &packet, &errMsg);
+        _implPtr->_tsParserPtr->parse(&packetUpconvert, &errMsg);
 #endif
         const int packetLen = buf.length();
         buf.clear();
         _implPtr->_tsPacketCount++;
 
         double pcrPrev = pcrLast();
-        if (_implPtr->checkIsDiscontinuity(packet)) {
+        if (_implPtr->checkIsDiscontinuity(packetUpconvert.result)) {
             _implPtr->_discontSegment++;
 
             emit discontEncountered(pcrPrev);
         }
 
-        if (!success) {
+        if (!packetUpconvert.success) {
             emit errorEncountered(ErrorKind::TS, errMsg);
         }
 
-        emit tsPacketReady(packet);
+        emit tsPacketReady(packetUpconvert);
 
         _implPtr->_tsPacketOffset += packetLen;
     } while (true);

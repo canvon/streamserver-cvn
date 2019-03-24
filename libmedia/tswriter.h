@@ -3,10 +3,14 @@
 
 #include <QObject>
 
+#include "conversionstore.h"
+#ifndef TS_PACKET_V2
+#include "tspacket.h"
+#else
+#include "tspacketv2.h"
+#endif
 #include <memory>
 #include <QIODevice>
-
-class TSPacket;
 
 namespace TS {
 
@@ -30,7 +34,8 @@ signals:
     void errorEncountered(QString errorMessage);
 
 public slots:
-    void queueTSPacket(const TSPacket &packet);
+    void queueTSPacket(const Upconvert<QByteArray, Packet> &packetUpconvert);
+    void queueTSPacket(const Packet &packet);
     void writeData();
 };
 

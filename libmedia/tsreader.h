@@ -3,7 +3,12 @@
 
 #include <QObject>
 
-#include "tspacket_compat.h"
+#include "conversionstore.h"
+#ifndef TS_PACKET_V2
+#include "tspacket.h"
+#else
+#include "tspacketv2.h"
+#endif
 #include <memory>
 #include <QIODevice>
 
@@ -36,7 +41,7 @@ public:
     double pcrLast() const;
 
 signals:
-    void tsPacketReady(const Packet &packet);
+    void tsPacketReady(const Upconvert<QByteArray, Packet> &packetUpconvert);
     void discontEncountered(double pcrPrev);
     void eofEncountered();
     void errorEncountered(ErrorKind errorKind, QString errorMessage);

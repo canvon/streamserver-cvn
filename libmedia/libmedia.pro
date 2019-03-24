@@ -34,6 +34,7 @@ SOURCES += \
     tswriter.cpp
 
 HEADERS += libmedia_global.h \
+    conversionstore.h \
     tsprimitive.h \
     tspacket.h \
     tspacketv2.h \

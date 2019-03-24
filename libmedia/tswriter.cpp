@@ -1,6 +1,10 @@
 #include "tswriter.h"
 
+#ifndef TS_PACKET_V2
 #include "tspacket.h"
+#else
+#include "tspacketv2.h"
+#endif
 
 #include <stdexcept>
 #include <QByteArray>
@@ -23,6 +27,8 @@ public:
     {
 
     }
+
+    void queueBytes(const QByteArray &bytes);
 };
 }  // namespace TS::impl
 
@@ -58,17 +64,54 @@ void Writer::setTSStripAdditionalInfo(bool strip)
     _implPtr->_tsStripAdditionalInfo = strip;
 }
 
-void Writer::queueTSPacket(const TSPacket &packet)
+void Writer::queueTSPacket(const Upconvert<QByteArray, Packet> &packetUpconvert)
 {
-    _implPtr->_buf.append(_implPtr->_tsStripAdditionalInfo ?
+    if (_implPtr->_tsStripAdditionalInfo && packetUpconvert.source.length()
+#ifndef TS_PACKET_V2
+            != TSPacket::lengthBasic)
+    {
+        queueTSPacket(packetUpconvert.result);
+#else
+            != PacketV2::sizeBasic)
+    {
+        // FIXME: Implement!
+        throw std::runtime_error("TS writer: Can't queue packet: Strip additional info is not implemented, yet!");
+#endif
+    }
+    else {
+        // Optimize re-generation from the parsed data away.
+        _implPtr->queueBytes(packetUpconvert.source);
+    }
+}
+
+void Writer::queueTSPacket(const Packet &packet)
+{
+#ifndef TS_PACKET_V2
+    _implPtr->queueBytes(_implPtr->_tsStripAdditionalInfo ?
         packet.toBasicPacketBytes() :
         packet.bytes()
     );
+#else
+    // TODO: Store the generator for a longer time
+    // FIXME: Respect the _tsStripAdditionalInfo!
+    PacketV2Generator generator;
+    QByteArray bytes;
+    QString errMsg;
+    if (generator.generate(packet, &bytes, &errMsg))
+        _implPtr->queueBytes(bytes);
+    else
+        throw std::runtime_error(std::string("TS writer: Error converting packet to bytes: ") + errMsg.toStdString());
+#endif
+}
+
+void impl::WriterImpl::queueBytes(const QByteArray &bytes)
+{
+    _buf.append(bytes);
 
     // TODO: Have a maximum amount of data that can be queued.
 
-    if (_implPtr->_notifierPtr)
-        _implPtr->_notifierPtr->setEnabled(true);
+    if (_notifierPtr)
+        _notifierPtr->setEnabled(true);
 }
 
 void Writer::writeData()

@@ -5,6 +5,7 @@
 
 #include <QObject>
 
+#include "conversionstore.h"
 #include "tspacket_compat.h"
 #include "tsprimitive.h"
 #include <memory>
@@ -134,6 +135,7 @@ public:
     void setTSPacketSize(int size);
 
     bool parse(const QByteArray &bytes, PacketV2 *packet, QString *errorMessage = nullptr);
+    void parse(Upconvert<QByteArray, PacketV2> *upconvert, QString *errorMessage = nullptr);
 };
 
 
