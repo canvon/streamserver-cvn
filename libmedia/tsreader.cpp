@@ -127,8 +127,8 @@ protected:
     bool                              _discontLastPCRValid = false;
     double                            _discontLastPCR;
 
-    PacketReaderBaseImpl(PacketReaderBase *api = nullptr);
-    PacketReaderBaseImpl(QIODevice *dev, PacketReaderBase *api = nullptr);
+    explicit PacketReaderBaseImpl(PacketReaderBase *api = nullptr);
+    explicit PacketReaderBaseImpl(QIODevice *dev, PacketReaderBase *api = nullptr);
 public:
     virtual ~PacketReaderBaseImpl();
 
@@ -367,8 +367,8 @@ protected:
     inline auto _api()       { return dynamic_cast<      PacketV2Reader *>(_apiPtr.data()); }
     inline auto _api() const { return dynamic_cast<const PacketV2Reader *>(_apiPtr.data()); }
 
-    PacketV2ReaderImpl(PacketReaderBase *api = nullptr);
-    PacketV2ReaderImpl(QIODevice *dev, PacketReaderBase *api = nullptr);
+    explicit PacketV2ReaderImpl(PacketReaderBase *api = nullptr);
+    explicit PacketV2ReaderImpl(QIODevice *dev, PacketReaderBase *api = nullptr);
 
 public:
     void handleTSBytes(const QByteArray &bytes);
