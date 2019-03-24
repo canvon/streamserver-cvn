@@ -23,6 +23,8 @@ HEADERS += \
     httpreply.h \
     httpheader.h
 
+include(../config.pri)
+
 CONFIG(debug, debug|release) {
     message("Building with debug messages")
 } else {
