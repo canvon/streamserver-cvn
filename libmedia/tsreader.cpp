@@ -146,7 +146,7 @@ void Reader::readData()
         const QString errMsg = packetUpconvert.result.errorMessage();
         packetUpconvert.success = errMsg.isNull();
 #else
-        Upconvert<QByteArray, Packet> packetUpconvert { buf };
+        Upconvert<QByteArray, PacketV2> packetUpconvert { buf, PacketV2() };
         QString errMsg;
         _implPtr->_tsParserPtr->parse(&packetUpconvert, &errMsg);
 #endif
