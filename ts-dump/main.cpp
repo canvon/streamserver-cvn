@@ -139,24 +139,14 @@ int main(int argc, char *argv[])
             }
 
 #ifndef TS_PACKET_V2
-            TSPacket packet(buf);
-            if (doOffset)
-                out << "count=" << ++tsPacketCount << " ";
-
-            if (verbose >= 0) {
-                QString outStr;
-                QDebug(&outStr) << packet;
-                out << outStr << endl;
-            }
-
-            QString errMsg = packet.errorMessage();
-            if (!errMsg.isEmpty()) {
-                out << "^ TS packet error: " << errMsg << endl;
-            }
+            const TSPacket packet(buf);
+            const QString errMsg = packet.errorMessage();
+            const bool success = errMsg.isEmpty();
 #else
             TS::PacketV2 packet;
-            QString errorMessage;
-            bool success = tsParser.parse(buf, &packet, &errorMessage);
+            QString errMsg;
+            const bool success = tsParser.parse(buf, &packet, &errMsg);
+#endif
             if (doOffset)
                 out << "count=" << ++tsPacketCount << " ";
 
@@ -167,8 +157,7 @@ int main(int argc, char *argv[])
             }
 
             if (!success)
-                out << "^ TS packet error: " << errorMessage << endl;
-#endif
+                out << "^ TS packet error: " << errMsg << endl;
 
             if (doOffset)
                 offset += buf.length();
