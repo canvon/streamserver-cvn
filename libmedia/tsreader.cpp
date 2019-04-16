@@ -149,6 +149,11 @@ void Reader::readData()
         Upconvert<QByteArray, PacketV2> packetUpconvert { buf, PacketV2() };
         QString errMsg;
         _implPtr->_tsParserPtr->parse(&packetUpconvert, &errMsg);
+
+        // FIXME: Remove again after ad-hoc testing!
+        auto bytes_ptr  = QSharedPointer<ConversionNode<QByteArray>>::create(packetUpconvert.source);
+        auto packet_ptr = QSharedPointer<ConversionNode<PacketV2>>::create(packetUpconvert.result);
+        conversionNodeAddEdge(bytes_ptr, std::make_tuple(packet_ptr));
 #endif
         const int packetLen = buf.length();
         buf.clear();
