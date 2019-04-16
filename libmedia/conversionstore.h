@@ -59,6 +59,65 @@ struct ConversionNode
     {
 
     }
+
+    template <typename ...Result>
+    QList<QSharedPointer<ConversionEdge<data_type, Result...>>> findEdgesOutByResults() const
+    {
+        QList<QSharedPointer<ConversionEdge<data_type, Result...>>> ret;
+
+        for (const QSharedPointer<ConversionEdgeKnownSource<data_type>> &edge_ptr : edgesOut) {
+            if (!edge_ptr)
+                continue;
+
+            // (The former gave a syntactic error on Debian 9 / GCC g++ 6.3 ...)
+            //auto edgeResults_ptr = edge_ptr.dynamicCast<ConversionEdge<data_type, Result...>>();
+            auto edgeResults_ptr = edge_ptr.template dynamicCast<ConversionEdge<data_type, Result...>>();
+            if (!edgeResults_ptr)
+                continue;
+
+            ret.append(edgeResults_ptr);
+        }
+
+        return ret;
+    }
+
+    template <typename Source>
+    QList<QSharedPointer<ConversionEdgeKnownSource<Source>>> findEdgesInBySource() const
+    {
+        QList<QSharedPointer<ConversionEdgeKnownSource<Source>>> ret;
+
+        for (const QWeakPointer<ConversionEdgeBase> &edge_weak_ptr : edgesIn) {
+            auto edge_ptr = edge_weak_ptr.toStrongRef();
+            if (!edge_ptr)
+                continue;
+
+            auto edgeSource_ptr = edge_ptr.dynamicCast<ConversionEdgeKnownSource<Source>>();
+            if (!edgeSource_ptr)
+                continue;
+
+            ret.append(edgeSource_ptr);
+        }
+
+        return ret;
+    }
+
+    template <typename Other>
+    QList<QSharedPointer<ConversionNode<Other>>> findOtherFormat() const
+    {
+        QList<QSharedPointer<ConversionNode<Other>>> ret;
+
+        const auto results = findEdgesOutByResults<Other>();
+        for (const QSharedPointer<ConversionEdge<data_type, Other>> &edge_ptr : results) {
+            ret.append(std::get<0>(edge_ptr->results_ptrs));
+        }
+
+        const auto sources = findEdgesInBySource<Other>();
+        for (const QSharedPointer<ConversionEdgeKnownSource<Other>> &edge_ptr : sources) {
+            ret.append(edge_ptr->source_ptr);
+        }
+
+        return ret;
+    }
 };
 
 namespace detail {

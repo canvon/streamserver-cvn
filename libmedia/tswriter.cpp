@@ -84,6 +84,26 @@ void Writer::queueTSPacket(const Upconvert<QByteArray, Packet> &packetUpconvert)
     }
 }
 
+void Writer::queueTSPacket(const ConversionNode<Packet> &packetNode)
+{
+    const auto bytesNodes_ptrs = packetNode.findOtherFormat<QByteArray>();
+    for (const QSharedPointer<ConversionNode<QByteArray>> &bytesNode_ptr : bytesNodes_ptrs) {
+        if (!_implPtr->_tsStripAdditionalInfo || bytesNode_ptr->data.length()
+#ifndef TS_PACKET_V2
+                == TSPacket::lengthBasic)
+#else
+                == PacketV2::sizeBasic)
+#endif
+        {
+            _implPtr->queueBytes(bytesNode_ptr->data);
+            return;
+        }
+    }
+
+    // No optimization found, generate from meaning-accessible representation.
+    queueTSPacket(packetNode.data);
+}
+
 void Writer::queueTSPacket(const Packet &packet)
 {
 #ifndef TS_PACKET_V2

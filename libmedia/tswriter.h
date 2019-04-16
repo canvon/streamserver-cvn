@@ -35,6 +35,7 @@ signals:
 
 public slots:
     void queueTSPacket(const Upconvert<QByteArray, Packet> &packetUpconvert);
+    void queueTSPacket(const ConversionNode<Packet> &packetNode);
     void queueTSPacket(const Packet &packet);
     void writeData();
 };
