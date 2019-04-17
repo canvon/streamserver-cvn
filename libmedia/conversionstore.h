@@ -54,8 +54,21 @@ struct ConversionNode
 
     data_type  data;
 
+    ConversionNode() :
+        data()
+    {
+
+    }
+
     ConversionNode(const data_type &data) :
         data(data)
+    {
+
+    }
+
+    template <typename ...Args>
+    ConversionNode(Args&&... args) :
+        data(std::forward<Args>(args)...)
     {
 
     }
