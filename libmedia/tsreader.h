@@ -33,6 +33,9 @@ public:
     explicit Reader(QIODevice *dev, QObject *parent = 0);
     ~Reader();
 
+#ifdef TS_PACKET_V2
+    PacketV2Parser *parser() const;
+#endif
     qint64 tsPacketSize() const;
     void setTSPacketSize(qint64 size);
     qint64 tsPacketOffset() const;

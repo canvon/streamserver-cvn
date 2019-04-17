@@ -69,6 +69,13 @@ Reader::~Reader()
 
 }
 
+#ifdef TS_PACKET_V2
+PacketV2Parser *Reader::parser() const
+{
+    return _implPtr->_tsParserPtr.get();
+}
+#endif
+
 qint64 Reader::tsPacketSize() const
 {
     return _implPtr->_tsPacketSize;
@@ -84,6 +91,9 @@ void Reader::setTSPacketSize(qint64 size)
         throw std::invalid_argument("TS reader: Set TS packet size: Invalid size " + std::to_string(size));
 
     _implPtr->_tsPacketSize = size;
+#ifdef TS_PACKET_V2
+    _implPtr->_tsParserPtr->setPrefixLength(size - PacketV2::sizeBasic);
+#endif
 }
 
 qint64 Reader::tsPacketOffset() const
@@ -146,12 +156,12 @@ void Reader::readData()
         auto packetNode_ptr = QSharedPointer<ConversionNode<TSPacket>>::create(bytesNode_ptr->data);
         const QString errMsg = packetNode_ptr->data.errorMessage();
         const bool success = errMsg.isNull();
+        conversionNodeAddEdge(bytesNode_ptr, std::make_tuple(packetNode_ptr));
 #else
         auto packetNode_ptr = QSharedPointer<ConversionNode<PacketV2>>::create();
         QString errMsg;
-        const bool success = _implPtr->_tsParserPtr->parse(bytesNode_ptr->data, &packetNode_ptr->data, &errMsg);
+        const bool success = _implPtr->_tsParserPtr->parse(bytesNode_ptr, packetNode_ptr, &errMsg);
 #endif
-        conversionNodeAddEdge(bytesNode_ptr, std::make_tuple(packetNode_ptr));
         const int packetLen = buf.length();
         buf.clear();
         _implPtr->_tsPacketCount++;

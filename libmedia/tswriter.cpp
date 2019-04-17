@@ -19,7 +19,11 @@ class WriterImpl {
     QPointer<QIODevice>               _devPtr;
     std::unique_ptr<QSocketNotifier>  _notifierPtr;
     QByteArray                        _buf;
+#ifndef TS_PACKET_V2
     bool                              _tsStripAdditionalInfo = false;
+#else
+    PacketV2Generator                 _generator;
+#endif
     friend Writer;
 
 public:
@@ -54,6 +58,7 @@ Writer::~Writer()
 
 }
 
+#ifndef TS_PACKET_V2
 bool Writer::tsStripAdditionalInfo() const
 {
     return _implPtr->_tsStripAdditionalInfo;
@@ -63,10 +68,27 @@ void Writer::setTSStripAdditionalInfo(bool strip)
 {
     _implPtr->_tsStripAdditionalInfo = strip;
 }
+#else
+PacketV2Generator &Writer::generator() const
+{
+    return _implPtr->_generator;
+}
+
+bool Writer::tsStripAdditionalInfo() const
+{
+    return _implPtr->_generator.prefixLength() == 0;
+}
+
+void Writer::setTSStripAdditionalInfo(bool strip)
+{
+    if (strip)
+        _implPtr->_generator.setPrefixLength(0);
+}
+#endif
 
 int Writer::queueTSPacket(const Upconvert<QByteArray, Packet> &packetUpconvert)
 {
-    if (_implPtr->_tsStripAdditionalInfo && packetUpconvert.source.length()
+    if (tsStripAdditionalInfo() && packetUpconvert.source.length()
 #ifndef TS_PACKET_V2
             != TSPacket::lengthBasic)
     {
@@ -86,14 +108,11 @@ int Writer::queueTSPacket(const Upconvert<QByteArray, Packet> &packetUpconvert)
 
 int Writer::queueTSPacket(const QSharedPointer<ConversionNode<Packet>> &packetNode)
 {
+#ifndef TS_PACKET_V2
     const auto bytesNodes_ptrs = packetNode->findOtherFormat<QByteArray>();
     for (const QSharedPointer<ConversionNode<QByteArray>> &bytesNode_ptr : bytesNodes_ptrs) {
         if (!_implPtr->_tsStripAdditionalInfo || bytesNode_ptr->data.length()
-#ifndef TS_PACKET_V2
                 == TSPacket::lengthBasic)
-#else
-                == PacketV2::sizeBasic)
-#endif
         {
             return _implPtr->queueBytes(bytesNode_ptr->data);
         }
@@ -101,6 +120,15 @@ int Writer::queueTSPacket(const QSharedPointer<ConversionNode<Packet>> &packetNo
 
     // No optimization found, generate from meaning-accessible representation.
     return queueTSPacket(packetNode->data);
+#else
+    PacketV2Generator &generator(_implPtr->_generator);
+    auto bytesNode = QSharedPointer<ConversionNode<QByteArray>>::create();
+    QString errMsg;
+    if (!generator.generate(packetNode, bytesNode, &errMsg))
+        throw static_cast<std::runtime_error>(ExceptionBuilder() << "TS writer: Error converting packet to bytes:" << errMsg);
+
+    return _implPtr->queueBytes(bytesNode->data);
+#endif
 }
 
 int Writer::queueTSPacket(const Packet &packet)
@@ -111,9 +139,7 @@ int Writer::queueTSPacket(const Packet &packet)
         packet.bytes()
     );
 #else
-    // TODO: Store the generator for a longer time
-    // FIXME: Respect the _tsStripAdditionalInfo!
-    PacketV2Generator generator;
+    PacketV2Generator &generator(_implPtr->_generator);
     QByteArray bytes;
     QString errMsg;
     if (generator.generate(packet, &bytes, &errMsg))

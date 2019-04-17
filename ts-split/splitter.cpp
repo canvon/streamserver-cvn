@@ -501,8 +501,13 @@ void SplitterImpl::startOutputRequest(Splitter::Output *outRequest, Splitter *th
                    qPrintable(outputFile.errorString()));
         }
 
-        _outputWriters.insert(&outputFile,
-            std::make_shared<TS::Writer>(&outputFile, that));
+        auto writer_ptr = std::make_shared<TS::Writer>(&outputFile, that);
+        _outputWriters.insert(&outputFile, writer_ptr);
+
+#ifdef TS_PACKET_V2
+        // (Avoid accidental cut-off of prefix bytes during splitting operation.)
+        writer_ptr->generator().setPrefixLength(_tsReaderPtr->parser()->prefixLength());
+#endif
     }
 }
 

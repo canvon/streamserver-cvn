@@ -27,6 +27,10 @@ public:
     explicit Writer(QIODevice *dev, QObject *parent = 0);
     ~Writer();
 
+#ifdef TS_PACKET_V2
+    PacketV2Generator &generator() const;
+#endif
+
     bool tsStripAdditionalInfo() const;
     void setTSStripAdditionalInfo(bool strip);
 
