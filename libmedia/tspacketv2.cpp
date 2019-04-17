@@ -411,6 +411,27 @@ void PacketV2Parser::parse(Upconvert<QByteArray, PacketV2> *upconvert, QString *
     upconvert->success = parse(upconvert->source, &upconvert->result, errorMessage);
 }
 
+bool PacketV2Parser::parse(
+    const QSharedPointer<ConversionNode<QByteArray>> &bytesNode,
+    const QSharedPointer<ConversionNode<PacketV2>> &packetNode,
+    QString *errorMessage)
+{
+    if (!bytesNode)
+        throw std::invalid_argument("TS packet v2 parser: Bytes node can't be null");
+
+    if (!packetNode)
+        throw std::invalid_argument("TS packet v2 parser: Packet node can't be null");
+
+    const QByteArray bytesPrefix = bytesNode->data.left(_implPtr->_prefixLength);
+    packetNode->addAdata(packetPrefixBytesKey, bytesPrefix);
+
+    const bool success = parse(bytesNode->data, &packetNode->data, errorMessage);
+
+    conversionNodeAddEdge(bytesNode, std::make_tuple(packetNode));
+
+    return success;
+}
+
 
 namespace impl {
 

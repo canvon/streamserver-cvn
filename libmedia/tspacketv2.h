@@ -119,6 +119,10 @@ LIBMEDIASHARED_EXPORT QDebug operator<<(QDebug debug, const PacketV2 &packet);
 LIBMEDIASHARED_EXPORT QDebug operator<<(QDebug debug, const PacketV2::AdaptationField &af);
 
 
+// For use with conversion store:
+const static QString packetPrefixBytesKey = "MPEG-TS packet prefix bytes";
+
+
 namespace impl {
 class PacketV2ParserImpl;
 }
@@ -136,6 +140,10 @@ public:
 
     bool parse(const QByteArray &bytes, PacketV2 *packet, QString *errorMessage = nullptr);
     void parse(Upconvert<QByteArray, PacketV2> *upconvert, QString *errorMessage = nullptr);
+    bool parse(
+        const QSharedPointer<ConversionNode<QByteArray>> &bytesNode,
+        const QSharedPointer<ConversionNode<PacketV2>> &packetNode,
+        QString *errorMessage = nullptr);
 };
 
 
