@@ -41,7 +41,7 @@ public:
     double pcrLast() const;
 
 signals:
-    void tsPacketReady(const Upconvert<QByteArray, Packet> &packetUpconvert);
+    void tsPacketReady(const QSharedPointer<ConversionNode<Packet>> &packetNode);
     void discontEncountered(double pcrPrev);
     void eofEncountered();
     void errorEncountered(ErrorKind errorKind, QString errorMessage);

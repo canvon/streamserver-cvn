@@ -84,9 +84,9 @@ int Writer::queueTSPacket(const Upconvert<QByteArray, Packet> &packetUpconvert)
     }
 }
 
-int Writer::queueTSPacket(const ConversionNode<Packet> &packetNode)
+int Writer::queueTSPacket(const QSharedPointer<ConversionNode<Packet>> &packetNode)
 {
-    const auto bytesNodes_ptrs = packetNode.findOtherFormat<QByteArray>();
+    const auto bytesNodes_ptrs = packetNode->findOtherFormat<QByteArray>();
     for (const QSharedPointer<ConversionNode<QByteArray>> &bytesNode_ptr : bytesNodes_ptrs) {
         if (!_implPtr->_tsStripAdditionalInfo || bytesNode_ptr->data.length()
 #ifndef TS_PACKET_V2
@@ -100,7 +100,7 @@ int Writer::queueTSPacket(const ConversionNode<Packet> &packetNode)
     }
 
     // No optimization found, generate from meaning-accessible representation.
-    return queueTSPacket(packetNode.data);
+    return queueTSPacket(packetNode->data);
 }
 
 int Writer::queueTSPacket(const Packet &packet)

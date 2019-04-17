@@ -362,9 +362,9 @@ void Splitter::openInput(QFile *inputFile)
     handleSegmentStarts();
 }
 
-void Splitter::handleTSPacketReady(const Upconvert<QByteArray, TS::Packet> &packetUpconvert)
+void Splitter::handleTSPacketReady(const QSharedPointer<ConversionNode<TS::Packet>> &packetNode)
 {
-    const TS::Packet &packet(packetUpconvert.result);
+    const TS::Packet &packet(packetNode->data);
 
     const QString logPrefix = _implPtr->logPrefix();
 
@@ -450,12 +450,12 @@ void Splitter::handleTSPacketReady(const Upconvert<QByteArray, TS::Packet> &pack
                    qPrintable(outputFile.fileName()));
         }
 
-        writerPtr->queueTSPacket(packetUpconvert);
+        const int bytesQueued = writerPtr->queueTSPacket(packetNode);
         writerPtr->writeData();
 
         switch (result.length.lenKind) {
         case LengthKind::Bytes:
-            result.length.lenBytes += packetUpconvert.source.length();
+            result.length.lenBytes += bytesQueued;
             break;
         case LengthKind::Packets:
             result.length.lenPackets++;

@@ -141,36 +141,33 @@ void Reader::readData()
         }
 
         // Try to interpret as TS packet.
+        auto bytesNode_ptr = QSharedPointer<ConversionNode<QByteArray>>::create(buf);
 #ifndef TS_PACKET_V2
-        Upconvert<QByteArray, TSPacket> packetUpconvert { buf, TSPacket(buf) };
-        const QString errMsg = packetUpconvert.result.errorMessage();
-        packetUpconvert.success = errMsg.isNull();
+        auto packetNode_ptr = QSharedPointer<ConversionNode<TSPacket>>::create(bytesNode_ptr->data);
+        const QString errMsg = packetNode_ptr->data.errorMessage();
+        const bool success = errMsg.isNull();
 #else
-        Upconvert<QByteArray, PacketV2> packetUpconvert { buf, PacketV2() };
+        auto packetNode_ptr = QSharedPointer<ConversionNode<PacketV2>>::create();
         QString errMsg;
-        _implPtr->_tsParserPtr->parse(&packetUpconvert, &errMsg);
-
-        // FIXME: Remove again after ad-hoc testing!
-        auto bytes_ptr  = QSharedPointer<ConversionNode<QByteArray>>::create(packetUpconvert.source);
-        auto packet_ptr = QSharedPointer<ConversionNode<PacketV2>>::create(packetUpconvert.result);
-        conversionNodeAddEdge(bytes_ptr, std::make_tuple(packet_ptr));
+        const bool success = _implPtr->_tsParserPtr->parse(bytesNode_ptr->data, &packetNode_ptr->data, &errMsg);
 #endif
+        conversionNodeAddEdge(bytesNode_ptr, std::make_tuple(packetNode_ptr));
         const int packetLen = buf.length();
         buf.clear();
         _implPtr->_tsPacketCount++;
 
         double pcrPrev = pcrLast();
-        if (_implPtr->checkIsDiscontinuity(packetUpconvert.result)) {
+        if (_implPtr->checkIsDiscontinuity(packetNode_ptr->data)) {
             _implPtr->_discontSegment++;
 
             emit discontEncountered(pcrPrev);
         }
 
-        if (!packetUpconvert.success) {
+        if (!success) {
             emit errorEncountered(ErrorKind::TS, errMsg);
         }
 
-        emit tsPacketReady(packetUpconvert);
+        emit tsPacketReady(packetNode_ptr);
 
         _implPtr->_tsPacketOffset += packetLen;
     } while (true);

@@ -105,7 +105,7 @@ signals:
 
 public slots:
     void openInput(QFile *inputFile);
-    void handleTSPacketReady(const Upconvert<QByteArray, TS::Packet> &packetUpconvert);
+    void handleTSPacketReady(const QSharedPointer<ConversionNode<TS::Packet>> &packetNode);
     void handleDiscontEncountered(double pcrPrev);
     void handleSegmentStarts();
     void handleEOFEncountered();
