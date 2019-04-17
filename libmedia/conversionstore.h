@@ -2,6 +2,7 @@
 #define CONVERSIONSTORE_H
 
 #include <QList>
+#include <QMap>
 #include <QSharedPointer>
 #include <tuple>
 
@@ -54,6 +55,51 @@ struct ConversionNode
 
     data_type  data;
 
+    struct AncillaryDataBase
+    {
+        const QString  key;
+
+
+        AncillaryDataBase(const QString &key) : key(key) { }
+
+        virtual ~AncillaryDataBase() { }  // Ensure we have a vtable.
+    };
+
+    template <typename AData>
+    struct AncillaryData : public AncillaryDataBase
+    {
+        using adata_type = AData;
+
+        adata_type  adata;
+
+
+        AncillaryData(const QString &key, const AData &adata) :
+            AncillaryDataBase(key), adata(adata)
+        {
+
+        }
+    };
+
+    QMap<QString, QSharedPointer<AncillaryDataBase>>  adataMap;
+
+    void addAdata(const QSharedPointer<AncillaryDataBase> &adata_ptr)
+    {
+        if (!adata_ptr)
+            return;
+
+        adataMap.insert(adata_ptr->key, adata_ptr);
+    }
+
+    template <typename AData>
+    QSharedPointer<AncillaryData<AData>> addAdata(const QString &key, const AData &adata)
+    {
+        auto adata_ptr = QSharedPointer<AncillaryData<AData>>::create(key, adata);
+
+        addAdata(adata_ptr);
+        return adata_ptr;
+    }
+
+
     ConversionNode() :
         data()
     {
@@ -72,6 +118,7 @@ struct ConversionNode
     {
 
     }
+
 
     template <typename ...Result>
     QList<QSharedPointer<ConversionEdge<data_type, Result...>>> findEdgesOutByResults() const
