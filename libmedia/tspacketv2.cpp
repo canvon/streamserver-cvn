@@ -162,7 +162,7 @@ QDebug operator<<(QDebug debug, const PacketV2::AdaptationField &af)
 
 namespace impl {
 class PacketV2ParserImpl {
-    int  _tsPacketSize = PacketV2::sizeBasic;
+    int  _prefixLength = 0;
 
     struct ParseState {
         BitStream  bitSource;
@@ -362,15 +362,17 @@ PacketV2Parser::~PacketV2Parser()
 
 }
 
-int PacketV2Parser::tsPacketSize() const
+int PacketV2Parser::prefixLength() const
 {
-    return _implPtr->_tsPacketSize;
+    return _implPtr->_prefixLength;
 }
 
-void PacketV2Parser::setTSPacketSize(int size)
+void PacketV2Parser::setPrefixLength(int len)
 {
-    // FIXME: Implement
-    throw std::runtime_error("TS packet v2 parser: Setting TS packet size not implemented, yet");
+    if (!(len >= 0))
+        throw std::invalid_argument("TS packet v2 parser: Prefix length must be positive-or-zero");
+
+    _implPtr->_prefixLength = len;
 }
 
 bool PacketV2Parser::parse(const QByteArray &bytes, PacketV2 *packet, QString *errorMessage)
@@ -383,17 +385,21 @@ bool PacketV2Parser::parse(const QByteArray &bytes, PacketV2 *packet, QString *e
 
     {
         const int bytesLen = bytes.length();
-        if (bytesLen != _implPtr->_tsPacketSize) {
+        const int expectedLen = _implPtr->_prefixLength + PacketV2::sizeBasic;
+        if (bytesLen != expectedLen) {
             if (errorMessage) {
                 QDebug(errorMessage)
-                    << "Expected TS packet size" << _implPtr->_tsPacketSize
+                    << "Expected TS packet size" << expectedLen
                     << "but got" << bytesLen;
             }
             return false;
         }
     }
 
-    impl::PacketV2ParserImpl::ParseState state { bytes, packet, errorMessage };
+    // Skip prefix.
+    const QByteArray bytesBasic = bytes.mid(_implPtr->_prefixLength);
+
+    impl::PacketV2ParserImpl::ParseState state { bytesBasic, packet, errorMessage };
     return _implPtr->parsePacket(&state);
 }
 

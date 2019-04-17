@@ -82,7 +82,7 @@ int main(int argc, char *argv[])
 #ifdef TS_PACKET_V2
     TS::PacketV2Parser tsParser;
     if (tsPacketSize != TS::PacketV2::sizeBasic)
-        tsParser.setTSPacketSize(tsPacketSize);
+        tsParser.setPrefixLength(tsPacketSize - TS::PacketV2::sizeBasic);
 #endif
 
     for (QString arg : args) {

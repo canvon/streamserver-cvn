@@ -131,8 +131,8 @@ public:
     explicit PacketV2Parser();
     ~PacketV2Parser();
 
-    int tsPacketSize() const;
-    void setTSPacketSize(int size);
+    int prefixLength() const;
+    void setPrefixLength(int len);
 
     bool parse(const QByteArray &bytes, PacketV2 *packet, QString *errorMessage = nullptr);
     void parse(Upconvert<QByteArray, PacketV2> *upconvert, QString *errorMessage = nullptr);
