@@ -121,6 +121,7 @@ LIBMEDIASHARED_EXPORT QDebug operator<<(QDebug debug, const PacketV2::Adaptation
 
 // For use with conversion store:
 const static QString packetPrefixBytesKey = "MPEG-TS packet prefix bytes";
+const static QString packetPrefixLengthKey = "MPEG-TS packet prefix length";
 
 
 namespace impl {
@@ -159,7 +160,14 @@ public:
     explicit PacketV2Generator();
     ~PacketV2Generator();
 
+    int prefixLength() const;
+    void setPrefixLength(int len);
+
     bool generate(const PacketV2 &packet, QByteArray *bytes, QString *errorMessage = nullptr);
+    bool generate(
+        const QSharedPointer<ConversionNode<PacketV2>> &packetNode,
+        const QSharedPointer<ConversionNode<QByteArray>> &bytesNode,
+        QString *errorMessage = nullptr);
 };
 
 

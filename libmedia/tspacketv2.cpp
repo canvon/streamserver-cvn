@@ -427,7 +427,8 @@ bool PacketV2Parser::parse(
 
     const bool success = parse(bytesNode->data, &packetNode->data, errorMessage);
 
-    conversionNodeAddEdge(bytesNode, std::make_tuple(packetNode));
+    auto edge = conversionNodeAddEdge(bytesNode, std::make_tuple(packetNode));
+    edge->keyValueMetadata.insert(packetPrefixLengthKey, QString::number(_implPtr->_prefixLength));
 
     return success;
 }
@@ -436,6 +437,8 @@ bool PacketV2Parser::parse(
 namespace impl {
 
 class PacketV2GeneratorImpl {
+    int _prefixLength = 0;
+
     struct GenerateState {
         const PacketV2 &packet;
         BitStream       bitSink;
@@ -670,6 +673,19 @@ PacketV2Generator::~PacketV2Generator()
 
 }
 
+int PacketV2Generator::prefixLength() const
+{
+    return _implPtr->_prefixLength;
+}
+
+void PacketV2Generator::setPrefixLength(int len)
+{
+    if (!(len >= 0))
+        throw std::invalid_argument("TS packet v2 generator: Prefix length must be positive-or-zero");
+
+    _implPtr->_prefixLength = len;
+}
+
 bool PacketV2Generator::generate(const PacketV2 &packet, QByteArray *bytes, QString *errorMessage)
 {
     if (!bytes)
@@ -683,8 +699,78 @@ bool PacketV2Generator::generate(const PacketV2 &packet, QByteArray *bytes, QStr
     if (!_implPtr->generatePacket(&state))
         return false;
 
+    // With the interface analogous to this one, prefix bytes have been skipped.
+    // So fill them in as zeroes, here...
+    if (_implPtr->_prefixLength > 0)
+        bytes->append(QByteArray(_implPtr->_prefixLength, 0x00));
+
     bytes->append(state.bitSink.bytes());
     return true;
+}
+
+bool PacketV2Generator::generate(
+    const QSharedPointer<ConversionNode<PacketV2>> &packetNode,
+    const QSharedPointer<ConversionNode<QByteArray>> &bytesNode,
+    QString *errorMessage)
+{
+    if (!packetNode)
+        throw std::invalid_argument("TS packet v2 generator: Packet node can't be null");
+
+    if (!bytesNode)
+        throw std::invalid_argument("TS packet v2 generator: Bytes node can't be null");
+
+
+    //
+    // Search for an optimization...
+    //
+
+    ConversionEdgeBase::keyValueMetadata_type edgeKeyValueMetadata;
+    edgeKeyValueMetadata.insert(packetPrefixLengthKey, QString::number(_implPtr->_prefixLength));
+
+    // Direct correspondence?
+    const auto bytesNodes_ptrs = packetNode->findOtherFormat<QByteArray>(edgeKeyValueMetadata);
+    if (!bytesNodes_ptrs.isEmpty()) {
+        bytesNode->data = bytesNodes_ptrs.first()->data;
+        return true;
+    }
+
+    // Can we simply cut the prefix off if requested?
+    do {
+        if (_implPtr->_prefixLength != 0)
+            break;
+
+        const auto prefixBytesBase = packetNode->adataMap.value(packetPrefixBytesKey);
+        if (!prefixBytesBase)
+            break;
+        const auto prefixBytes = prefixBytesBase.dynamicCast<ConversionNode<PacketV2>::AncillaryData<QByteArray>>();
+        if (!prefixBytes)
+            break;
+        const QByteArray &prefixBytesDirect(prefixBytes->adata);
+
+        const auto sourceBytesList = packetNode->findEdgesInBySource<QByteArray>();
+        if (sourceBytesList.isEmpty())
+            break;
+
+        const auto sourceBytes_ptr = sourceBytesList.first()->source_ptr.toStrongRef();
+        if (!sourceBytes_ptr)
+            break;
+
+        const QByteArray &sourceBytesDirect(sourceBytes_ptr->data);
+        bytesNode->data = sourceBytesDirect.mid(prefixBytesDirect.length());
+        return true;
+    } while (false);
+
+
+    //
+    // No optimization found, generate from meaning-accessible representation.
+    //
+
+    if (_implPtr->_prefixLength != 0)
+        throw std::runtime_error("TS packet v2 generator: Can't fill in nor generate prefix bytes");
+
+    return generate(packetNode->data, &bytesNode->data, errorMessage);
+
+    // TODO: Store for later re-use!
 }
 
 
