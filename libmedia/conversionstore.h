@@ -23,7 +23,28 @@ template <typename T> struct ConversionNode;
 
 struct ConversionEdgeBase
 {
+    using keyValueMetadata_type = QMap<QString, QString>;
+
+    keyValueMetadata_type  keyValueMetadata;
+
+
     virtual ~ConversionEdgeBase() { }  // Ensure we have a vtable.
+
+
+    bool matchesKeyValueMetadata(const keyValueMetadata_type &otherKVMetadata)
+    {
+        const keyValueMetadata_type::const_iterator iterEnd = otherKVMetadata.cend();
+        for (keyValueMetadata_type::const_iterator iter = otherKVMetadata.cbegin();
+             iter != iterEnd; ++iter)
+        {
+            const QString theirValue = iter.value();
+            const QString ourValue = keyValueMetadata.value(iter.key());
+            if (ourValue != theirValue)
+                return false;
+        }
+
+        return true;
+    }
 };
 
 template <typename Source>
@@ -121,7 +142,9 @@ struct ConversionNode
 
 
     template <typename ...Result>
-    QList<QSharedPointer<ConversionEdge<data_type, Result...>>> findEdgesOutByResults() const
+    QList<QSharedPointer<ConversionEdge<data_type, Result...>>> findEdgesOutByResults(
+        ConversionEdgeBase::keyValueMetadata_type edgeKeyValueMetadata = ConversionEdgeBase::keyValueMetadata_type()
+        ) const
     {
         QList<QSharedPointer<ConversionEdge<data_type, Result...>>> ret;
 
@@ -135,6 +158,9 @@ struct ConversionNode
             if (!edgeResults_ptr)
                 continue;
 
+            if (!edgeResults_ptr->matchesKeyValueMetadata(edgeKeyValueMetadata))
+                continue;
+
             ret.append(edgeResults_ptr);
         }
 
@@ -142,7 +168,9 @@ struct ConversionNode
     }
 
     template <typename Source>
-    QList<QSharedPointer<ConversionEdgeKnownSource<Source>>> findEdgesInBySource() const
+    QList<QSharedPointer<ConversionEdgeKnownSource<Source>>> findEdgesInBySource(
+        ConversionEdgeBase::keyValueMetadata_type edgeKeyValueMetadata = ConversionEdgeBase::keyValueMetadata_type()
+        ) const
     {
         QList<QSharedPointer<ConversionEdgeKnownSource<Source>>> ret;
 
@@ -155,6 +183,9 @@ struct ConversionNode
             if (!edgeSource_ptr)
                 continue;
 
+            if (!edgeSource_ptr->matchesKeyValueMetadata(edgeKeyValueMetadata))
+                continue;
+
             ret.append(edgeSource_ptr);
         }
 
@@ -162,16 +193,18 @@ struct ConversionNode
     }
 
     template <typename Other>
-    QList<QSharedPointer<ConversionNode<Other>>> findOtherFormat() const
+    QList<QSharedPointer<ConversionNode<Other>>> findOtherFormat(
+        ConversionEdgeBase::keyValueMetadata_type edgeKeyValueMetadata = ConversionEdgeBase::keyValueMetadata_type()
+        ) const
     {
         QList<QSharedPointer<ConversionNode<Other>>> ret;
 
-        const auto results = findEdgesOutByResults<Other>();
+        const auto results = findEdgesOutByResults<Other>(edgeKeyValueMetadata);
         for (const QSharedPointer<ConversionEdge<data_type, Other>> &edge_ptr : results) {
             ret.append(std::get<0>(edge_ptr->results_ptrs));
         }
 
-        const auto sources = findEdgesInBySource<Other>();
+        const auto sources = findEdgesInBySource<Other>(edgeKeyValueMetadata);
         for (const QSharedPointer<ConversionEdgeKnownSource<Other>> &edge_ptr : sources) {
             ret.append(edge_ptr->source_ptr);
         }
