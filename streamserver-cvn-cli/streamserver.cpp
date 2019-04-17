@@ -465,8 +465,8 @@ void StreamServer::processInput()
         auto packetNode = QSharedPointer<ConversionNode<TS::PacketV2>>::create();
         QString errmsg;
         TS::PacketV2Parser parser;
-        if (_tsPacketSize > 0)
-            parser.setPrefixLength(_tsPacketSize - TS::PacketV2::sizeBasic);
+        if (readSize > 0)
+            parser.setPrefixLength(readSize - TS::PacketV2::sizeBasic);
         parser.parse(packetBytesNode, packetNode, &errmsg);
         TS::PacketV2 &packet(packetNode->data);
 #endif
