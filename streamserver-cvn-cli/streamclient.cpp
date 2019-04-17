@@ -104,7 +104,11 @@ void StreamClient::setTSStripAdditionalInfo(bool strip)
     _tsStripAdditionalInfo = strip;
 }
 
+#ifndef TS_PACKET_V2
 void StreamClient::queuePacket(const TSPacket &packet)
+#else
+void StreamClient::queuePacket(const QSharedPointer<ConversionNode<TS::PacketV2>> &packetNode)
+#endif
 {
     if (!_forwardPackets) {
         if (verbose >= 2)
@@ -116,9 +120,16 @@ void StreamClient::queuePacket(const TSPacket &packet)
     if (verbose >= 2)
         qDebug() << qPrintable(_logPrefix) << "Queueing packet";
     if (verbose >= 3)
-        qDebug() << qPrintable(_logPrefix) << "Packet data:" << packet.bytes();
+        qDebug() << qPrintable(_logPrefix) << "Packet data:"
+#ifndef TS_PACKET_V2
+                 << packet.bytes();
 
     _queue.append(packet);
+#else
+                 << packetNode->data;
+
+    _queue.append(packetNode);
+#endif
 }
 
 void StreamClient::sendData()
@@ -159,10 +170,30 @@ void StreamClient::sendData()
     while (!_sendBuf.isEmpty() || !_queue.isEmpty()) {
         // Fill send buffer up to 1KiB.
         while (!_queue.isEmpty()) {
+#ifndef TS_PACKET_V2
             const TSPacket &packet(_queue.front());
             const QByteArray bytes = _tsStripAdditionalInfo ?
                 packet.toBasicPacketBytes() :
                 packet.bytes();
+#else
+            QSharedPointer<ConversionNode<TS::PacketV2>> packetNode = _queue.front();
+            TS::PacketV2Generator generator;
+            qint64 tsPacketSize = parentServer()->tsPacketSize();
+            if (tsPacketSize > 0)
+                generator.setPrefixLength(tsPacketSize - TS::PacketV2::sizeBasic);
+            if (_tsStripAdditionalInfo)
+                generator.setPrefixLength(0);
+            auto bytesNode = QSharedPointer<ConversionNode<QByteArray>>::create();
+            QString errMsg;
+            if (!generator.generate(packetNode, bytesNode, &errMsg)) {
+                if (verbose >= 1)
+                    qInfo() << qPrintable(_logPrefix) << "Packet generation error, discarding packet:" << errMsg;
+
+                _queue.pop_front();
+                continue;
+            }
+            const QByteArray &bytes(bytesNode->data);
+#endif
             if (!(_sendBuf.length() + bytes.length() <= 1024))
                 break;
 
