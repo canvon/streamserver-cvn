@@ -164,8 +164,8 @@ public:
 
     bool generate(const PacketV2 &packet, QByteArray *bytes, QString *errorMessage = nullptr);
     bool generate(
-        const QSharedPointer<ConversionNode<PacketV2>> &packetNode,
-        const QSharedPointer<ConversionNode<QByteArray>> &bytesNode,
+        const QSharedPointer<ConversionNode<PacketV2>> &packetNode_ptr,
+        QSharedPointer<ConversionNode<QByteArray>> *bytesNode_ptr_ptr,
         QString *errorMessage = nullptr);
 };
 

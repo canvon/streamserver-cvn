@@ -701,15 +701,15 @@ bool PacketV2Generator::generate(const PacketV2 &packet, QByteArray *bytes, QStr
 }
 
 bool PacketV2Generator::generate(
-    const QSharedPointer<ConversionNode<PacketV2>> &packetNode,
-    const QSharedPointer<ConversionNode<QByteArray>> &bytesNode,
+    const QSharedPointer<ConversionNode<PacketV2>> &packetNode_ptr,
+    QSharedPointer<ConversionNode<QByteArray>> *bytesNode_ptr_ptr,
     QString *errorMessage)
 {
-    if (!packetNode)
-        throw std::invalid_argument("TS packet v2 generator: Packet node can't be null");
+    if (!packetNode_ptr)
+        throw std::invalid_argument("TS packet v2 generator: Packet node pointer can't be null");
 
-    if (!bytesNode)
-        throw std::invalid_argument("TS packet v2 generator: Bytes node can't be null");
+    if (!bytesNode_ptr_ptr)
+        throw std::invalid_argument("TS packet v2 generator: Pointer to bytes node pointer can't be null");
 
 
     //
@@ -720,9 +720,9 @@ bool PacketV2Generator::generate(
     edgeKeyValueMetadata.insert(packetPrefixLengthKey, QString::number(_implPtr->_prefixLength));
 
     // Direct correspondence?
-    const auto bytesNodes_ptrs = packetNode->findOtherFormat<QByteArray>(edgeKeyValueMetadata);
+    const auto bytesNodes_ptrs = packetNode_ptr->findOtherFormat<QByteArray>(edgeKeyValueMetadata);
     if (!bytesNodes_ptrs.isEmpty()) {
-        bytesNode->data = bytesNodes_ptrs.first()->data;
+        *bytesNode_ptr_ptr = bytesNodes_ptrs.first();
         return true;
     }
 
@@ -731,7 +731,7 @@ bool PacketV2Generator::generate(
         if (_implPtr->_prefixLength != 0)
             break;
 
-        const auto prefixBytesBase = packetNode->adataMap.value(packetPrefixBytesKey);
+        const auto prefixBytesBase = packetNode_ptr->adataMap.value(packetPrefixBytesKey);
         if (!prefixBytesBase)
             break;
         const auto prefixBytes = prefixBytesBase.dynamicCast<ConversionNode<PacketV2>::AncillaryData<QByteArray>>();
@@ -739,7 +739,7 @@ bool PacketV2Generator::generate(
             break;
         const QByteArray &prefixBytesDirect(prefixBytes->adata);
 
-        const auto sourceBytesList = packetNode->findEdgesInBySource<QByteArray>();
+        const auto sourceBytesList = packetNode_ptr->findEdgesInBySource<QByteArray>();
         if (sourceBytesList.isEmpty())
             break;
 
@@ -748,7 +748,10 @@ bool PacketV2Generator::generate(
             break;
 
         const QByteArray &sourceBytesDirect(sourceBytes_ptr->data);
-        bytesNode->data = sourceBytesDirect.mid(prefixBytesDirect.length());
+        *bytesNode_ptr_ptr = QSharedPointer<ConversionNode<QByteArray>>::create(
+            sourceBytesDirect.mid(prefixBytesDirect.length()));
+        auto edge_ptr = conversionNodeAddEdge(packetNode_ptr, std::make_tuple(*bytesNode_ptr_ptr));
+        edge_ptr->mergeKeyValueMetadata(edgeKeyValueMetadata);
         return true;
     } while (false);
 
@@ -760,9 +763,16 @@ bool PacketV2Generator::generate(
     if (_implPtr->_prefixLength != 0)
         throw std::runtime_error("TS packet v2 generator: Can't fill in nor generate prefix bytes");
 
-    return generate(packetNode->data, &bytesNode->data, errorMessage);
+    *bytesNode_ptr_ptr = QSharedPointer<ConversionNode<QByteArray>>::create();
+    const bool success = generate(packetNode_ptr->data, &(*bytesNode_ptr_ptr)->data, errorMessage);
 
-    // TODO: Store for later re-use!
+    // Store for later re-use.
+    if (success) {
+        auto edge_ptr = conversionNodeAddEdge(packetNode_ptr, std::make_tuple(*bytesNode_ptr_ptr));
+        edge_ptr->mergeKeyValueMetadata(edgeKeyValueMetadata);
+    }
+
+    return success;
 }
 
 

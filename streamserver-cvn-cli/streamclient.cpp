@@ -183,9 +183,9 @@ void StreamClient::sendData()
                 generator.setPrefixLength(tsPacketSize - TS::PacketV2::sizeBasic);
             if (_tsStripAdditionalInfo)
                 generator.setPrefixLength(0);
-            auto bytesNode = QSharedPointer<ConversionNode<QByteArray>>::create();
+            QSharedPointer<ConversionNode<QByteArray>> bytesNode;
             QString errMsg;
-            if (!generator.generate(packetNode, bytesNode, &errMsg)) {
+            if (!generator.generate(packetNode, &bytesNode, &errMsg)) {
                 if (verbose >= 1)
                     qInfo() << qPrintable(_logPrefix) << "Packet generation error, discarding packet:" << errMsg;
 

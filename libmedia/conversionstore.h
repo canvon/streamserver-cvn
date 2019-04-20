@@ -33,6 +33,16 @@ struct ConversionEdgeBase
 
         return true;
     }
+
+    void mergeKeyValueMetadata(const keyValueMetadata_type &additionalKVMetadata)
+    {
+        const keyValueMetadata_type::const_iterator iterEnd = additionalKVMetadata.cend();
+        for (keyValueMetadata_type::const_iterator iter = additionalKVMetadata.cbegin();
+             iter != iterEnd; ++iter)
+        {
+            keyValueMetadata.insert(iter.key(), iter.value());
+        }
+    }
 };
 
 template <typename Source>

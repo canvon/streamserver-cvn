@@ -102,9 +102,9 @@ int Writer::queueTSPacket(const QSharedPointer<ConversionNode<Packet>> &packetNo
     return queueTSPacket(packetNode->data);
 #else
     PacketV2Generator &generator(_implPtr->_tsGenerator);
-    auto bytesNode = QSharedPointer<ConversionNode<QByteArray>>::create();
+    QSharedPointer<ConversionNode<QByteArray>> bytesNode;
     QString errMsg;
-    if (!generator.generate(packetNode, bytesNode, &errMsg))
+    if (!generator.generate(packetNode, &bytesNode, &errMsg))
         throw static_cast<std::runtime_error>(ExceptionBuilder() << "TS writer: Error converting packet to bytes:" << errMsg);
 
     return _implPtr->queueBytes(bytesNode->data);
