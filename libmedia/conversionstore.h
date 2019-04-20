@@ -7,18 +7,6 @@
 #include <tuple>
 
 
-template <typename Source, typename Result>
-struct Upconvert
-{
-    using source_type = Source;
-    using result_type = Result;
-
-    const source_type  source;
-    result_type        result;
-    bool               success = false;
-};
-
-
 template <typename T> struct ConversionNode;
 
 struct ConversionEdgeBase

@@ -140,7 +140,6 @@ public:
     void setPrefixLength(int len);
 
     bool parse(const QByteArray &bytes, PacketV2 *packet, QString *errorMessage = nullptr);
-    void parse(Upconvert<QByteArray, PacketV2> *upconvert, QString *errorMessage = nullptr);
     bool parse(
         const QSharedPointer<ConversionNode<QByteArray>> &bytesNode,
         const QSharedPointer<ConversionNode<PacketV2>> &packetNode,

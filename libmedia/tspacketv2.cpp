@@ -403,14 +403,6 @@ bool PacketV2Parser::parse(const QByteArray &bytes, PacketV2 *packet, QString *e
     return _implPtr->parsePacket(&state);
 }
 
-void PacketV2Parser::parse(Upconvert<QByteArray, PacketV2> *upconvert, QString *errorMessage)
-{
-    if (!upconvert)
-        throw std::invalid_argument("TS packet v2 parser: Conversion store can't be null");
-
-    upconvert->success = parse(upconvert->source, &upconvert->result, errorMessage);
-}
-
 bool PacketV2Parser::parse(
     const QSharedPointer<ConversionNode<QByteArray>> &bytesNode,
     const QSharedPointer<ConversionNode<PacketV2>> &packetNode,

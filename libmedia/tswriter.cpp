@@ -86,26 +86,6 @@ void Writer::setTSStripAdditionalInfo(bool strip)
 }
 #endif
 
-int Writer::queueTSPacket(const Upconvert<QByteArray, Packet> &packetUpconvert)
-{
-    if (tsStripAdditionalInfo() && packetUpconvert.source.length()
-#ifndef TS_PACKET_V2
-            != TSPacket::lengthBasic)
-    {
-        return queueTSPacket(packetUpconvert.result);
-#else
-            != PacketV2::sizeBasic)
-    {
-        // FIXME: Implement!
-        throw std::runtime_error("TS writer: Can't queue packet: Strip additional info is not implemented, yet!");
-#endif
-    }
-    else {
-        // Optimize re-generation from the parsed data away.
-        return _implPtr->queueBytes(packetUpconvert.source);
-    }
-}
-
 int Writer::queueTSPacket(const QSharedPointer<ConversionNode<Packet>> &packetNode)
 {
 #ifndef TS_PACKET_V2

@@ -38,7 +38,6 @@ signals:
     void errorEncountered(QString errorMessage);
 
 public slots:
-    int queueTSPacket(const Upconvert<QByteArray, Packet> &packetUpconvert);
     int queueTSPacket(const QSharedPointer<ConversionNode<Packet>> &packetNode);
     int queueTSPacket(const Packet &packet);
     void writeData();
