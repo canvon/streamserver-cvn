@@ -162,7 +162,6 @@ void Reader::readData()
         QString errMsg;
         const bool success = _implPtr->_tsParserPtr->parse(bytesNode_ptr, packetNode_ptr, &errMsg);
 #endif
-        const int packetLen = buf.length();
         buf.clear();
         _implPtr->_tsPacketCount++;
 
@@ -179,7 +178,7 @@ void Reader::readData()
 
         emit tsPacketReady(packetNode_ptr);
 
-        _implPtr->_tsPacketOffset += packetLen;
+        _implPtr->_tsPacketOffset += bytesNode_ptr->data.length();
     } while (true);
 }
 
