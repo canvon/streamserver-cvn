@@ -422,10 +422,11 @@ bool PacketV2Parser::parse(
     ConversionEdgeBase::keyValueMetadata_type edgeKeyValueMetadata;
     edgeKeyValueMetadata.insert(packetPrefixLengthKey, QString::number(_implPtr->_prefixLength));
 
-    const auto packetNodes_ptrs = bytesNode_ptr->findOtherFormat<PacketV2>(edgeKeyValueMetadata);
-    if (!packetNodes_ptrs.isEmpty()) {
-        *packetNode_ptr_ptr = packetNodes_ptrs.first();
-        return true;
+    const auto packetNodeElements = bytesNode_ptr->findOtherFormat<PacketV2>(edgeKeyValueMetadata);
+    if (!packetNodeElements.isEmpty()) {
+        auto &packetNodeElement(packetNodeElements.first());
+        *packetNode_ptr_ptr = packetNodeElement.node;
+        return packetNodeElement.success;
     }
 
 
@@ -441,8 +442,9 @@ bool PacketV2Parser::parse(
 
     const bool success = parse(bytesNode_ptr->data, &packetNode_ptr->data, errorMessage);
 
-    auto edge = conversionNodeAddEdge(bytesNode_ptr, std::make_tuple(packetNode_ptr));
-    edge->mergeKeyValueMetadata(edgeKeyValueMetadata);
+    auto edge_ptr = conversionNodeAddEdge(bytesNode_ptr, std::make_tuple(packetNode_ptr));
+    edge_ptr->mergeKeyValueMetadata(edgeKeyValueMetadata);
+    edge_ptr->setSuccess(success);
 
     return success;
 }
@@ -742,10 +744,11 @@ bool PacketV2Generator::generate(
     edgeKeyValueMetadata.insert(packetPrefixLengthKey, QString::number(_implPtr->_prefixLength));
 
     // Direct correspondence?
-    const auto bytesNodes_ptrs = packetNode_ptr->findOtherFormat<QByteArray>(edgeKeyValueMetadata);
-    if (!bytesNodes_ptrs.isEmpty()) {
-        *bytesNode_ptr_ptr = bytesNodes_ptrs.first();
-        return true;
+    const auto bytesNodeElements = packetNode_ptr->findOtherFormat<QByteArray>(edgeKeyValueMetadata);
+    if (!bytesNodeElements.isEmpty()) {
+        auto &bytesNodeElement(bytesNodeElements.first());
+        *bytesNode_ptr_ptr = bytesNodeElement.node;
+        return bytesNodeElement.success;
     }
 
     // Can we simply cut the prefix off if requested?
@@ -774,6 +777,7 @@ bool PacketV2Generator::generate(
             sourceBytesDirect.mid(prefixBytesDirect.length()));
         auto edge_ptr = conversionNodeAddEdge(packetNode_ptr, std::make_tuple(*bytesNode_ptr_ptr));
         edge_ptr->mergeKeyValueMetadata(edgeKeyValueMetadata);
+        edge_ptr->setSuccess(true);
         return true;
     } while (false);
 
@@ -789,10 +793,9 @@ bool PacketV2Generator::generate(
     const bool success = generate(packetNode_ptr->data, &(*bytesNode_ptr_ptr)->data, errorMessage);
 
     // Store for later re-use.
-    if (success) {
-        auto edge_ptr = conversionNodeAddEdge(packetNode_ptr, std::make_tuple(*bytesNode_ptr_ptr));
-        edge_ptr->mergeKeyValueMetadata(edgeKeyValueMetadata);
-    }
+    auto edge_ptr = conversionNodeAddEdge(packetNode_ptr, std::make_tuple(*bytesNode_ptr_ptr));
+    edge_ptr->mergeKeyValueMetadata(edgeKeyValueMetadata);
+    edge_ptr->setSuccess(success);
 
     return success;
 }

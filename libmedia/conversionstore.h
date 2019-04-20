@@ -7,6 +7,9 @@
 #include <tuple>
 
 
+const static QString conversionSuccessKey = "success";
+
+
 template <typename T> struct ConversionNode;
 
 struct ConversionEdgeBase
@@ -42,6 +45,20 @@ struct ConversionEdgeBase
         {
             keyValueMetadata.insert(iter.key(), iter.value());
         }
+    }
+
+    bool wasSuccess() const
+    {
+        bool success = false, ok = false;
+        int successInt = keyValueMetadata.value(conversionSuccessKey, "0").toInt(&ok);
+        if (ok && successInt)
+            success = true;
+        return success;
+    }
+
+    void setSuccess(bool success)
+    {
+        keyValueMetadata.insert(conversionSuccessKey, QString::number(success));
     }
 };
 
@@ -191,20 +208,29 @@ struct ConversionNode
     }
 
     template <typename Other>
-    QList<QSharedPointer<ConversionNode<Other>>> findOtherFormat(
+    struct FindOtherFormatElement
+    {
+        QSharedPointer<ConversionNode<Other>>  node;
+        bool                                   success;
+    };
+
+    template <typename Other>
+    QList<FindOtherFormatElement<Other>> findOtherFormat(
         ConversionEdgeBase::keyValueMetadata_type edgeKeyValueMetadata = ConversionEdgeBase::keyValueMetadata_type()
         ) const
     {
-        QList<QSharedPointer<ConversionNode<Other>>> ret;
+        QList<FindOtherFormatElement<Other>> ret;
 
         const auto results = findEdgesOutByResults<Other>(edgeKeyValueMetadata);
         for (const QSharedPointer<ConversionEdge<data_type, Other>> &edge_ptr : results) {
-            ret.append(std::get<0>(edge_ptr->results_ptrs));
+            // Re-use success of stored conversion.
+            ret.append({ std::get<0>(edge_ptr->results_ptrs), edge_ptr->wasSuccess() });
         }
 
         const auto sources = findEdgesInBySource<Other>(edgeKeyValueMetadata);
         for (const QSharedPointer<ConversionEdgeKnownSource<Other>> &edge_ptr : sources) {
-            ret.append(edge_ptr->source_ptr);
+            // Going back to original data is always a success.
+            ret.append({ edge_ptr->source_ptr, true });
         }
 
         return ret;

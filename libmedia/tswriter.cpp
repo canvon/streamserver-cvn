@@ -89,12 +89,11 @@ void Writer::setTSStripAdditionalInfo(bool strip)
 int Writer::queueTSPacket(const QSharedPointer<ConversionNode<Packet>> &packetNode)
 {
 #ifndef TS_PACKET_V2
-    const auto bytesNodes_ptrs = packetNode->findOtherFormat<QByteArray>();
-    for (const QSharedPointer<ConversionNode<QByteArray>> &bytesNode_ptr : bytesNodes_ptrs) {
-        if (!_implPtr->_tsStripAdditionalInfo || bytesNode_ptr->data.length()
-                == TSPacket::lengthBasic)
+    const auto bytesNodeElements = packetNode->findOtherFormat<QByteArray>();
+    for (const auto &bytesNodeElement : bytesNodeElements) {
+        if (!_implPtr->_tsStripAdditionalInfo || bytesNodeElement.node->data.length() == TSPacket::lengthBasic)
         {
-            return _implPtr->queueBytes(bytesNode_ptr->data);
+            return _implPtr->queueBytes(bytesNodeElement.node->data);
         }
     }
 
