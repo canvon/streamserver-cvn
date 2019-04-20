@@ -22,7 +22,7 @@ class WriterImpl {
 #ifndef TS_PACKET_V2
     bool                              _tsStripAdditionalInfo = false;
 #else
-    PacketV2Generator                 _generator;
+    PacketV2Generator                 _tsGenerator;
 #endif
     friend Writer;
 
@@ -69,20 +69,20 @@ void Writer::setTSStripAdditionalInfo(bool strip)
     _implPtr->_tsStripAdditionalInfo = strip;
 }
 #else
-PacketV2Generator &Writer::generator() const
+PacketV2Generator &Writer::tsGenerator() const
 {
-    return _implPtr->_generator;
+    return _implPtr->_tsGenerator;
 }
 
 bool Writer::tsStripAdditionalInfo() const
 {
-    return _implPtr->_generator.prefixLength() == 0;
+    return _implPtr->_tsGenerator.prefixLength() == 0;
 }
 
 void Writer::setTSStripAdditionalInfo(bool strip)
 {
     if (strip)
-        _implPtr->_generator.setPrefixLength(0);
+        _implPtr->_tsGenerator.setPrefixLength(0);
 }
 #endif
 
@@ -101,7 +101,7 @@ int Writer::queueTSPacket(const QSharedPointer<ConversionNode<Packet>> &packetNo
     // No optimization found, generate from meaning-accessible representation.
     return queueTSPacket(packetNode->data);
 #else
-    PacketV2Generator &generator(_implPtr->_generator);
+    PacketV2Generator &generator(_implPtr->_tsGenerator);
     auto bytesNode = QSharedPointer<ConversionNode<QByteArray>>::create();
     QString errMsg;
     if (!generator.generate(packetNode, bytesNode, &errMsg))
@@ -119,7 +119,7 @@ int Writer::queueTSPacket(const Packet &packet)
         packet.bytes()
     );
 #else
-    PacketV2Generator &generator(_implPtr->_generator);
+    PacketV2Generator &generator(_implPtr->_tsGenerator);
     QByteArray bytes;
     QString errMsg;
     if (generator.generate(packet, &bytes, &errMsg))

@@ -28,7 +28,7 @@ public:
     ~Writer();
 
 #ifdef TS_PACKET_V2
-    PacketV2Generator &generator() const;
+    PacketV2Generator &tsGenerator() const;
 #endif
 
     bool tsStripAdditionalInfo() const;

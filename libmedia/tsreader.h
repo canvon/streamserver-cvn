@@ -34,7 +34,7 @@ public:
     ~Reader();
 
 #ifdef TS_PACKET_V2
-    PacketV2Parser *parser() const;
+    PacketV2Parser &tsParser() const;
 #endif
     qint64 tsPacketSize() const;
     void setTSPacketSize(qint64 size);

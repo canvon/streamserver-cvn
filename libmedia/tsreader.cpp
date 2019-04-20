@@ -25,7 +25,7 @@ class ReaderImpl {
         = TSPacket::lengthBasic;
 #else
         = PacketV2::sizeBasic;
-    std::unique_ptr<PacketV2Parser>   _tsParserPtr;
+    PacketV2Parser                    _tsParser;
 #endif
     qint64                            _tsPacketOffset = 0;
     qint64                            _tsPacketCount  = 0;
@@ -36,9 +36,6 @@ class ReaderImpl {
 
 public:
     explicit ReaderImpl(QIODevice *dev) : _devPtr(dev)
-#ifdef TS_PACKET_V2
-        , _tsParserPtr(std::make_unique<PacketV2Parser>())
-#endif
     {
 
     }
@@ -70,9 +67,9 @@ Reader::~Reader()
 }
 
 #ifdef TS_PACKET_V2
-PacketV2Parser *Reader::parser() const
+PacketV2Parser &Reader::tsParser() const
 {
-    return _implPtr->_tsParserPtr.get();
+    return _implPtr->_tsParser;
 }
 #endif
 
@@ -92,7 +89,7 @@ void Reader::setTSPacketSize(qint64 size)
 
     _implPtr->_tsPacketSize = size;
 #ifdef TS_PACKET_V2
-    _implPtr->_tsParserPtr->setPrefixLength(size - PacketV2::sizeBasic);
+    _implPtr->_tsParser.setPrefixLength(size - PacketV2::sizeBasic);
 #endif
 }
 
@@ -160,7 +157,7 @@ void Reader::readData()
 #else
         auto packetNode_ptr = QSharedPointer<ConversionNode<PacketV2>>::create();
         QString errMsg;
-        const bool success = _implPtr->_tsParserPtr->parse(bytesNode_ptr, packetNode_ptr, &errMsg);
+        const bool success = _implPtr->_tsParser.parse(bytesNode_ptr, packetNode_ptr, &errMsg);
 #endif
         buf.clear();
         _implPtr->_tsPacketCount++;

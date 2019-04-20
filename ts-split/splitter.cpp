@@ -506,7 +506,7 @@ void SplitterImpl::startOutputRequest(Splitter::Output *outRequest, Splitter *th
 
 #ifdef TS_PACKET_V2
         // (Avoid accidental cut-off of prefix bytes during splitting operation.)
-        writer_ptr->generator().setPrefixLength(_tsReaderPtr->parser()->prefixLength());
+        writer_ptr->tsGenerator().setPrefixLength(_tsReaderPtr->tsParser().prefixLength());
 #endif
     }
 }
