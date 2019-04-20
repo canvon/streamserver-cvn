@@ -226,11 +226,6 @@ struct SetupEdgeIn
         return *this;
     }
 };
-
-#if 0
-template <typename T, typename U>
-const T &constT(const T &t) { return t; }
-#endif
 }  // namespace detail
 
 template <typename Source, typename ...Result>
@@ -246,7 +241,6 @@ conversionNodeAddEdge(
     source_ptr->edgesOut.append(edge_ptr);
 
     // Set up in-edges.
-    //std::tuple<detail::SetupEdgeIn<decltype(edge_ptr), Result>...> setup(detail::constT<decltype(edge_ptr), Result>(edge_ptr)...);
     auto setup = std::make_tuple(detail::SetupEdgeIn<decltype(edge_ptr), Result>(&edge_ptr)...);
     setup = results_ptrs;
 
