@@ -141,8 +141,8 @@ public:
 
     bool parse(const QByteArray &bytes, PacketV2 *packet, QString *errorMessage = nullptr);
     bool parse(
-        const QSharedPointer<ConversionNode<QByteArray>> &bytesNode,
-        const QSharedPointer<ConversionNode<PacketV2>> &packetNode,
+        const QSharedPointer<ConversionNode<QByteArray>> &bytesNode_ptr,
+        QSharedPointer<ConversionNode<PacketV2>> *packetNode_ptr_ptr,
         QString *errorMessage = nullptr);
 };
 

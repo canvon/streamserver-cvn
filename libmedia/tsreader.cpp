@@ -155,15 +155,15 @@ void Reader::readData()
         const bool success = errMsg.isNull();
         conversionNodeAddEdge(bytesNode_ptr, std::make_tuple(packetNode_ptr));
 #else
-        auto packetNode_ptr = QSharedPointer<ConversionNode<PacketV2>>::create();
+        QSharedPointer<ConversionNode<PacketV2>> packetNode_ptr;
         QString errMsg;
-        const bool success = _implPtr->_tsParser.parse(bytesNode_ptr, packetNode_ptr, &errMsg);
+        const bool success = _implPtr->_tsParser.parse(bytesNode_ptr, &packetNode_ptr, &errMsg);
 #endif
         buf.clear();
         _implPtr->_tsPacketCount++;
 
         double pcrPrev = pcrLast();
-        if (_implPtr->checkIsDiscontinuity(packetNode_ptr->data)) {
+        if (packetNode_ptr && _implPtr->checkIsDiscontinuity(packetNode_ptr->data)) {
             _implPtr->_discontSegment++;
 
             emit discontEncountered(pcrPrev);
@@ -173,7 +173,8 @@ void Reader::readData()
             emit errorEncountered(ErrorKind::TS, errMsg);
         }
 
-        emit tsPacketReady(packetNode_ptr);
+        if (packetNode_ptr)
+            emit tsPacketReady(packetNode_ptr);
 
         _implPtr->_tsPacketOffset += bytesNode_ptr->data.length();
     } while (true);

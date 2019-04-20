@@ -404,23 +404,45 @@ bool PacketV2Parser::parse(const QByteArray &bytes, PacketV2 *packet, QString *e
 }
 
 bool PacketV2Parser::parse(
-    const QSharedPointer<ConversionNode<QByteArray>> &bytesNode,
-    const QSharedPointer<ConversionNode<PacketV2>> &packetNode,
+    const QSharedPointer<ConversionNode<QByteArray>> &bytesNode_ptr,
+    QSharedPointer<ConversionNode<PacketV2>> *packetNode_ptr_ptr,
     QString *errorMessage)
 {
-    if (!bytesNode)
-        throw std::invalid_argument("TS packet v2 parser: Bytes node can't be null");
+    if (!bytesNode_ptr)
+        throw std::invalid_argument("TS packet v2 parser: Bytes node pointer can't be null");
 
-    if (!packetNode)
-        throw std::invalid_argument("TS packet v2 parser: Packet node can't be null");
+    if (!packetNode_ptr_ptr)
+        throw std::invalid_argument("TS packet v2 parser: Pointer to packet node pointer can't be null");
 
-    const QByteArray bytesPrefix = bytesNode->data.left(_implPtr->_prefixLength);
-    packetNode->addAdata(packetPrefixBytesKey, bytesPrefix);
 
-    const bool success = parse(bytesNode->data, &packetNode->data, errorMessage);
+    //
+    // Search for an optimization...
+    //
 
-    auto edge = conversionNodeAddEdge(bytesNode, std::make_tuple(packetNode));
-    edge->keyValueMetadata.insert(packetPrefixLengthKey, QString::number(_implPtr->_prefixLength));
+    ConversionEdgeBase::keyValueMetadata_type edgeKeyValueMetadata;
+    edgeKeyValueMetadata.insert(packetPrefixLengthKey, QString::number(_implPtr->_prefixLength));
+
+    const auto packetNodes_ptrs = bytesNode_ptr->findOtherFormat<PacketV2>(edgeKeyValueMetadata);
+    if (!packetNodes_ptrs.isEmpty()) {
+        *packetNode_ptr_ptr = packetNodes_ptrs.first();
+        return true;
+    }
+
+
+    //
+    // No optimization found, actually parse the bytes.
+    //
+
+    auto packetNode_ptr = QSharedPointer<ConversionNode<PacketV2>>::create();
+    *packetNode_ptr_ptr = packetNode_ptr;  // (This could be delayed until success, but maybe the caller is interested in a partial result as well.)
+
+    const QByteArray bytesPrefix = bytesNode_ptr->data.left(_implPtr->_prefixLength);
+    packetNode_ptr->addAdata(packetPrefixBytesKey, bytesPrefix);
+
+    const bool success = parse(bytesNode_ptr->data, &packetNode_ptr->data, errorMessage);
+
+    auto edge = conversionNodeAddEdge(bytesNode_ptr, std::make_tuple(packetNode_ptr));
+    edge->mergeKeyValueMetadata(edgeKeyValueMetadata);
 
     return success;
 }

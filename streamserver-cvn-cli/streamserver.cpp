@@ -462,12 +462,17 @@ void StreamServer::processInput()
         const QString &errmsg(packet.errorMessage());
 #else
         auto packetBytesNode = QSharedPointer<ConversionNode<QByteArray>>::create(packetBytes);
-        auto packetNode = QSharedPointer<ConversionNode<TS::PacketV2>>::create();
+        QSharedPointer<ConversionNode<TS::PacketV2>> packetNode;
         QString errmsg;
         TS::PacketV2Parser parser;
         if (readSize > 0)
             parser.setPrefixLength(readSize - TS::PacketV2::sizeBasic);
-        parser.parse(packetBytesNode, packetNode, &errmsg);
+        parser.parse(packetBytesNode, &packetNode, &errmsg);
+        if (!packetNode) {
+            if (verbose >= 0)
+                qWarning() << "TS packet parsing didn't yield a packet node, skipping bytes...";
+            return;
+        }
         TS::PacketV2 &packet(packetNode->data);
 #endif
         if (verbose >= 3)
