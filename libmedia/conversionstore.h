@@ -74,14 +74,15 @@ struct ConversionEdgeKnownSource : public ConversionEdgeBase
     source_node_ptr_type  source_ptr;
 };
 
-template <typename Source, typename ...Result>
+template <typename Source, typename Result>
 struct ConversionEdge : public ConversionEdgeKnownSource<Source>
 {
-    using results_nodes_ptrs_tuple_type
-        = std::tuple<QSharedPointer<ConversionNode<Result>>...>;
+    using result_type = Result;
+    using result_node_type = ConversionNode<result_type>;
+    using result_node_ptr_type = QSharedPointer<result_node_type>;
 
     using ConversionEdgeKnownSource<Source>::source_ptr;
-    results_nodes_ptrs_tuple_type  results_ptrs;
+    result_node_ptr_type  result_ptr;
 
 
     virtual void clear() override
@@ -109,9 +110,8 @@ struct ConversionEdge : public ConversionEdgeKnownSource<Source>
             }
         } while (false);
 
-        // FIXME: Either adjust to work on every entry in the results tuple, or cease taking more than one result template arguments!
         // Clear pointer which is this edge's outgoing strong reference.
-        std::get<0>(results_ptrs).clear();
+        result_ptr.clear();
     }
 };
 
@@ -206,20 +206,20 @@ struct ConversionNode
         }
     }
 
-    template <typename ...Result>
-    QList<QSharedPointer<ConversionEdge<data_type, Result...>>> findEdgesOutByResults(
+    template <typename Result>
+    QList<QSharedPointer<ConversionEdge<data_type, Result>>> findEdgesOutByResults(
         ConversionEdgeBase::keyValueMetadata_type edgeKeyValueMetadata = ConversionEdgeBase::keyValueMetadata_type()
         ) const
     {
-        QList<QSharedPointer<ConversionEdge<data_type, Result...>>> ret;
+        QList<QSharedPointer<ConversionEdge<data_type, Result>>> ret;
 
         for (const QSharedPointer<ConversionEdgeKnownSource<data_type>> &edge_ptr : edgesOut) {
             if (!edge_ptr)
                 continue;
 
             // (The former gave a syntactic error on Debian 9 / GCC g++ 6.3 ...)
-            //auto edgeResults_ptr = edge_ptr.dynamicCast<ConversionEdge<data_type, Result...>>();
-            auto edgeResults_ptr = edge_ptr.template dynamicCast<ConversionEdge<data_type, Result...>>();
+            //auto edgeResults_ptr = edge_ptr.dynamicCast<ConversionEdge<data_type, Result>>();
+            auto edgeResults_ptr = edge_ptr.template dynamicCast<ConversionEdge<data_type, Result>>();
             if (!edgeResults_ptr)
                 continue;
 
@@ -274,7 +274,7 @@ struct ConversionNode
         const auto results = findEdgesOutByResults<Other>(edgeKeyValueMetadata);
         for (const QSharedPointer<ConversionEdge<data_type, Other>> &edge_ptr : results) {
             // Re-use success of stored conversion.
-            ret.append({ std::get<0>(edge_ptr->results_ptrs), edge_ptr->wasSuccess() });
+            ret.append({ edge_ptr->result_ptr, edge_ptr->wasSuccess() });
         }
 
         const auto sources = findEdgesInBySource<Other>(edgeKeyValueMetadata);
@@ -287,36 +287,18 @@ struct ConversionNode
     }
 };
 
-namespace detail {
-template <typename EdgePtr, typename Result>
-struct SetupEdgeIn
-{
-    EdgePtr *edge_ptr_ptr;
-
-    SetupEdgeIn(EdgePtr *edge_ptr_ptr) : edge_ptr_ptr(edge_ptr_ptr) { }
-
-    SetupEdgeIn &operator=(const QSharedPointer<ConversionNode<Result>> &oneResult) {
-        oneResult->edgesIn.append(*edge_ptr_ptr);
-        return *this;
-    }
-};
-}  // namespace detail
-
-template <typename Source, typename ...Result>
-QSharedPointer<ConversionEdge<Source, Result...>>
+template <typename Source, typename Result>
+QSharedPointer<ConversionEdge<Source, Result>>
 conversionNodeAddEdge(
     QSharedPointer<ConversionNode<Source>> source_ptr,
-    std::tuple<QSharedPointer<ConversionNode<Result>>...> results_ptrs)
+    QSharedPointer<ConversionNode<Result>> result_ptr)
 {
-    auto edge_ptr = QSharedPointer<ConversionEdge<Source, Result...>>::create();
+    auto edge_ptr = QSharedPointer<ConversionEdge<Source, Result>>::create();
     edge_ptr->source_ptr = source_ptr;
-    edge_ptr->results_ptrs = results_ptrs;
+    edge_ptr->result_ptr = result_ptr;
 
     source_ptr->edgesOut.append(edge_ptr);
-
-    // Set up in-edges.
-    auto setup = std::make_tuple(detail::SetupEdgeIn<decltype(edge_ptr), Result>(&edge_ptr)...);
-    setup = results_ptrs;
+    result_ptr->edgesIn.append(edge_ptr);
 
     return edge_ptr;
 }

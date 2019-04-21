@@ -153,7 +153,7 @@ void Reader::readData()
         auto packetNode_ptr = QSharedPointer<ConversionNode<TSPacket>>::create(bytesNode_ptr->data);
         const QString errMsg = packetNode_ptr->data.errorMessage();
         const bool success = errMsg.isNull();
-        conversionNodeAddEdge(bytesNode_ptr, std::make_tuple(packetNode_ptr));
+        conversionNodeAddEdge(bytesNode_ptr, packetNode_ptr);
 #else
         QSharedPointer<ConversionNode<PacketV2>> packetNode_ptr;
         QString errMsg;

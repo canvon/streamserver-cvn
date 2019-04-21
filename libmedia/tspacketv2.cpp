@@ -442,7 +442,7 @@ bool PacketV2Parser::parse(
 
     const bool success = parse(bytesNode_ptr->data, &packetNode_ptr->data, errorMessage);
 
-    auto edge_ptr = conversionNodeAddEdge(bytesNode_ptr, std::make_tuple(packetNode_ptr));
+    auto edge_ptr = conversionNodeAddEdge(bytesNode_ptr, packetNode_ptr);
     edge_ptr->mergeKeyValueMetadata(edgeKeyValueMetadata);
     edge_ptr->setSuccess(success);
 
@@ -775,7 +775,7 @@ bool PacketV2Generator::generate(
         const QByteArray &sourceBytesDirect(sourceBytes_ptr->data);
         *bytesNode_ptr_ptr = QSharedPointer<ConversionNode<QByteArray>>::create(
             sourceBytesDirect.mid(prefixBytesDirect.length()));
-        auto edge_ptr = conversionNodeAddEdge(packetNode_ptr, std::make_tuple(*bytesNode_ptr_ptr));
+        auto edge_ptr = conversionNodeAddEdge(packetNode_ptr, *bytesNode_ptr_ptr);
         edge_ptr->mergeKeyValueMetadata(edgeKeyValueMetadata);
         edge_ptr->setSuccess(true);
         return true;
@@ -793,7 +793,7 @@ bool PacketV2Generator::generate(
     const bool success = generate(packetNode_ptr->data, &(*bytesNode_ptr_ptr)->data, errorMessage);
 
     // Store for later re-use.
-    auto edge_ptr = conversionNodeAddEdge(packetNode_ptr, std::make_tuple(*bytesNode_ptr_ptr));
+    auto edge_ptr = conversionNodeAddEdge(packetNode_ptr, *bytesNode_ptr_ptr);
     edge_ptr->mergeKeyValueMetadata(edgeKeyValueMetadata);
     edge_ptr->setSuccess(success);
 
