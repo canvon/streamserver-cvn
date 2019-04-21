@@ -162,6 +162,9 @@ void StreamClient::queuePacket(const QSharedPointer<ConversionNode<TS::PacketV2>
 
 void StreamClient::sendData()
 {
+    // Need to wrap entire function into try-catch block, as we might be called via Qt event loop, and Qt doesn't like / recover from exceptions.
+    try {
+
     if (verbose >= 2)
         qDebug() << qPrintable(_logPrefix) << "Begin send data";
 
@@ -260,6 +263,25 @@ void StreamClient::sendData()
 
     if (verbose >= 2)
         qDebug() << qPrintable(_logPrefix) << "Finish send data";
+
+    // End of try block.
+    }
+    catch (const std::exception &ex) {
+        if (verbose >= 0) {
+            qWarning().nospace()
+                << qPrintable(_logPrefix) << " "
+                << "Sending data: Got exception: " << ex.what();
+        }
+
+        // Otherwise, ignore... (Or what else could we do? Drop the client? Drop the first packet in the queue?)
+
+        // Let's try to drop the first packet. (So hopefully we won't loop on this forever.)
+        if (!_queue.isEmpty()) {
+            if (verbose >= 1)
+                qInfo() << qPrintable(_logPrefix) << "Sending data: Dropping one outgoing packet...";
+            _queue.removeFirst();
+        }
+    }
 }
 
 void StreamClient::processRequest()
