@@ -10,7 +10,9 @@
 #include <QDebug>
 #include <QCoreApplication>
 
+// (Note: As of 2019-04-17, we need both old and new packet defined...)
 #include "tspacket.h"
+#include "tspacketv2.h"
 #include "humanreadable.h"
 #include "log.h"
 
@@ -455,13 +457,29 @@ void StreamServer::processInput()
 
     // Actually process the read data.
     try {
+#ifndef TS_PACKET_V2
         TSPacket packet(packetBytes);
+        const QString &errmsg(packet.errorMessage());
+        const bool success = errmsg.isNull();
+#else
+        auto packetBytesNode = QSharedPointer<ConversionNode<QByteArray>>::create(packetBytes);
+        QSharedPointer<ConversionNode<TS::PacketV2>> packetNode;
+        QString errmsg;
+        if (readSize > 0)
+            _tsParser.setPrefixLength(readSize - TS::PacketV2::sizeBasic);
+        const bool success = _tsParser.parse(packetBytesNode, &packetNode, &errmsg);
+        if (!packetNode) {
+            if (verbose >= 0)
+                qWarning() << "TS packet parsing didn't yield a packet node, skipping bytes...";
+            return;
+        }
+        TS::PacketV2 &packet(packetNode->data);
+#endif
         if (verbose >= 3)
             qInfo() << "TS packet contents:" << packet;
-        const QString &errmsg(packet.errorMessage());
-        if (verbose >= 0 && !errmsg.isNull())
+        if (verbose >= 0 && !success)
             qWarning() << "TS packet error:" << qPrintable(errmsg);
-        if (!errmsg.isNull()) {
+        if (!success) {
             if (++_inputConsecutiveErrorCount >= 16 && _tsPacketAutosize) {
                 if (_tsPacketSize > 0) {
                     qWarning() << "Got" << _inputConsecutiveErrorCount << "consecutive errors, trying to re-sync and re-detect TS packet size...";
@@ -537,10 +555,17 @@ void StreamServer::processInput()
             }
         }
 
+#ifndef TS_PACKET_V2
         auto af = packet.adaptationField();
         bool afModified = false;
         if (af && af->PCRFlag() && af->PCR()) {
             double pcr = af->PCR()->toSecs();
+#else
+        auto &af(packet.adaptationField);
+        bool afModified = false;
+        if (af.pcrFlag) {
+            double pcr = af.programClockReference.toSecs();
+#endif
             if (!_openRealTimeValid) {
                 _openRealTime = timenow() - pcr;
                 _openRealTimeValid = true;
@@ -551,14 +576,23 @@ void StreamServer::processInput()
             double dt = (pcr - _lastPacketTime) - (now - _lastRealTime);
             if (_lastPacketTime + 1 < pcr || pcr < _lastPacketTime) {
                 // Discontinuity, just keep sending.
+#ifndef TS_PACKET_V2
                 bool discontinuityBefore = af->discontinuityIndicator();
                 af->setDiscontinuityIndicator(true);
+#else
+                bool discontinuityBefore = af.discontinuityIndicator.value;
+                af.discontinuityIndicator.value = true;
+#endif
                 afModified = true;
                 if (verbose >= 0) {
                     qInfo().nospace()
                         << "Discontinuity detected; Discontinuity Indicator was "
                         << discontinuityBefore << ", now set to "
+#ifndef TS_PACKET_V2
                         << af->discontinuityIndicator();
+#else
+                        << af.discontinuityIndicator.value;
+#endif
                 }
                 _openRealTime = timenow() - pcr;
                 if (verbose >= 0)
@@ -583,17 +617,28 @@ void StreamServer::processInput()
             _lastPacketTime = pcr;
             _lastRealTime = timenow() - _openRealTime;
         }
-        if (afModified)
+        if (afModified) {
+#ifndef TS_PACKET_V2
             packet.updateAdaptationfieldBytes();
+#else
+            // Try to force a re-generation on next send.
+            packetNode->clearEdges();
+#endif
+        }
 
         for (auto client : _clients) {
             try {
+#ifndef TS_PACKET_V2
                 client->queuePacket(packet);
+#else
+                client->queuePacket(packetNode);
+#endif
                 client->sendData();
             }
             catch (std::exception &ex) {
-                qWarning() << qPrintable(client->logPrefix())
-                           << "Error sending TS packet to client" << client->id() << ":" << QString(ex.what());
+                qWarning().nospace()
+                    << qPrintable(client->logPrefix()) << " "
+                    << "Error sending TS packet to client " << client->id() << ": " << QString(ex.what());
                 continue;
             }
         }

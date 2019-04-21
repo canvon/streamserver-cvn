@@ -3,10 +3,14 @@
 
 #include <QObject>
 
+#include "conversionstore.h"
+#ifndef TS_PACKET_V2
+#include "tspacket.h"
+#else
+#include "tspacketv2.h"
+#endif
 #include <memory>
 #include <QIODevice>
-
-class TSPacket;
 
 namespace TS {
 
@@ -29,6 +33,9 @@ public:
     explicit Reader(QIODevice *dev, QObject *parent = 0);
     ~Reader();
 
+#ifdef TS_PACKET_V2
+    PacketV2Parser &tsParser() const;
+#endif
     qint64 tsPacketSize() const;
     void setTSPacketSize(qint64 size);
     qint64 tsPacketOffset() const;
@@ -37,7 +44,7 @@ public:
     double pcrLast() const;
 
 signals:
-    void tsPacketReady(const TSPacket &packet);
+    void tsPacketReady(const QSharedPointer<ConversionNode<Packet>> &packetNode);
     void discontEncountered(double pcrPrev);
     void eofEncountered();
     void errorEncountered(ErrorKind errorKind, QString errorMessage);

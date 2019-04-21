@@ -1,6 +1,10 @@
 #include "splitter.h"
 
+#ifndef TS_PACKET_V2
 #include "tspacket.h"
+#else
+#include "tspacketv2.h"
+#endif
 #include "tsreader.h"
 #include "tswriter.h"
 #include "log.h"
@@ -358,8 +362,10 @@ void Splitter::openInput(QFile *inputFile)
     handleSegmentStarts();
 }
 
-void Splitter::handleTSPacketReady(const TSPacket &packet)
+void Splitter::handleTSPacketReady(const QSharedPointer<ConversionNode<TS::Packet>> &packetNode)
 {
+    const TS::Packet &packet(packetNode->data);
+
     const QString logPrefix = _implPtr->logPrefix();
 
     TS::Reader &reader(*_implPtr->_tsReaderPtr);
@@ -444,12 +450,12 @@ void Splitter::handleTSPacketReady(const TSPacket &packet)
                    qPrintable(outputFile.fileName()));
         }
 
-        writerPtr->queueTSPacket(packet);
+        const int bytesQueued = writerPtr->queueTSPacket(packetNode);
         writerPtr->writeData();
 
         switch (result.length.lenKind) {
         case LengthKind::Bytes:
-            result.length.lenBytes += packet.bytes().length();
+            result.length.lenBytes += bytesQueued;
             break;
         case LengthKind::Packets:
             result.length.lenPackets++;
@@ -495,8 +501,13 @@ void SplitterImpl::startOutputRequest(Splitter::Output *outRequest, Splitter *th
                    qPrintable(outputFile.errorString()));
         }
 
-        _outputWriters.insert(&outputFile,
-            std::make_shared<TS::Writer>(&outputFile, that));
+        auto writer_ptr = std::make_shared<TS::Writer>(&outputFile, that);
+        _outputWriters.insert(&outputFile, writer_ptr);
+
+#ifdef TS_PACKET_V2
+        // (Avoid accidental cut-off of prefix bytes during splitting operation.)
+        writer_ptr->tsGenerator().setPrefixLength(_tsReaderPtr->tsParser().prefixLength());
+#endif
     }
 }
 

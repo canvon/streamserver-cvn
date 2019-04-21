@@ -14,6 +14,8 @@ TEMPLATE = lib
 
 DEFINES += LIBMEDIA_LIBRARY
 
+include(../config.pri)
+
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which as been marked as deprecated (the exact warnings
 # depend on your compiler). Please consult the documentation of the
@@ -27,11 +29,16 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
     tspacket.cpp \
+    tspacketv2.cpp \
     tsreader.cpp \
     tswriter.cpp
 
 HEADERS += libmedia_global.h \
+    conversionstore.h \
+    tsprimitive.h \
     tspacket.h \
+    tspacketv2.h \
+    tspacket_compat.h \
     tsreader.h \
     tswriter.h
 

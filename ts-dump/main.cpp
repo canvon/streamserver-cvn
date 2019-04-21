@@ -1,6 +1,10 @@
 #include <QCoreApplication>
 
+#ifndef TS_PACKET_V2
 #include "tspacket.h"
+#else
+#include "tspacketv2.h"
+#endif
 
 #include <QCommandLineParser>
 #include <QDebug>
@@ -15,14 +19,22 @@ int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
     int ret = 0;
+    int verbose = 0;
     bool doOffset = false;
-    qint64 tsPacketSize = TSPacket::lengthBasic;
+    qint64 tsPacketSize
+#ifndef TS_PACKET_V2
+        = TSPacket::lengthBasic;
+#else
+        = TS::PacketV2::sizeBasic;
+#endif
 
     QCommandLineParser parser;
     parser.setApplicationDescription("Dump MPEG-TS packet contents");
     parser.addHelpOption();
     parser.addPositionalArgument("FILE", "File to parse as MPEG-TS stream", "FILE [...]");
     parser.addOptions({
+        { { "v", "verbose" }, "Increase verbose level" },
+        { { "q", "quiet"   }, "Decrease verbose level" },
         { "offset",
           "Output file offset of TS packet" },
         { { "s", "ts-packet-size" },
@@ -30,6 +42,14 @@ int main(int argc, char *argv[])
           "SIZE" },
     });
     parser.process(a);
+
+    // Apply incremental options.
+    for (QString opt : parser.optionNames()) {
+        if (opt == "v" || opt == "verbose")
+            verbose++;
+        else if (opt == "q" || opt == "quiet")
+            verbose--;
+    }
 
     // offset
     if (parser.isSet("offset"))
@@ -58,6 +78,12 @@ int main(int argc, char *argv[])
                << endl;
         return 2;
     }
+
+#ifdef TS_PACKET_V2
+    TS::PacketV2Parser tsParser;
+    if (tsPacketSize != TS::PacketV2::sizeBasic)
+        tsParser.setPrefixLength(tsPacketSize - TS::PacketV2::sizeBasic);
+#endif
 
     for (QString arg : args) {
         QString fileName = arg;
@@ -112,18 +138,26 @@ int main(int argc, char *argv[])
                 break;
             }
 
-            TSPacket packet(buf);
+#ifndef TS_PACKET_V2
+            const TSPacket packet(buf);
+            const QString errMsg = packet.errorMessage();
+            const bool success = errMsg.isEmpty();
+#else
+            TS::PacketV2 packet;
+            QString errMsg;
+            const bool success = tsParser.parse(buf, &packet, &errMsg);
+#endif
             if (doOffset)
                 out << "count=" << ++tsPacketCount << " ";
 
-            QString outStr;
-            QDebug(&outStr) << packet;
-            out << outStr << endl;
-
-            QString errMsg = packet.errorMessage();
-            if (!errMsg.isEmpty()) {
-                out << "^ TS packet error: " << errMsg << endl;
+            if (verbose >= 0) {
+                QString outStr;
+                QDebug(&outStr) << packet;
+                out << outStr << endl;
             }
+
+            if (!success)
+                out << "^ TS packet error: " << errMsg << endl;
 
             if (doOffset)
                 offset += buf.length();

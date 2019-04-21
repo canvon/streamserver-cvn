@@ -31,6 +31,9 @@ class StreamServer : public QObject
     qint64                  _tsPacketSize = 0;  // Request immediate automatic detection.
     bool                    _tsPacketAutosize = true;
     bool                    _tsStripAdditionalInfoDefault = true;
+#ifdef TS_PACKET_V2
+    TS::PacketV2Parser      _tsParser;
+#endif
     bool                    _openRealTimeValid = false;
     double                  _openRealTime = 0;
     double                  _lastRealTime = 0;

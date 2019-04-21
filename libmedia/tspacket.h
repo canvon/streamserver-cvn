@@ -5,6 +5,7 @@
 
 #include <QObject>
 
+#include "tspacket_compat.h"
 #include <memory>
 #include <QByteArray>
 #include <QDebug>

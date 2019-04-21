@@ -1,38 +1,25 @@
-QT += core network
-QT -= gui
+#-------------------------------------------------
+#
+# Project created by QtCreator 2018-03-11T16:19:23
+#
+#-------------------------------------------------
+
+QT       += testlib
+
+QT       -= gui
 
 CONFIG += c++14
 
-TARGET = streamserver-cvn-cli
-CONFIG += console
-CONFIG -= app_bundle
+TARGET = tst_tsparsertest
+CONFIG   += console
+CONFIG   -= app_bundle
 
 TEMPLATE = app
 
-SOURCES += main.cpp \
-    streamserver.cpp \
-    streamclient.cpp \
-    httprequest.cpp \
-    httpreply.cpp \
-    httpheader.cpp
-
-HEADERS += \
-    streamserver.h \
-    streamclient.h \
-    httprequest.h \
-    httpreply.h \
-    httpheader.h
-
 include(../config.pri)
 
-CONFIG(debug, debug|release) {
-    message("Building with debug messages")
-} else {
-    DEFINES += QT_NO_DEBUG_OUTPUT
-}
-
 # The following define makes your compiler emit warnings if you use
-# any feature of Qt which as been marked deprecated (the exact warnings
+# any feature of Qt which as been marked as deprecated (the exact warnings
 # depend on your compiler). Please consult the documentation of the
 # deprecated API in order to know how to port your code away from it.
 DEFINES += QT_DEPRECATED_WARNINGS
@@ -42,12 +29,17 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
-# Link against internal library libinfra.
+
+SOURCES += tst_tsparsertest.cpp
+DEFINES += SRCDIR=\\\"$$PWD/\\\"
+
+
+# Link against libinfra.
 win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../libinfra/release/ -linfra
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../libinfra/debug/ -linfra
 else:unix: LIBS += -L$$OUT_PWD/../libinfra/ -linfra
 
-# Link against internal library libmedia.
+# Link against libmedia.
 win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../libmedia/release/ -lmedia
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../libmedia/debug/ -lmedia
 else:unix: LIBS += -L$$OUT_PWD/../libmedia/ -lmedia

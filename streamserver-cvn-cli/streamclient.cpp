@@ -102,9 +102,41 @@ void StreamClient::setTSStripAdditionalInfo(bool strip)
     if (verbose >= 2)
         qInfo() << qPrintable(_logPrefix) << "Changing TS strip additional info from" << _tsStripAdditionalInfo << "to" << strip;
     _tsStripAdditionalInfo = strip;
+#ifdef TS_PACKET_V2
+    if (_tsStripAdditionalInfo) {
+        _tsGenerator.setPrefixLength(0);
+    }
+    else {
+        const StreamServer *const server = parentServer();
+        if (!server)
+            throw std::runtime_error("StreamClient set TS strip additional info: Can't get TS packet size from StreamServer: Server missing");
+
+        const qint64 tsPacketSize = server->tsPacketSize();
+        if (tsPacketSize == 0)
+            _tsGenerator.setPrefixLength(0);
+        else
+            _tsGenerator.setPrefixLength(tsPacketSize - TS::PacketV2::sizeBasic);
+    }
+#endif
 }
 
+#ifdef TS_PACKET_V2
+TS::PacketV2Generator &StreamClient::tsGenerator()
+{
+    return _tsGenerator;
+}
+
+const TS::PacketV2Generator &StreamClient::tsGenerator() const
+{
+    return _tsGenerator;
+}
+#endif
+
+#ifndef TS_PACKET_V2
 void StreamClient::queuePacket(const TSPacket &packet)
+#else
+void StreamClient::queuePacket(const QSharedPointer<ConversionNode<TS::PacketV2>> &packetNode)
+#endif
 {
     if (!_forwardPackets) {
         if (verbose >= 2)
@@ -116,13 +148,23 @@ void StreamClient::queuePacket(const TSPacket &packet)
     if (verbose >= 2)
         qDebug() << qPrintable(_logPrefix) << "Queueing packet";
     if (verbose >= 3)
-        qDebug() << qPrintable(_logPrefix) << "Packet data:" << packet.bytes();
+        qDebug() << qPrintable(_logPrefix) << "Packet data:"
+#ifndef TS_PACKET_V2
+                 << packet.bytes();
 
     _queue.append(packet);
+#else
+                 << packetNode->data;
+
+    _queue.append(packetNode);
+#endif
 }
 
 void StreamClient::sendData()
 {
+    // Need to wrap entire function into try-catch block, as we might be called via Qt event loop, and Qt doesn't like / recover from exceptions.
+    try {
+
     if (verbose >= 2)
         qDebug() << qPrintable(_logPrefix) << "Begin send data";
 
@@ -159,10 +201,24 @@ void StreamClient::sendData()
     while (!_sendBuf.isEmpty() || !_queue.isEmpty()) {
         // Fill send buffer up to 1KiB.
         while (!_queue.isEmpty()) {
+#ifndef TS_PACKET_V2
             const TSPacket &packet(_queue.front());
             const QByteArray bytes = _tsStripAdditionalInfo ?
                 packet.toBasicPacketBytes() :
                 packet.bytes();
+#else
+            QSharedPointer<ConversionNode<TS::PacketV2>> packetNode = _queue.front();
+            QSharedPointer<ConversionNode<QByteArray>> bytesNode;
+            QString errMsg;
+            if (!_tsGenerator.generate(packetNode, &bytesNode, &errMsg)) {
+                if (verbose >= 1)
+                    qInfo() << qPrintable(_logPrefix) << "Packet generation error, discarding packet:" << errMsg;
+
+                _queue.pop_front();
+                continue;
+            }
+            const QByteArray &bytes(bytesNode->data);
+#endif
             if (!(_sendBuf.length() + bytes.length() <= 1024))
                 break;
 
@@ -207,6 +263,25 @@ void StreamClient::sendData()
 
     if (verbose >= 2)
         qDebug() << qPrintable(_logPrefix) << "Finish send data";
+
+    // End of try block.
+    }
+    catch (const std::exception &ex) {
+        if (verbose >= 0) {
+            qWarning().nospace()
+                << qPrintable(_logPrefix) << " "
+                << "Sending data: Got exception: " << ex.what();
+        }
+
+        // Otherwise, ignore... (Or what else could we do? Drop the client? Drop the first packet in the queue?)
+
+        // Let's try to drop the first packet. (So hopefully we won't loop on this forever.)
+        if (!_queue.isEmpty()) {
+            if (verbose >= 1)
+                qInfo() << qPrintable(_logPrefix) << "Sending data: Dropping one outgoing packet...";
+            _queue.removeFirst();
+        }
+    }
 }
 
 void StreamClient::processRequest()

@@ -14,7 +14,11 @@
 
 #include "httprequest.h"
 #include "httpreply.h"
+#ifndef TS_PACKET_V2
 #include "tspacket.h"
+#else
+#include "tspacketv2.h"
+#endif
 
 class StreamServer;
 
@@ -38,7 +42,12 @@ private:
     bool                         _replyHeaderSent = false;
     bool                         _forwardPackets = false;
     bool                         _tsStripAdditionalInfo = true;
+#ifndef TS_PACKET_V2
     QList<TSPacket>              _queue;
+#else
+    TS::PacketV2Generator        _tsGenerator;
+    QList<QSharedPointer<ConversionNode<TS::PacketV2>>>  _queue;
+#endif
     QByteArray                   _sendBuf;
 
 public:
@@ -59,8 +68,16 @@ public:
 
     bool tsStripAdditionalInfo() const;
     void setTSStripAdditionalInfo(bool strip);
+#ifdef TS_PACKET_V2
+    TS::PacketV2Generator &tsGenerator();
+    const TS::PacketV2Generator &tsGenerator() const;
+#endif
 
+#ifndef TS_PACKET_V2
     void queuePacket(const TSPacket &packet);
+#else
+    void queuePacket(const QSharedPointer<ConversionNode<TS::PacketV2>> &packetNode);
+#endif
     void sendData();
     void processRequest();
 
