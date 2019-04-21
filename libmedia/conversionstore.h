@@ -12,7 +12,7 @@ const static QString conversionSuccessKey = "success";
 
 template <typename T> struct ConversionNode;
 
-struct ConversionEdgeBase
+struct ConversionEdgeBase : public QEnableSharedFromThis<ConversionEdgeBase>
 {
     using keyValueMetadata_type = QMap<QString, QString>;
 
@@ -87,7 +87,9 @@ struct ConversionEdge : public ConversionEdgeKnownSource<Source>
 
     virtual void clear() override
     {
-        QSharedPointer<ConversionEdgeKnownSource<Source>> keepAlive;
+        // Delay our own destruction until leaving this function.
+        auto keepAlive = this->sharedFromThis();
+
         do {
             auto source_strongPtr = source_ptr.toStrongRef();
             if (!source_strongPtr)
@@ -101,10 +103,6 @@ struct ConversionEdge : public ConversionEdgeKnownSource<Source>
             for (int i = sourceEdgesOut.length() - 1; i >= 0; --i) {
                 const auto &edge_ptr(sourceEdgesOut.at(i));
                 if (edge_ptr.data() == this) {
-                    // Delay our own destruction until leaving this function.
-                    if (!keepAlive)
-                        keepAlive = edge_ptr;
-
                     sourceEdgesOut.removeAt(i);
                 }
             }
@@ -116,7 +114,7 @@ struct ConversionEdge : public ConversionEdgeKnownSource<Source>
 };
 
 template <typename Data>
-struct ConversionNode
+struct ConversionNode : public QEnableSharedFromThis<ConversionNode<Data>>
 {
     using data_type = Data;
 
@@ -192,6 +190,9 @@ struct ConversionNode
 
     void clearEdges()
     {
+        // Delay our own destruction until leaving this function.
+        auto keepAlive = this->sharedFromThis();
+
         // Out-edges are weak pointers on the other side, so we can simply drop them.
         edgesOut.clear();
 
