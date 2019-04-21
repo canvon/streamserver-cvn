@@ -460,6 +460,7 @@ void StreamServer::processInput()
 #ifndef TS_PACKET_V2
         TSPacket packet(packetBytes);
         const QString &errmsg(packet.errorMessage());
+        const bool success = errmsg.isNull();
 #else
         auto packetBytesNode = QSharedPointer<ConversionNode<QByteArray>>::create(packetBytes);
         QSharedPointer<ConversionNode<TS::PacketV2>> packetNode;
@@ -467,7 +468,7 @@ void StreamServer::processInput()
         TS::PacketV2Parser parser;
         if (readSize > 0)
             parser.setPrefixLength(readSize - TS::PacketV2::sizeBasic);
-        parser.parse(packetBytesNode, &packetNode, &errmsg);
+        const bool success = parser.parse(packetBytesNode, &packetNode, &errmsg);
         if (!packetNode) {
             if (verbose >= 0)
                 qWarning() << "TS packet parsing didn't yield a packet node, skipping bytes...";
@@ -477,9 +478,9 @@ void StreamServer::processInput()
 #endif
         if (verbose >= 3)
             qInfo() << "TS packet contents:" << packet;
-        if (verbose >= 0 && !errmsg.isNull())
+        if (verbose >= 0 && !success)
             qWarning() << "TS packet error:" << qPrintable(errmsg);
-        if (!errmsg.isNull()) {
+        if (!success) {
             if (++_inputConsecutiveErrorCount >= 16 && _tsPacketAutosize) {
                 if (_tsPacketSize > 0) {
                     qWarning() << "Got" << _inputConsecutiveErrorCount << "consecutive errors, trying to re-sync and re-detect TS packet size...";
