@@ -345,7 +345,7 @@ inline BitStream &operator<<(BitStream &bitSink, const uimsbf<StreamBitSize, Wor
 {
     for (size_t workingBitsLeft = inUIMSBF.working_bit_size; workingBitsLeft > 0; --workingBitsLeft) {
         const size_t workingBitIndex = workingBitsLeft - 1;
-        const WorkingType mask = 1u << workingBitIndex;
+        const WorkingType mask = static_cast<WorkingType>(1u) << workingBitIndex;
         const bool bit = inUIMSBF.value & mask;
 
         if (workingBitsLeft > inUIMSBF.stream_bit_size) {
@@ -372,7 +372,7 @@ inline BitStream &operator<<(BitStream &bitSink, const tcimsbf<StreamBitSize, Wo
     bool signBit;
     for (size_t workingBitsLeft = inTCIMSBF.working_bit_size; workingBitsLeft > 0; --workingBitsLeft) {
         const size_t workingBitIndex = workingBitsLeft - 1;
-        const WorkingType mask = 1u << workingBitIndex;
+        const WorkingType mask = static_cast<WorkingType>(1u) << workingBitIndex;
         const bool bit = inTCIMSBF.value & mask;
 
         if (workingBitsLeft == inTCIMSBF.working_bit_size) {
