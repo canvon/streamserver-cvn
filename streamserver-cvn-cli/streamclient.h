@@ -45,6 +45,7 @@ private:
 #ifndef TS_PACKET_V2
     QList<TSPacket>              _queue;
 #else
+    TS::PacketV2Generator        _tsGenerator;
     QList<QSharedPointer<ConversionNode<TS::PacketV2>>>  _queue;
 #endif
     QByteArray                   _sendBuf;
@@ -67,6 +68,10 @@ public:
 
     bool tsStripAdditionalInfo() const;
     void setTSStripAdditionalInfo(bool strip);
+#ifdef TS_PACKET_V2
+    TS::PacketV2Generator &tsGenerator();
+    const TS::PacketV2Generator &tsGenerator() const;
+#endif
 
 #ifndef TS_PACKET_V2
     void queuePacket(const TSPacket &packet);

@@ -102,7 +102,35 @@ void StreamClient::setTSStripAdditionalInfo(bool strip)
     if (verbose >= 2)
         qInfo() << qPrintable(_logPrefix) << "Changing TS strip additional info from" << _tsStripAdditionalInfo << "to" << strip;
     _tsStripAdditionalInfo = strip;
+#ifdef TS_PACKET_V2
+    if (_tsStripAdditionalInfo) {
+        _tsGenerator.setPrefixLength(0);
+    }
+    else {
+        const StreamServer *const server = parentServer();
+        if (!server)
+            throw std::runtime_error("StreamClient set TS strip additional info: Can't get TS packet size from StreamServer: Server missing");
+
+        const qint64 tsPacketSize = server->tsPacketSize();
+        if (tsPacketSize == 0)
+            _tsGenerator.setPrefixLength(0);
+        else
+            _tsGenerator.setPrefixLength(tsPacketSize - TS::PacketV2::sizeBasic);
+    }
+#endif
 }
+
+#ifdef TS_PACKET_V2
+TS::PacketV2Generator &StreamClient::tsGenerator()
+{
+    return _tsGenerator;
+}
+
+const TS::PacketV2Generator &StreamClient::tsGenerator() const
+{
+    return _tsGenerator;
+}
+#endif
 
 #ifndef TS_PACKET_V2
 void StreamClient::queuePacket(const TSPacket &packet)
@@ -177,15 +205,9 @@ void StreamClient::sendData()
                 packet.bytes();
 #else
             QSharedPointer<ConversionNode<TS::PacketV2>> packetNode = _queue.front();
-            TS::PacketV2Generator generator;
-            qint64 tsPacketSize = parentServer()->tsPacketSize();
-            if (tsPacketSize > 0)
-                generator.setPrefixLength(tsPacketSize - TS::PacketV2::sizeBasic);
-            if (_tsStripAdditionalInfo)
-                generator.setPrefixLength(0);
             QSharedPointer<ConversionNode<QByteArray>> bytesNode;
             QString errMsg;
-            if (!generator.generate(packetNode, &bytesNode, &errMsg)) {
+            if (!_tsGenerator.generate(packetNode, &bytesNode, &errMsg)) {
                 if (verbose >= 1)
                     qInfo() << qPrintable(_logPrefix) << "Packet generation error, discarding packet:" << errMsg;
 
