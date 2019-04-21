@@ -143,7 +143,7 @@ struct ConversionNode
         adata_type  adata;
 
 
-        AncillaryData(const QString &key, const AData &adata) :
+        AncillaryData(const QString &key, const adata_type &adata) :
             AncillaryDataBase(key), adata(adata)
         {
 
