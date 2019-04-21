@@ -622,8 +622,7 @@ void StreamServer::processInput()
             packet.updateAdaptationfieldBytes();
 #else
             // Try to force a re-generation on next send.
-            packetNode->edgesIn.clear();
-            packetNode->edgesOut.clear();
+            packetNode->clearEdges();
 #endif
         }
 

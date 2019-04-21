@@ -22,6 +22,8 @@ struct ConversionEdgeBase
     virtual ~ConversionEdgeBase() { }  // Ensure we have a vtable.
 
 
+    virtual void clear() = 0;
+
     bool matchesKeyValueMetadata(const keyValueMetadata_type &otherKVMetadata)
     {
         const keyValueMetadata_type::const_iterator iterEnd = otherKVMetadata.cend();
@@ -78,7 +80,39 @@ struct ConversionEdge : public ConversionEdgeKnownSource<Source>
     using results_nodes_ptrs_tuple_type
         = std::tuple<QSharedPointer<ConversionNode<Result>>...>;
 
+    using ConversionEdgeKnownSource<Source>::source_ptr;
     results_nodes_ptrs_tuple_type  results_ptrs;
+
+
+    virtual void clear() override
+    {
+        QSharedPointer<ConversionEdgeKnownSource<Source>> keepAlive;
+        do {
+            auto source_strongPtr = source_ptr.toStrongRef();
+            if (!source_strongPtr)
+                break;
+
+            auto &sourceEdgesOut(source_strongPtr->edgesOut);
+            if (sourceEdgesOut.isEmpty())
+                break;
+
+            // Remove strong reference to this edge.
+            for (int i = sourceEdgesOut.length() - 1; i >= 0; --i) {
+                const auto &edge_ptr(sourceEdgesOut.at(i));
+                if (edge_ptr.data() == this) {
+                    // Delay our own destruction until leaving this function.
+                    if (!keepAlive)
+                        keepAlive = edge_ptr;
+
+                    sourceEdgesOut.removeAt(i);
+                }
+            }
+        } while (false);
+
+        // FIXME: Either adjust to work on every entry in the results tuple, or cease taking more than one result template arguments!
+        // Clear pointer which is this edge's outgoing strong reference.
+        std::get<0>(results_ptrs).clear();
+    }
 };
 
 template <typename Data>
@@ -155,6 +189,22 @@ struct ConversionNode
 
     }
 
+
+    void clearEdges()
+    {
+        // Out-edges are weak pointers on the other side, so we can simply drop them.
+        edgesOut.clear();
+
+        // In-edges will be kept alive from the other side and would continue to point at us.
+        if (!edgesIn.isEmpty()) {
+            for (int i = edgesIn.length() - 1; i >= 0; --i) {
+                auto edge_ptr = edgesIn.at(i).toStrongRef();
+                if (edge_ptr)
+                    edge_ptr->clear();
+                edgesIn.removeAt(i);
+            }
+        }
+    }
 
     template <typename ...Result>
     QList<QSharedPointer<ConversionEdge<data_type, Result...>>> findEdgesOutByResults(
