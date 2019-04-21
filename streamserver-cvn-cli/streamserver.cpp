@@ -636,8 +636,9 @@ void StreamServer::processInput()
                 client->sendData();
             }
             catch (std::exception &ex) {
-                qWarning() << qPrintable(client->logPrefix())
-                           << "Error sending TS packet to client" << client->id() << ":" << QString(ex.what());
+                qWarning().nospace()
+                    << qPrintable(client->logPrefix()) << " "
+                    << "Error sending TS packet to client " << client->id() << ": " << QString(ex.what());
                 continue;
             }
         }
