@@ -38,6 +38,7 @@ public:
 
     }
 
+    QString positionString() const;
     qint64 tsPacketSizeEffective() const;
 #ifdef TS_PACKET_V2
     bool checkIsReady();
@@ -67,6 +68,11 @@ Reader::Reader(QIODevice *dev, QObject *parent) :
 Reader::~Reader()
 {
 
+}
+
+const QString Reader::positionString() const
+{
+    return _implPtr->positionString();
 }
 
 #ifdef TS_PACKET_V2
@@ -221,6 +227,26 @@ bool Reader::drainBuffer()
 
     _implPtr->_tsPacketOffset += bytesNode_ptr->data.length();
     return true;
+}
+
+QString impl::ReaderImpl::positionString() const
+{
+    QString pos;
+    {
+        QDebug debug(&pos);
+        debug.nospace();
+        debug << "[offset=" << _tsPacketOffset;
+
+        const auto packetCount = _tsPacketCount;
+        if (packetCount >= 1)
+            debug << ", pkg=" << packetCount;
+        else
+            debug << ", pkg=(not_started)";
+
+        debug << ", seg="   << _discontSegment;
+        debug << "]";
+    }
+    return pos;
 }
 
 qint64 impl::ReaderImpl::tsPacketSizeEffective() const

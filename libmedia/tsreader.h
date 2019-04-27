@@ -34,6 +34,7 @@ public:
     explicit Reader(QIODevice *dev, QObject *parent = 0);
     ~Reader();
 
+    const QString positionString() const;
 #ifdef TS_PACKET_V2
     PacketV2Parser &tsParser() const;
 #endif

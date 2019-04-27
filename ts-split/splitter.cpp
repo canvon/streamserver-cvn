@@ -32,24 +32,14 @@ class SplitterImpl {
     Splitter::Output &findOrDefaultOutputResult(QFile *outputFile);
 
     QString logPrefix() {
-        if (!_tsReaderPtr)
-            return QString();
-
-        TS::Reader &reader(*_tsReaderPtr);
         QString prefix;
         {
             QDebug debug(&prefix);
-            debug.nospace();
-            debug << "[offset=" << reader.tsPacketOffset();
 
-            const auto packetCount = reader.tsPacketCount();
-            if (packetCount >= 1)
-                debug << ", pkg=" << packetCount;
-            else
-                debug << ", pkg=(not_started)";
+            if (_tsReaderPtr)
+                debug.nospace() << "Input=" << qPrintable(_tsReaderPtr->positionString());
 
-            debug << ", seg="   << reader.discontSegment();
-            debug << "]";
+            // TODO: Maybe log output positions, too?
         }
         return prefix;
     }
