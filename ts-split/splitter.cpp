@@ -19,7 +19,7 @@
 #include <QDebug>
 #include <QCoreApplication>
 
-using log::verbose;
+using SSCvn::log::verbose;
 
 class SplitterImpl {
     QPointer<QFile>              _inputFilePtr;

@@ -6,6 +6,7 @@
 #include <QtMessageHandler>
 #include <QTextStream>
 
+namespace SSCvn {
 namespace log {
 namespace backend {
 
@@ -31,7 +32,8 @@ void msgHandler(QtMsgType type, const QMessageLogContext &ctx, const QString &ms
 void updateIsSystemdJournal();
 
 
-}  // namespace log::backend
-}  // namespace log
+}  // namespace SSCvn::log::backend
+}  // namespace SSCvn::log
+}  // namespace SSCvn
 
 #endif // LOG_BACKEND_H

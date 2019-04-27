@@ -16,7 +16,7 @@
 #include "humanreadable.h"
 #include "log.h"
 
-using log::verbose;
+using SSCvn::log::verbose;
 
 namespace {
 

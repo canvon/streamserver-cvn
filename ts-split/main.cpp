@@ -11,8 +11,11 @@
 #include <QFile>
 #include <QTextStream>
 
-using log::verbose;
-using log::debug_level;
+using SSCvn::log::verbose;
+using SSCvn::log::debug_level;
+
+// TODO: Convert to ambitious use of namespaces.
+using namespace SSCvn;
 
 namespace {
     QTextStream out(stdout), errout(stderr);

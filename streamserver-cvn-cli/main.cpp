@@ -14,8 +14,11 @@
 #include <QCommandLineParser>
 #include <QSettings>
 
-using log::debug_level;
-using log::verbose;
+using SSCvn::log::debug_level;
+using SSCvn::log::verbose;
+
+// TODO: Convert to ambitious use of namespaces.
+using namespace SSCvn;
 
 sig_atomic_t lastSigNum = 0;
 

@@ -9,6 +9,7 @@
 #include <QCoreApplication>
 
 
+namespace SSCvn {
 namespace log {
 
 int verbose = 0;  // Normal output.
@@ -175,5 +176,6 @@ void updateIsSystemdJournal() {
 }
 
 
-}  // namespace log::backend
-}  // namespace log
+}  // namespace SSCvn::log::backend
+}  // namespace SSCvn::log
+}  // namespace SSCvn
