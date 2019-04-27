@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
     qInstallMessageHandler(&log::backend::msgHandler);
 
     QCoreApplication a(argc, argv);
-    qint64 tsPacketSize = TSPacket::lengthBasic;
+    qint64 tsPacketSize = 0;
 
     QCommandLineParser parser;
     parser.setApplicationDescription("Split MPEG-TS stream into files");
@@ -280,7 +280,11 @@ int main(int argc, char *argv[])
     if (!outputTemplates.isEmpty())
         splitter.setOutputTemplates(outputTemplates);
     splitter.openInput(&inputFile);
-    splitter.tsReader()->setTSPacketSize(tsPacketSize);
+    if (tsPacketSize > 0) {
+        TS::Reader &reader(*splitter.tsReader());
+        reader.setTSPacketAutoSize(false);
+        reader.setTSPacketSize(tsPacketSize);
+    }
 
     int ret = a.exec();
 

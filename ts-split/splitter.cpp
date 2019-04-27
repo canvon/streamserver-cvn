@@ -674,6 +674,8 @@ void Splitter::handleErrorEncountered(TS::Reader::ErrorKind errorKind, QString e
     const QString logPrefix = _implPtr->logPrefix();
 
     switch (errorKind) {
+    case TS::Reader::ErrorKind::Unknown:
+        qFatal("%s Splitter: Error: %s", qPrintable(logPrefix), qPrintable(errorMessage));
     case TS::Reader::ErrorKind::IO:
         qFatal("%s Splitter: IO error: %s", qPrintable(logPrefix), qPrintable(errorMessage));
     case TS::Reader::ErrorKind::TS:

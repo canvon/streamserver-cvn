@@ -25,6 +25,7 @@ class Reader : public QObject
 
 public:
     enum class ErrorKind {
+        Unknown,
         IO,
         TS,
     };
@@ -36,6 +37,8 @@ public:
 #ifdef TS_PACKET_V2
     PacketV2Parser &tsParser() const;
 #endif
+    bool tsPacketAutoSize() const;
+    void setTSPacketAutoSize(bool autoSize = true);
     qint64 tsPacketSize() const;
     void setTSPacketSize(qint64 size);
     qint64 tsPacketOffset() const;
@@ -51,6 +54,7 @@ signals:
 
 public slots:
     void readData();
+    bool drainBuffer();
 };
 
 }  // namespace TS
