@@ -35,9 +35,13 @@ class SplitterImpl {
         QString prefix;
         {
             QDebug debug(&prefix);
+            debug.nospace();
 
-            if (_tsReaderPtr)
-                debug.nospace() << "Input=" << qPrintable(_tsReaderPtr->positionString());
+            debug << "Input=";
+            if (!_tsReaderPtr)
+                debug << "N.A.";
+            else
+                debug << qPrintable(_tsReaderPtr->positionString());
 
             // TODO: Maybe log output positions, too?
         }
@@ -328,10 +332,19 @@ Splitter::Output &SplitterImpl::findOrDefaultOutputResult(QFile *outputFile)
 
 void Splitter::openInput(QFile *inputFile)
 {
+    const QString theLogPrefix = _implPtr->logPrefix();
+
     if (!inputFile)
         throw std::invalid_argument("Splitter: Open input: Input file can't be null");
 
     _implPtr->_inputFilePtr = inputFile;
+
+    if (verbose >= 0) {
+        qInfo().nospace()
+            << qPrintable(theLogPrefix) << " "
+            << "Opening input file " << inputFile->fileName()
+            << "...";
+    }
 
     if (!inputFile->open(QIODevice::ReadOnly)) {
         qFatal("Splitter: Error opening input file \"%s\": %s",
@@ -341,6 +354,7 @@ void Splitter::openInput(QFile *inputFile)
 
     _implPtr->_tsReaderPtr = std::make_unique<TS::Reader>(inputFile, this);
     TS::Reader &reader(*_implPtr->_tsReaderPtr);
+    reader.setLogPrefix("{Input}");
 
     // Set up signals.
     connect(&reader, &TS::Reader::tsPacketReady, this, &Splitter::handleTSPacketReady);
