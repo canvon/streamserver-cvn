@@ -261,32 +261,64 @@ int main(int argc, char *argv[])
         outputTemplates.append({ Splitter::TemplateKind::DiscontinuitySegments, discontSegsFormat });
     }
 
-    // Sanity check.
+    const auto args = parser.positionalArguments();
+    if (!(args.length() >= 1)) {
+        qCritical() << "Input file missing!";
+        return 2;
+    }
+    else if (args.length() > 1) {
+        qCritical() << "Currently, only one input file is supported!";
+        return 2;
+    }
+    const QString inputFileName = args.first();
+
+    // If no output specifications have been given, default to
+    // split by discontinuity segments, and derive file format string
+    // from input file name.
     if (outputs.isEmpty() && outputTemplates.isEmpty()) {
-        qCritical() << "No --outfile/--outfiles-template descriptions specified";
-        return 2;
-    }
-    else {
-        if (verbose >= 1 && !outputs.isEmpty()) {
-            qInfo() << "Output requests before run:";
-            for (const Splitter::Output &output : outputs)
-                qInfo() << output;
+        if (verbose >= 0) {
+            qInfo() << "No output specifications given, constructing output file format string from input file name" << inputFileName << "...";
         }
 
-        if (verbose >= 1 && !outputTemplates.isEmpty()) {
-            qInfo() << "Output templates before run:";
-            for (const Splitter::OutputTemplate &outputTemplate : outputTemplates)
-                qInfo() << outputTemplate;
+        // Support chopping a single, well-known extension.
+        const QStringList extensions { ".ts", ".m2ts" };
+        QString inputFileStem = inputFileName;
+        for (const QString &extension : extensions) {
+            if (inputFileStem.endsWith(extension, Qt::CaseInsensitive)) {
+                inputFileStem.chop(extension.length());
+                break;
+            }
         }
+
+        if (verbose >= 1) {
+            qInfo() << "Detected input file stem" << inputFileStem;
+        }
+
+        QString outputFileFormat = inputFileStem;
+
+        // Escape percents in file name.
+        outputFileFormat.replace('%', "%%");
+
+        // Append a hopefully-useful digits expando + extension.
+        outputFileFormat.append(".%03d.ts");
+
+        // Create output template.
+        outputTemplates.append({ Splitter::TemplateKind::DiscontinuitySegments, outputFileFormat });
     }
 
-    auto args = parser.positionalArguments();
-    if (!(args.length() == 1)) {
-        qCritical() << "Input file missing";
-        return 2;
+    if (verbose >= 1 && !outputs.isEmpty()) {
+        qInfo() << "Output requests before run:";
+        for (const Splitter::Output &output : outputs)
+            qInfo() << output;
     }
 
-    QFile inputFile(args.first(), &a);
+    if (verbose >= 1 && !outputTemplates.isEmpty()) {
+        qInfo() << "Output templates before run:";
+        for (const Splitter::OutputTemplate &outputTemplate : outputTemplates)
+            qInfo() << outputTemplate;
+    }
+
+    QFile inputFile(inputFileName, &a);
     Splitter splitter(&a);
     if (!outputs.isEmpty())
         splitter.setOutputRequests(outputs);
