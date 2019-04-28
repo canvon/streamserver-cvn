@@ -392,8 +392,6 @@ void Splitter::handleTSPacketReady(const QSharedPointer<ConversionNode<TS::Packe
 {
     const TS::Packet &packet(packetNode->data);
 
-    const QString logPrefix = _implPtr->logPrefix();
-
     TS::Reader &reader(*_implPtr->_tsReaderPtr);
     const qint64 packetOffset = reader.tsPacketOffset();
     const qint64 packetCount  = reader.tsPacketCount();
@@ -401,7 +399,7 @@ void Splitter::handleTSPacketReady(const QSharedPointer<ConversionNode<TS::Packe
 
     // Dump.
     if (verbose >= 2) {
-        qInfo() << qPrintable(logPrefix) << "Packet:" << packet;
+        qInfo() << qPrintable(_implPtr->logPrefix()) << "Packet:" << packet;
     }
 
     // Conditionally forward to output files.
@@ -497,15 +495,13 @@ void Splitter::handleTSPacketReady(const QSharedPointer<ConversionNode<TS::Packe
 
 void SplitterImpl::startOutputRequest(Splitter::Output *outRequest, Splitter *that)
 {
-    const QString theLogPrefix = logPrefix();
-
     if (!outRequest) {
-        qCritical() << qPrintable(theLogPrefix) << "Splitter: Internal error: Start output request called without output request";
+        qCritical() << qPrintable(logPrefix()) << "Splitter: Internal error: Start output request called without output request";
         return;
     }
 
     if (!outRequest->outputFile) {
-        qCritical() << qPrintable(theLogPrefix) << "Splitter: Internal error: Start output request called without output file";
+        qCritical() << qPrintable(logPrefix()) << "Splitter: Internal error: Start output request called without output file";
         return;
     }
     QFile &outputFile(*outRequest->outputFile);
@@ -518,7 +514,7 @@ void SplitterImpl::startOutputRequest(Splitter::Output *outRequest, Splitter *th
 
         if (verbose >= 0) {
             qInfo().nospace()
-                << qPrintable(theLogPrefix) << " "
+                << qPrintable(logPrefix()) << " "
                 << "Opening output file " << outResult.id << ", " << outputFile.fileName()
                 << "...";
         }
