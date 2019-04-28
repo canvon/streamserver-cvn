@@ -3,9 +3,9 @@
 
 #ifndef TS_PACKET_V2
 #include "tspacket.h"
-#else
-#include "tspacketv2.h"
 #endif
+// (Always need V2, to avoid ifdef-ing every place where the basic packet size or sync byte fixed value are used.)
+#include "tspacketv2.h"
 
 #include <cmath>
 #include <stdexcept>
@@ -44,10 +44,8 @@ public:
 
     QString positionString() const;
     qint64 tsPacketSizeEffective() const;
-#ifdef TS_PACKET_V2
     bool checkIsReady();
     bool checkIsReady(int bufPacketSize, int bufPrefixLength, int *storeBufPacketCount = nullptr, int *storeBufSyncByteCount = nullptr);
-#endif
     bool checkIsDiscontinuity(const Packet &packet);
 };
 }  // namespace TS::impl
@@ -211,7 +209,6 @@ void Reader::readData()
             }
         }
 
-#ifdef TS_PACKET_V2
         // Try to support packet size auto-detection & resync after corruption...
         bool noMoreDrainBuffer = false;
         while (_implPtr->checkIsReady()) {
@@ -225,19 +222,6 @@ void Reader::readData()
                     << (noMoreDrainBuffer ? "No more drain buffer possible." : "Buffer can't be processed, yet.")
                     << "Continuing read data loop...";
         }
-#else
-        if (verbose >= 3) {
-            qInfo() << qPrintable(_implPtr->_logPrefix) << qPrintable(positionString())
-                    << "Draining buffer...";
-        }
-
-        while (drainBuffer());
-
-        if (verbose >= 3) {
-            qInfo() << qPrintable(_implPtr->_logPrefix) << qPrintable(positionString())
-                    << "Finished draining buffer.";
-        }
-#endif
     } while (true);
 
     // End of try block.
@@ -348,11 +332,16 @@ qint64 impl::ReaderImpl::tsPacketSizeEffective() const
     return packetSize;
 }
 
-#ifdef TS_PACKET_V2
 bool impl::ReaderImpl::checkIsReady()
 {
     int bufPacketSize = tsPacketSizeEffective();
-    int bufPrefixLength = _tsParser.prefixLength();
+    int bufPrefixLength =
+#ifndef TS_PACKET_V2
+        // Assume the only valid/existing prefix length is 4 bytes time-code prefix.
+        bufPacketSize == 4 + TSPacket::lengthBasic ? 4 : 0;
+#else
+        _tsParser.prefixLength();
+#endif
 
     while (_buf.length() >= bufPacketSize) {
         // Already running at some packet size(, or fixed)?
@@ -452,7 +441,9 @@ bool impl::ReaderImpl::checkIsReady()
                 }
 
                 _tsPacketSize = bufPacketSize;
+#ifdef TS_PACKET_V2
                 _tsParser.setPrefixLength(bufPrefixLength);
+#endif
                 return true;
             }
 
@@ -619,7 +610,6 @@ bool impl::ReaderImpl::checkIsReady(int bufPacketSize, int bufPrefixLength, int 
     // Otherwise, delay processing buffer until there are enough correct packets.
     return false;
 }
-#endif
 
 bool impl::ReaderImpl::checkIsDiscontinuity(const Packet &packet)
 {
