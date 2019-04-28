@@ -166,7 +166,7 @@ void Reader::readData()
     do {
         const int prePacketSize = _implPtr->tsPacketSizeEffective();
         int bufLenPrev   = buf.length();
-        int bufLenTarget = std::max(prePacketSize, bufLenPrev + 4);
+        int bufLenTarget = (bufLenPrev / prePacketSize + 1) * prePacketSize;  // Target next full packet.
         if (bufLenPrev < bufLenTarget) {
             if (verbose >= 3) {
                 qInfo() << qPrintable(_implPtr->_logPrefix) << qPrintable(positionString())
