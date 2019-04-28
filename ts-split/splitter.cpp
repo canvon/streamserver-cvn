@@ -766,6 +766,11 @@ QDebug operator<<(QDebug debug, const Splitter::Output &output)
     QDebugStateSaver saver(debug);
     debug.nospace();
     debug << "Splitter::Output(";
+
+    // Prefix id, if present.
+    if (output.id)
+        debug << "id=" << output.id << " ";
+
     debug <<        output.start;
     debug << " " << output.length;
     if (!output.outputFile) {
