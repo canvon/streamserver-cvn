@@ -441,7 +441,20 @@ bool impl::ReaderImpl::checkIsReady()
                 }
 
                 _tsPacketSize = bufPacketSize;
-#ifdef TS_PACKET_V2
+#ifndef TS_PACKET_V2
+                do {
+                    if (bufPacketSize == TSPacket::lengthBasic && bufPrefixLength == 0)
+                        break;
+                    if (bufPacketSize == 4 + TSPacket::lengthBasic && bufPrefixLength == 4)
+                        break;
+
+                    if (bufPrefixLength != 0) {
+                        throw static_cast<std::runtime_error>(ExceptionBuilder()
+                            << "TS reader: Invalid TS packet prefix length" << bufPrefixLength
+                            << "for TSPacket (V1)");
+                    }
+                } while (false);
+#else
                 _tsParser.setPrefixLength(bufPrefixLength);
 #endif
                 return true;
