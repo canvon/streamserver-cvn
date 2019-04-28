@@ -72,6 +72,8 @@ int main(int argc, char *argv[])
           "DESCR" },
         { "outfiles-template", "Output files template description",
           "DESCR" },
+        { "discont-segments-format", "Discontinuity segments file format",
+          "FMT" },
     });
     parser.addPositionalArgument("OUTFILE", "Output file description:\n"
             "Syntax: KEY1=VALUE1,KEY2=VALUE2,...,FINAL=REST\n"
@@ -92,6 +94,9 @@ int main(int argc, char *argv[])
             "  fileFormat=PRINTF_FORMAT\n"
             "    (e.g., myout%03d.ts)\n",
         "[--outfiles-template OUTTEMPLATE]");
+    parser.addPositionalArgument("DISCONTSEGFORMAT", "Discontinuity segment format,\n"
+            "this is an alias for: --outfiles-template discontSegments=,fileFormat=...\n",
+        "[--discont-segments-format DISCONTSEGFORMAT]");
     parser.addPositionalArgument("INPUT", "Input file to split into parts");
     parser.process(a);
 
@@ -250,6 +255,11 @@ int main(int argc, char *argv[])
 
         outputTemplates.append(outTempl);
     }  // for outfiles-template options
+
+    // Discontinuity segments format (alias for a specific output template).
+    for (const QString &discontSegsFormat : parser.values("discont-segments-format")) {
+        outputTemplates.append({ Splitter::TemplateKind::DiscontinuitySegments, discontSegsFormat });
+    }
 
     // Sanity check.
     if (outputs.isEmpty() && outputTemplates.isEmpty()) {

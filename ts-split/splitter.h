@@ -87,7 +87,7 @@ public:
         QString       outputFilesFormatString;
         typedef HumanReadable::NumericRange<int>  range_type;
         //QList<range_type>                         filter;
-        HumanReadable::NumericRangeList<int>      filter;
+        HumanReadable::NumericRangeList<int>      filter = {};
     };
 
     explicit Splitter(QObject *parent = 0);
