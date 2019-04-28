@@ -403,7 +403,11 @@ bool impl::ReaderImpl::checkIsReady()
             QList<int> candidateSuffixLengths { 0, 16, 20 };
 
             double bestScore = 0.0;
+            bool stop = false;
             for (const int testPrefixLength : candidatePrefixLengths) {
+                if (stop)
+                    break;
+
                 for (const int testSuffixLength : candidateSuffixLengths) {
                     const int testPacketSize = testPrefixLength + TS::PacketV2::sizeBasic + testSuffixLength;
 
@@ -427,6 +431,12 @@ bool impl::ReaderImpl::checkIsReady()
                         bufPacketSize = testPacketSize;
                         bufPrefixLength = testPrefixLength;
                         bestScore = score;
+
+                        if (bestScore >= 1.0) {
+                            // Optimum found, no need to go on...
+                            stop = true;
+                            break;
+                        }
                     }
                 }
             }
