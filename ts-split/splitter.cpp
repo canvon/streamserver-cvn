@@ -28,6 +28,7 @@ class SplitterImpl {
     QList<Splitter::OutputTemplate>      _outputTemplates;
     typedef std::shared_ptr<TS::Writer>  _writerPtr_type;
     QHash<QFile *, _writerPtr_type>      _outputWriters;
+    int                                  _lastOutputId = 0;
 
     Splitter::Output &findOrDefaultOutputResult(QFile *outputFile);
 
@@ -317,6 +318,11 @@ const QList<Splitter::Output> &Splitter::outputResults() const
     return _implPtr->_outputResults;
 }
 
+int Splitter::lastOutputId() const
+{
+    return _implPtr->_lastOutputId;
+}
+
 Splitter::Output &SplitterImpl::findOrDefaultOutputResult(QFile *outputFile)
 {
     for (Splitter::Output &output : _outputResults) {
@@ -326,6 +332,7 @@ Splitter::Output &SplitterImpl::findOrDefaultOutputResult(QFile *outputFile)
 
     Splitter::Output output;
     output.outputFile = outputFile;
+    output.id = ++_lastOutputId;
     _outputResults.append(output);
     return _outputResults.last();
 }
@@ -488,19 +495,22 @@ void SplitterImpl::startOutputRequest(Splitter::Output *outRequest, Splitter *th
     }
     QFile &outputFile(*outRequest->outputFile);
 
+    Splitter::Output &outResult(findOrDefaultOutputResult(&outputFile));
+
     if (!outputFile.isOpen()) {
         if (outputFile.exists())
-            qFatal("Splitter: Output file exists: %s", qPrintable(outputFile.fileName()));
+            qFatal("Splitter: Output file %d exists: %s", outResult.id, qPrintable(outputFile.fileName()));
 
         if (verbose >= 0) {
             qInfo().nospace()
                 << qPrintable(theLogPrefix) << " "
-                << "Opening output file " << outputFile.fileName()
+                << "Opening output file " << outResult.id << ", " << outputFile.fileName()
                 << "...";
         }
 
         if (!outputFile.open(QFile::WriteOnly)) {
-            qFatal("Splitter: Error opening output file \"%s\": %s",
+            qFatal("Splitter: Error opening output file %d, \"%s\": %s",
+                   outResult.id,
                    qPrintable(outputFile.fileName()),
                    qPrintable(outputFile.errorString()));
         }
@@ -579,7 +589,7 @@ void SplitterImpl::finishOutputRequest(Splitter::Output *outRequestPtr)
     if (verbose >= 0) {
         qInfo().nospace()
             << qPrintable(theLogPrefix) << " "
-            << "Closing output file " << outFile.fileName()
+            << "Closing output file " << outResult.id
             << "...";
     }
 

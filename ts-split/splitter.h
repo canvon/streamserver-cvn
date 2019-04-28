@@ -71,6 +71,7 @@ public:
 
     struct Output {
         QFile  *outputFile;
+        int     id = 0;
         Start   start;
         Length  length;
     };
@@ -100,6 +101,7 @@ public:
     const QList<OutputTemplate> &outputTemplates() const;
     void setOutputTemplates(const QList<OutputTemplate> &templates);
     const QList<Output> &outputResults() const;
+    int lastOutputId() const;
 
 signals:
 
