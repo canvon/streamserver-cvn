@@ -429,11 +429,11 @@ bool impl::ReaderImpl::checkIsReady()
             // Do we have a winner? Stick to that packet size for a while
             // and indicate buffer can now be processed.
             if (bestScore >= 0.5) {
-                if (verbose >= 1) {
+                if (verbose >= 0) {
                     qInfo() << qPrintable(_logPrefix) << qPrintable(positionString())
                             << "TS packet size auto-detection: Final best score is" << bestScore << "and"
                             << "packet size gets set permanently to" << bufPacketSize << "with"
-                            << bufPrefixLength << "prefix bytes!";
+                            << bufPrefixLength << "prefix bytes.";
                 }
 
                 _tsPacketSize = bufPacketSize;
@@ -441,19 +441,14 @@ bool impl::ReaderImpl::checkIsReady()
                 return true;
             }
 
-            // Otherwise, assume basic case and fall-through to general resync.
-            bufPacketSize = TS::PacketV2::sizeBasic;
-            bufPrefixLength = 0;
-            // *Don't* set the memorized packet size, so that auto-detection is resumed after resync.
-            //_tsPacketSize = bufPacketSize;
-            //_tsParser.setPrefixLength(bufPrefixLength);
+            // Otherwise, fall-through to general resync.
 
-            if (verbose >= 2) {
+            if (verbose >= 1) {
                 qWarning() << qPrintable(_logPrefix) << qPrintable(positionString())
                         << "TS packet size auto-detection failed:"
-                        << "Final best score of" << bestScore << "is not enough; reset to"
+                        << "Final best score of" << bestScore << "is not enough; refusing to set"
                         << "packet size" << bufPacketSize << "with"
-                        << bufPrefixLength << "prefix length, for the moment.";
+                        << bufPrefixLength << "prefix bytes, which likely would not work.";
             }
         }
 
