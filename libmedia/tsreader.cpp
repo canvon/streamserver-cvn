@@ -213,15 +213,19 @@ void Reader::readData()
 
 #ifdef TS_PACKET_V2
         // Try to support packet size auto-detection & resync after corruption...
-        if (!_implPtr->checkIsReady()) {
-            if (verbose >= 3) {
-                qInfo() << qPrintable(_implPtr->_logPrefix) << qPrintable(positionString())
-                        << "Buffer can't be processed, yet. Continuing read data loop...";
+        bool noMoreDrainBuffer = false;
+        while (_implPtr->checkIsReady()) {
+            if (!drainBuffer()) {
+                noMoreDrainBuffer = true;
+                break;
             }
-            continue;
         }
-#endif
-
+        if (verbose >= 3) {
+            qInfo() << qPrintable(_implPtr->_logPrefix) << qPrintable(positionString())
+                    << (noMoreDrainBuffer ? "No more drain buffer possible." : "Buffer can't be processed, yet.")
+                    << "Continuing read data loop...";
+        }
+#else
         if (verbose >= 3) {
             qInfo() << qPrintable(_implPtr->_logPrefix) << qPrintable(positionString())
                     << "Draining buffer...";
@@ -233,6 +237,7 @@ void Reader::readData()
             qInfo() << qPrintable(_implPtr->_logPrefix) << qPrintable(positionString())
                     << "Finished draining buffer.";
         }
+#endif
     } while (true);
 
     // End of try block.
