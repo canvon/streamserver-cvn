@@ -27,6 +27,8 @@ public:
     explicit Writer(QIODevice *dev, QObject *parent = 0);
     ~Writer();
 
+    const QString positionString() const;
+
 #ifdef TS_PACKET_V2
     PacketV2Generator &tsGenerator() const;
 #endif

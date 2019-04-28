@@ -24,6 +24,8 @@ class WriterImpl {
 #else
     PacketV2Generator                 _tsGenerator;
 #endif
+    qint64                            _tsPacketOffset = 0;
+    qint64                            _tsPacketCount  = 0;
     friend Writer;
 
 public:
@@ -32,6 +34,7 @@ public:
 
     }
 
+    QString positionString() const;
     int queueBytes(const QByteArray &bytes);
 };
 }  // namespace TS::impl
@@ -56,6 +59,11 @@ Writer::Writer(QIODevice *dev, QObject *parent) :
 Writer::~Writer()
 {
 
+}
+
+const QString Writer::positionString() const
+{
+    return _implPtr->positionString();
 }
 
 #ifndef TS_PACKET_V2
@@ -93,6 +101,7 @@ int Writer::queueTSPacket(const QSharedPointer<ConversionNode<Packet>> &packetNo
     for (const auto &bytesNodeElement : bytesNodeElements) {
         if (!_implPtr->_tsStripAdditionalInfo || bytesNodeElement.node->data.length() == TSPacket::lengthBasic)
         {
+            _implPtr->_tsPacketCount++;
             return _implPtr->queueBytes(bytesNodeElement.node->data);
         }
     }
@@ -106,6 +115,7 @@ int Writer::queueTSPacket(const QSharedPointer<ConversionNode<Packet>> &packetNo
     if (!generator.generate(packetNode, &bytesNode, &errMsg))
         throw static_cast<std::runtime_error>(ExceptionBuilder() << "TS writer: Error converting packet to bytes:" << errMsg);
 
+    _implPtr->_tsPacketCount++;
     return _implPtr->queueBytes(bytesNode->data);
 #endif
 }
@@ -113,6 +123,7 @@ int Writer::queueTSPacket(const QSharedPointer<ConversionNode<Packet>> &packetNo
 int Writer::queueTSPacket(const Packet &packet)
 {
 #ifndef TS_PACKET_V2
+    _implPtr->_tsPacketCount++;
     return _implPtr->queueBytes(_implPtr->_tsStripAdditionalInfo ?
         packet.toBasicPacketBytes() :
         packet.bytes()
@@ -121,17 +132,39 @@ int Writer::queueTSPacket(const Packet &packet)
     PacketV2Generator &generator(_implPtr->_tsGenerator);
     QByteArray bytes;
     QString errMsg;
-    if (generator.generate(packet, &bytes, &errMsg))
+    if (generator.generate(packet, &bytes, &errMsg)) {
+        _implPtr->_tsPacketCount++;
         return _implPtr->queueBytes(bytes);
-    else
+    }
+    else {
         throw std::runtime_error(std::string("TS writer: Error converting packet to bytes: ") + errMsg.toStdString());
+    }
 #endif
+}
+
+QString impl::WriterImpl::positionString() const
+{
+    QString pos;
+    {
+        QDebug debug(&pos);
+        debug.nospace();
+        debug << "[offset=" << _tsPacketOffset;
+
+        if (_tsPacketCount >= 1)
+            debug << ", pkg=" << _tsPacketCount;
+        else
+            debug << ", pkg=(not_started)";
+
+        debug << "]";
+    }
+    return pos;
 }
 
 int impl::WriterImpl::queueBytes(const QByteArray &bytes)
 {
     _buf.append(bytes);
     const int bytesQueued = bytes.length();
+    _tsPacketOffset += bytesQueued;
 
     // TODO: Have a maximum amount of data that can be queued.
 

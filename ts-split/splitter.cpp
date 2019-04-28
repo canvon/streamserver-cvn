@@ -44,7 +44,22 @@ class SplitterImpl {
             else
                 debug << qPrintable(_tsReaderPtr->positionString());
 
-            // TODO: Maybe log output positions, too?
+            // Log output positions, too.
+            for (const Splitter::Output &outResult : _outputResults) {
+                if (!outResult.outputFile ||
+                    !outResult.outputFile->isOpen())
+                {
+                    // ..but only for open (currently active) output files.
+                    continue;
+                }
+
+                debug << " Output" << outResult.id << "=";
+                _writerPtr_type writerPtr = _outputWriters[outResult.outputFile];
+                if (!outResult.outputFile || !writerPtr)
+                    debug << "N.A.";
+                else
+                    debug << qPrintable(writerPtr->positionString());
+            }
         }
         return prefix;
     }
