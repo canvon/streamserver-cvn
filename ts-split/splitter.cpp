@@ -683,7 +683,7 @@ void Splitter::handleErrorEncountered(TS::Reader::ErrorKind errorKind, QString e
     case TS::Reader::ErrorKind::IO:
         qFatal("%s Splitter: IO error: %s", qPrintable(logPrefix), qPrintable(errorMessage));
     case TS::Reader::ErrorKind::TS:
-        qWarning() << qPrintable(logPrefix) << "Splitter: Ignoring TS error:" << errorMessage;
+        qWarning() << qPrintable(logPrefix) << "Splitter: Ignoring TS error:" << qPrintable(errorMessage);
         break;
     }
 }
