@@ -494,7 +494,7 @@ bool impl::ReaderImpl::checkIsReady()
             // Assume we found two consecutive valid packets, and
             // remove garbage before the first one.
             _buf.remove(0, syncBytePos1);
-            if (verbose >= 1) {
+            if (verbose >= 0) {
                 qInfo() << qPrintable(_logPrefix) << qPrintable(positionString())
                         << "Resync: Found two consecutive sync bytes with distance" << syncBytePosDiff
                         << "which is one basic TS packet size!"
@@ -506,7 +506,7 @@ bool impl::ReaderImpl::checkIsReady()
             if (syncBytePos1 >= 4) {
                 // Remove garbage.
                 _buf.remove(0, syncBytePos1 - 4);
-                if (verbose >= 1) {
+                if (verbose >= 0) {
                     qInfo() << qPrintable(_logPrefix) << qPrintable(positionString())
                             << "Resync: Found two consecutive sync bytes with distance" << syncBytePosDiff
                             << "which is a timecode prefix plus basic TS packet size!"
@@ -519,7 +519,7 @@ bool impl::ReaderImpl::checkIsReady()
                 // the whole packet, or somehow fill up/in (potentially)
                 // invalid prefix bytes. ...
                 _buf.insert(0, 4 - syncBytePos1, 0x00);
-                if (verbose >= 1) {
+                if (verbose >= 0) {
                     qInfo() << qPrintable(_logPrefix) << qPrintable(positionString())
                             << "Resync: Found two consecutive sync bytes with distance" << syncBytePosDiff
                             << "which is a timecode prefix plus basic TS packet size!"
@@ -534,7 +534,7 @@ bool impl::ReaderImpl::checkIsReady()
             // Anyhow, they should just be trailing bytes.
             // Remove garbage before first detected packet...
             _buf.remove(0, syncBytePos1);
-            if (verbose >= 1) {
+            if (verbose >= 0) {
                 qInfo() << qPrintable(_logPrefix) << qPrintable(positionString())
                         << "Resync: Found two consecutive sync bytes with distance" << syncBytePosDiff
                         << "which is a basic TS packet with forward-error-correction size!"
