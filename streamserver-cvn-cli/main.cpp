@@ -9,6 +9,7 @@
 #include <signal.h>
 
 #include <memory>
+#include <system_error>
 #include <QPointer>
 #include <QTextStream>
 #include <QCommandLineParser>

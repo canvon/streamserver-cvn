@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include <stdexcept>
+#include <system_error>
 #include <functional>
 #include <QDebug>
 #include <QCoreApplication>
