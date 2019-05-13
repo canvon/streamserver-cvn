@@ -57,6 +57,14 @@ which will stream the file (or data from the named pipe) `FOO.ts`
 (which has to be in `MPEG-TS` (MPEG *Transport Stream*) format)
 and make it available as http://_YOUR\_IP\_HERE_:8000 .
 
+You can also run `ts-dump`, first. An MPEG-TS packet with the correct size
+and starting with a sync-byte, but otherwise invalid data, is provided
+in the repository in `testdata/one-empty-packet.bin`.
+
+    scm/build-streamserver-cvn$ ./ts-dump/ts-dump ../streamserver-cvn/testdata/one-empty-packet.bin
+
+It is expected to dump the packet and report an error in the packet.
+
 
 ## Building in Termux
 
