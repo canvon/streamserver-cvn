@@ -57,3 +57,15 @@ and the resulting binaries worked. (Initial test made 2019-05-11.)
 * Qt 5.11.2
 
 For building in Termux, see [[BUILDING#building-in-termux]].
+
+For producing compatible input for `streamserver-cvn`, you may try to
+use the `mpv` video player in encoding mode; e.g.:
+
+    scm/build-streamserver-cvn$ mpv --loop=inf ~/storage/.../FOO.mkv \
+      --o=- --of=mpegts | ./streamserver-cvn-cli/streamserver-cvn-cli \
+      /dev/fd/0
+
+Note the `--o=-` which enables encoding mode with output to stdout,
+and the `--of=mpegts` which specifies the output format. The `mpv` output
+is then piped into `streamserver-cvn-cli`, which is instructed to
+serve its HTTP stream from `/dev/fd/0`, otherwise known as stdin.
