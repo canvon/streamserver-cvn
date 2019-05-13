@@ -34,7 +34,7 @@ and use should be working as expected. Lower versions (especially
 of Qt or the C++ compiler) will likely not work.
 
 For building in the development environment,
-see [[BUILDING#building-in-development-environment]].
+see [BUILDING: Building in development environment](BUILDING.md#building-in-development-environment).
 
 
 ## Termux App on Android
@@ -56,7 +56,7 @@ and the resulting binaries worked. (Initial test made 2019-05-11.)
 * clang 8.0.0
 * Qt 5.11.2
 
-For building in Termux, see [[BUILDING#building-in-termux]].
+For building in Termux, see [BUILDING: Building in Termux](BUILDING.md#building-in-termux).
 
 For producing compatible input for `streamserver-cvn`, you may try to
 use the `mpv` video player in encoding mode; e.g.:

@@ -2,7 +2,7 @@
 
 This document describes steps to be taken when building `streamserver-cvn`,
 a media streaming server, `canvon` attempt. For general information,
-see the [[README]].
+see the [README](README.md).
 
 
 ## Building in development environment
@@ -72,7 +72,7 @@ In Termux, you'll need to first install the `x11-repo` package
 (which adds a file in `../usr/etc/apt/sources.list.d/`).
 You'll then install package `qt5-base-dev` from that other repos.
 
-Then follow the steps as for [[#building-in-development-environment]],
+Then follow the steps as for [Building in development environment](#building-in-development-environment),
 except for (**N.B.: This assumes your Android device is ARM-based!**)
 at step 4./qmake, pass an option to the C++ compiler (`clang`)
 in the following way:
