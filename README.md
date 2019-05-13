@@ -51,6 +51,7 @@ two missing includes, see commit 17e33b2eee7ba94673c39adbab0940f642045282),
 and the resulting binaries worked. (Initial test made 2019-05-11.)
 
 `streamserver-cvn` was tested with these versions:
+
 * Android 7
 * Termux 0.68
 * clang 8.0.0
