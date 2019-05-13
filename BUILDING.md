@@ -12,7 +12,7 @@ without the use of Qt Creator, follow these steps:
 
 1. Clone this git repository (if not already done so).
 
-    scm$ git clone https://.../streamserver-cvn.git
+        scm$ git clone https://.../streamserver-cvn.git
 
    Further steps assume the repository was
    cloned to directory `streamserver-cvn`.
@@ -20,16 +20,16 @@ without the use of Qt Creator, follow these steps:
 2. Create an empty directory **outside** the git working copy,
    which will be used as external build directory.
 
-    scm$ mkdir build-streamserver-cvn
+        scm$ mkdir build-streamserver-cvn
 
 3. Change current working directory to the build directory just created.
 
-    scm$ cd build-streamserver-cvn
-    scm/build-streamserver-cvn$
+        scm$ cd build-streamserver-cvn
+        scm/build-streamserver-cvn$
 
 4. Run `qmake`, which sets up the `Makefile`.
 
-    scm/build-streamserver-cvn$ qmake ../streamserver-cvn
+        scm/build-streamserver-cvn$ qmake ../streamserver-cvn
 
    Note that, at this step, additional flags may be passed to qmake,
    like `DEFINES+=...` or `QMAKE_CXXFLAGS+=...`.
@@ -40,7 +40,7 @@ without the use of Qt Creator, follow these steps:
 
 5. Run `make`, which does the real build.
 
-    scm/build-streamserver-cvn$ make
+        scm/build-streamserver-cvn$ make
 
    Note that, at this step, additional flags may be given as well:
 
