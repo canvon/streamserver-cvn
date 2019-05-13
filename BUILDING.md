@@ -73,7 +73,8 @@ In Termux, you'll need to first install the `x11-repo` package
 You'll then install package `qt5-base-dev` from that other repos.
 
 Then follow the steps as for [[#building-in-development-environment]],
-except for at step 4./qmake, pass an option to the C++ compiler (`clang`)
+except for (**N.B.: This assumes your Android device is ARM-based!**)
+at step 4./qmake, pass an option to the C++ compiler (`clang`)
 in the following way:
 
     scm/build-streamserver-cvn$ qmake QMAKE_CXXFLAGS+=--target=armv7l-linux-android ../streamserver-cvn
