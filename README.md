@@ -69,3 +69,16 @@ Note the `--o=-` which enables encoding mode with output to stdout,
 and the `--of=mpegts` which specifies the output format. The `mpv` output
 is then piped into `streamserver-cvn-cli`, which is instructed to
 serve its HTTP stream from `/dev/fd/0`, otherwise known as stdin.
+
+When this is running (it may take a few seconds for mpv to start up),
+you can, e.g., go to the *VLC App* and enter the stream URL
+as: `http://localhost:8000`
+
+Or open an Editor, write the http://_YOUR\_IP\_HERE_:8000 out
+(insert your actual IP addess or, e.g., a DynDNS hostname
+pointing at you, or at your router and a port forwarded to your device).
+You can then try to play it on your TV with a *Raspberry Pi* attached
+running *Kodi*: Mark the URL as for copy & paste, then choose "Send" and,
+in the following dialog (which may take some seconds to start up),
+tap the option to play on Kodi, provided by the *Kore* Kodi remote App...
+(**TODO**: Could this be done easier via Termux:API..?)
