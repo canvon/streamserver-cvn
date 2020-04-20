@@ -34,11 +34,6 @@ private:
 public:
     explicit RequestNetside();
 
-    const QByteArray lineSep = "\r\n";
-    const QByteArray fieldSepRequestLine = " ";
-
-    static QByteArray simplifiedLinearWhiteSpace(const QByteArray &bytes);
-
     qint64 byteCount() const;
     qint64 byteCountMax() const;
     void setByteCountMax(qint64 max);

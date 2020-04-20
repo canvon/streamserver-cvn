@@ -12,6 +12,7 @@ TEMPLATE = app
 SOURCES += main.cpp \
     streamserver.cpp \
     streamclient.cpp \
+    http/httputil.cpp \
     http/httpheader_netside.cpp \
     http/httprequest_netside.cpp \
     http/httpresponse.cpp
@@ -19,6 +20,7 @@ SOURCES += main.cpp \
 HEADERS += \
     streamserver.h \
     streamclient.h \
+    http/httputil.h \
     http/httpheader_netside.h \
     http/httprequest_netside.h \
     http/httpresponse.h

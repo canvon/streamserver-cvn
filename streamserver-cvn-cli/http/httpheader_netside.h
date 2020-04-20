@@ -28,8 +28,6 @@ public:
     explicit HeaderNetside();
     ~HeaderNetside();
 
-    static const QByteArray fieldSep;
-
     QList<Field> fields() const;
     QList<Field> fields(const QByteArray &fieldName) const;
     QList<QByteArray> fieldValues(const QByteArray &fieldName) const;

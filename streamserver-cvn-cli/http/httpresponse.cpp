@@ -1,5 +1,7 @@
 #include "httpresponse.h"
 
+#include "httputil.h"
+
 #include <stdexcept>
 #include <QBuffer>
 #include <QTextStream>
@@ -86,13 +88,13 @@ QByteArray Response::toBytes() const
     QTextStream bufOut(&buf);
 
     // HTTP response status line
-    bufOut << _httpVersion << fieldSepStatusLine
-           << _statusCode  << fieldSepStatusLine
+    bufOut << _httpVersion << fieldSepStartLine
+           << _statusCode  << fieldSepStartLine
            << _statusMsg   << lineSep;
 
     // Header
     for (const std::pair<QString, QString> field : _header)
-        bufOut << field.first << fieldSepHeader << field.second << lineSep;
+        bufOut << field.first << fieldSepHeaderGenerate << field.second << lineSep;
     bufOut << lineSep;
 
     // Body

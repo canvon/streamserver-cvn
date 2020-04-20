@@ -1,6 +1,7 @@
 #include "httpheader_netside.h"
 
 #include "httprequest_netside.h"
+#include "httputil.h"
 #include "humanreadable.h"
 
 #include <stdexcept>
@@ -9,8 +10,6 @@
 
 namespace SSCvn {
 namespace HTTP {  // namespace SSCvn::HTTP
-
-const QByteArray HeaderNetside::fieldSep = ":";
 
 namespace impl {  // namespace SSCvn::HTTP::impl
 
@@ -100,12 +99,12 @@ void HeaderNetside::setField(const QByteArray &fieldName, const QByteArray &fiel
 
 void HeaderNetside::append(const QByteArray &fieldBytes)
 {
-    int i = fieldBytes.indexOf(fieldSep);
+    int i = fieldBytes.indexOf(fieldSepHeaderParse);
     if (!(i >= 0)) {
         QString exMsg;
         QDebug(&exMsg).nospace()
             << "HTTP header netside: Field bytes are missing the field separator "
-            << fieldSep << ": " << HumanReadable::Hexdump { fieldBytes, true, true };
+            << fieldSepHeaderParse << ": " << HumanReadable::Hexdump { fieldBytes, true, true };
         throw std::runtime_error(exMsg.toStdString());
     }
 
@@ -120,7 +119,7 @@ void HeaderNetside::append(const QByteArray &fieldBytes)
 
     // Simplify linear white-space to single SPs,
     // with LWS at start and end trimmed.
-    theField.fieldValue = RequestNetside::simplifiedLinearWhiteSpace(theField.fieldValueRaw);
+    theField.fieldValue = simplifiedLinearWhiteSpace(theField.fieldValueRaw);
 
     _implPtr->append(theField);
 }

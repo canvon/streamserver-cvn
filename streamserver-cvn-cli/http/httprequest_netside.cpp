@@ -1,5 +1,6 @@
 #include "httprequest_netside.h"
 
+#include "httputil.h"
 #include "humanreadable.h"
 
 #include <stdexcept>
@@ -10,62 +11,6 @@ namespace HTTP {  // namespace SSCvn::HTTP
 RequestNetside::RequestNetside()
 {
 
-}
-
-QByteArray RequestNetside::simplifiedLinearWhiteSpace(const QByteArray &bytes)
-{
-    QByteArray ret;
-    QByteArray lws;
-    enum { Null, Ret, LWS } dir;
-    for (const char &c : bytes) {
-        dir = Null;
-        switch (c) {
-        case '\r':  // CR. (LWS optionally starts with CR-LF.)
-            if (lws.isEmpty())
-                dir = LWS;
-            else
-                dir = Ret;
-            break;
-        case '\n':  // LF. (LWS optionally starts with CR-LF.)
-            if (lws == "\r")
-                dir = LWS;
-            else
-                dir = Ret;
-            break;
-        case ' ':  // SP (space)
-        case '\t':  // HT (horizontal-tab)
-            dir = LWS;
-            break;
-        default:
-            dir = Ret;
-            break;
-        }
-
-        switch (dir) {
-        case Null:
-        case Ret:
-            if (ret.isEmpty()) {
-                // Any leading LWS just gets removed.
-            }
-            else {
-                if (!lws.isEmpty())
-                    // Transform a sequence of LWS to a single SP.
-                    ret.append(' ');
-            }
-            lws.clear();
-
-            ret.append(c);
-            break;
-        case LWS:
-            lws.append(c);
-            break;
-        }
-    }
-
-    // Any trailing LWS just gets removed.
-    // (By ignoring the final value of the lws variable.)
-
-    return ret;
 }
 
 qint64 RequestNetside::byteCount() const
@@ -163,21 +108,21 @@ void RequestNetside::processChunk(const QByteArray &in)
 
             int iFrom = 0, iFieldSep;
 
-            iFieldSep = _requestLine.indexOf(fieldSepRequestLine, iFrom);
+            iFieldSep = _requestLine.indexOf(fieldSepStartLine, iFrom);
             if (iFieldSep < 0)
                 throw std::runtime_error("HTTP request netside: No field separator after HTTP method");
             _method = _requestLine.mid(iFrom, iFieldSep - iFrom);
             if (_method.isEmpty())
                 throw std::runtime_error("HTTP request netside: HTTP method is missing");
-            iFrom = iFieldSep + fieldSepRequestLine.length();
+            iFrom = iFieldSep + fieldSepStartLine.length();
 
-            iFieldSep = _requestLine.indexOf(fieldSepRequestLine, iFrom);
+            iFieldSep = _requestLine.indexOf(fieldSepStartLine, iFrom);
             if (iFieldSep < 0)
                 throw std::runtime_error("HTTP request netside: No field separator after request path");
             _path = _requestLine.mid(iFrom, iFieldSep - iFrom);
             if (_path.isEmpty())
                 throw std::runtime_error("HTTP request netside: Request path is missing");
-            iFrom = iFieldSep + fieldSepRequestLine.length();
+            iFrom = iFieldSep + fieldSepStartLine.length();
 
             _httpVersion = _requestLine.mid(iFrom);
             if (_httpVersion.isEmpty())

@@ -23,10 +23,6 @@ private:
 public:
     explicit Response(int statusCode = 200, const QString &statusMsg = "OK", const QString &httpVersion = "HTTP/1.0");
 
-    const QByteArray lineSep = "\r\n";
-    const QByteArray fieldSepStatusLine = " ";
-    const QByteArray fieldSepHeader = ": ";
-
     const QString &httpVersion() const;
     void setHttpVersion(const QString &version);
 
