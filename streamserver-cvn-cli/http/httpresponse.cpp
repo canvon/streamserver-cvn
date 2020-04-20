@@ -1,88 +1,88 @@
-#include "httpreply.h"
+#include "httpresponse.h"
 
 #include <stdexcept>
 #include <QBuffer>
 #include <QTextStream>
 
-HTTPReply::HTTPReply(int statusCode, const QString &statusMsg, const QString &httpVersion)
+HTTPResponse::HTTPResponse(int statusCode, const QString &statusMsg, const QString &httpVersion)
 {
     setHttpVersion(httpVersion);
     setStatusCode(statusCode);
     setStatusMsg(statusMsg);
 }
 
-const QString &HTTPReply::httpVersion() const
+const QString &HTTPResponse::httpVersion() const
 {
     return _httpVersion;
 }
 
-void HTTPReply::setHttpVersion(const QString &version)
+void HTTPResponse::setHttpVersion(const QString &version)
 {
     if (version.isEmpty())
-        throw std::invalid_argument("HTTP reply: HTTP version can't be empty");
+        throw std::invalid_argument("HTTP response: HTTP version can't be empty");
 
     if (version.contains(' ') || version.contains('\r') || version.contains('\n'))
-        throw std::invalid_argument("HTTP reply: Invalid characters found in to-be-set HTTP version");
+        throw std::invalid_argument("HTTP response: Invalid characters found in to-be-set HTTP version");
 
     _httpVersion = version;
 }
 
-int HTTPReply::statusCode() const
+int HTTPResponse::statusCode() const
 {
     return _statusCode;
 }
 
-void HTTPReply::setStatusCode(int status)
+void HTTPResponse::setStatusCode(int status)
 {
     if (status < 100 || status > 999)
-        throw std::invalid_argument("HTTP reply: Refusing to set invalid (non 3-digit) status code " +
+        throw std::invalid_argument("HTTP response: Refusing to set invalid (non 3-digit) status code " +
                                     std::to_string(status));
 
     _statusCode = status;
 }
 
-const QString &HTTPReply::statusMsg() const
+const QString &HTTPResponse::statusMsg() const
 {
     return _statusMsg;
 }
 
-void HTTPReply::setStatusMsg(const QString &msg)
+void HTTPResponse::setStatusMsg(const QString &msg)
 {
     if (msg.contains('\r') || msg.contains('\n'))
-        throw std::invalid_argument("HTTP reply: Invalid characters found in to-be-set status message");
+        throw std::invalid_argument("HTTP response: Invalid characters found in to-be-set status message");
 
     _statusMsg = msg;
 }
 
-const HTTPReply::header_type &HTTPReply::header() const
+const HTTPResponse::header_type &HTTPResponse::header() const
 {
     return _header;
 }
 
-void HTTPReply::setHeader(const QString &fieldName, const QString &fieldValue)
+void HTTPResponse::setHeader(const QString &fieldName, const QString &fieldValue)
 {
     // TODO: Update existing header fields?
     _header.append(std::make_pair(fieldName, fieldValue));
 }
 
-const QByteArray &HTTPReply::body() const
+const QByteArray &HTTPResponse::body() const
 {
     return _body;
 }
 
-void HTTPReply::setBody(const QByteArray &body)
+void HTTPResponse::setBody(const QByteArray &body)
 {
     _body = body;
     setHeader("Content-Length", QString::number(_body.length()));
 }
 
-QByteArray HTTPReply::toBytes() const
+QByteArray HTTPResponse::toBytes() const
 {
     QByteArray bufBytes;
     QBuffer buf(&bufBytes); buf.open(QIODevice::WriteOnly);
     QTextStream bufOut(&buf);
 
-    // HTTP reply status line
+    // HTTP response status line
     bufOut << _httpVersion << fieldSepStatusLine
            << _statusCode  << fieldSepStatusLine
            << _statusMsg   << lineSep;

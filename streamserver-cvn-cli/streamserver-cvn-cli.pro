@@ -14,14 +14,14 @@ SOURCES += main.cpp \
     streamclient.cpp \
     http/httpheader_netside.cpp \
     http/httprequest_netside.cpp \
-    http/httpreply.cpp
+    http/httpresponse.cpp
 
 HEADERS += \
     streamserver.h \
     streamclient.h \
     http/httpheader_netside.h \
     http/httprequest_netside.h \
-    http/httpreply.h
+    http/httpresponse.h
 
 include(../config.pri)
 

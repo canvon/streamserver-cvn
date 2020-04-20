@@ -1,12 +1,12 @@
-#ifndef HTTPREPLY_H
-#define HTTPREPLY_H
+#ifndef HTTPRESPONSE_H
+#define HTTPRESPONSE_H
 
 #include <utility>
 #include <QString>
 #include <QList>
 
-// An HTTP request reply being constructed by the program.
-class HTTPReply
+// An HTTP request response(/reply) being constructed by the program.
+class HTTPResponse
 {
     QString  _httpVersion;
     int      _statusCode;
@@ -18,7 +18,7 @@ private:
     QByteArray   _body;
 
 public:
-    explicit HTTPReply(int statusCode = 200, const QString &statusMsg = "OK", const QString &httpVersion = "HTTP/1.0");
+    explicit HTTPResponse(int statusCode = 200, const QString &statusMsg = "OK", const QString &httpVersion = "HTTP/1.0");
 
     const QByteArray lineSep = "\r\n";
     const QByteArray fieldSepStatusLine = " ";
@@ -42,4 +42,4 @@ public:
     QByteArray toBytes() const;
 };
 
-#endif // HTTPREPLY_H
+#endif // HTTPRESPONSE_H

@@ -87,9 +87,9 @@ const HTTPRequest &StreamClient::httpRequest() const
     return _httpRequest;
 }
 
-const HTTPReply *StreamClient::httpReply() const
+const HTTPResponse *StreamClient::httpResponse() const
 {
-    return _httpReplyPtr.get();
+    return _httpResponsePtr.get();
 }
 
 bool StreamClient::tsStripAdditionalInfo() const
@@ -174,28 +174,28 @@ void StreamClient::sendData()
         return;
     }
 
-    if (!_httpReplyPtr) {
+    if (!_httpResponsePtr) {
         if (verbose >= 2)
-            qDebug() << qPrintable(_logPrefix) << "No reply generated, yet, leaving send data early";
+            qDebug() << qPrintable(_logPrefix) << "No response generated, yet, leaving send data early";
         return;
     }
 
-    if (!_replyHeaderSent) {
-        // Initially fill send buffer with HTTP reply.
+    if (!_responseHeaderSent) {
+        // Initially fill send buffer with HTTP response.
 
         if (verbose >= 0) {
-            qInfo() << qPrintable(_logPrefix) << "Sending server reply:"
-                    << "HTTP version"   << _httpReplyPtr->httpVersion()
-                    << "Status code"    << _httpReplyPtr->statusCode()
-                    << "Status message" << _httpReplyPtr->statusMsg();
+            qInfo() << qPrintable(_logPrefix) << "Sending server response:"
+                    << "HTTP version"   << _httpResponsePtr->httpVersion()
+                    << "Status code"    << _httpResponsePtr->statusCode()
+                    << "Status message" << _httpResponsePtr->statusMsg();
         }
 
-        const QByteArray reply = _httpReplyPtr->toBytes();
+        const QByteArray response = _httpResponsePtr->toBytes();
         if (verbose >= 3)
-            qDebug() << qPrintable(_logPrefix) << "Filling send buffer with reply data:" << reply;
+            qDebug() << qPrintable(_logPrefix) << "Filling send buffer with response data:" << response;
 
-        _sendBuf.append(reply);
-        _replyHeaderSent = true;
+        _sendBuf.append(response);
+        _responseHeaderSent = true;
     }
 
     while (!_sendBuf.isEmpty() || !_queue.isEmpty()) {
@@ -257,7 +257,7 @@ void StreamClient::sendData()
 
     if (_sendBuf.isEmpty() && !_forwardPackets) {
         if (verbose >= 0)
-            qInfo() << qPrintable(_logPrefix) << "Closing client connection after HTTP reply";
+            qInfo() << qPrintable(_logPrefix) << "Closing client connection after HTTP response";
         _socketPtr->close();
     }
 
@@ -309,9 +309,9 @@ void StreamClient::processRequest()
     if (!(httpVersion == "HTTP/1.0" || httpVersion == "HTTP/1.1")) {
         if (verbose >= 0)
             qInfo() << qPrintable(_logPrefix) << "HTTP version not recognized:" << httpVersion;
-        _httpReplyPtr = std::make_unique<HTTPReply>(400, "Bad Request");
-        _httpReplyPtr->setHeader("Content-Type", "text/plain");
-        _httpReplyPtr->setBody("HTTP version not recognized.\n");
+        _httpResponsePtr = std::make_unique<HTTPResponse>(400, "Bad Request");
+        _httpResponsePtr->setHeader("Content-Type", "text/plain");
+        _httpResponsePtr->setBody("HTTP version not recognized.\n");
         return;
     }
 
@@ -325,9 +325,9 @@ void StreamClient::processRequest()
             for (const HTTP::HeaderParser::Field &hostHeader : hostHeaders)
                 info << hostHeader.fieldValue;
         }
-        _httpReplyPtr = std::make_unique<HTTPReply>(400, "Bad Request");
-        _httpReplyPtr->setHeader("Content-Type", "text/plain");
-        _httpReplyPtr->setBody("Multiple HTTP Host headers in request.\n");
+        _httpResponsePtr = std::make_unique<HTTPResponse>(400, "Bad Request");
+        _httpResponsePtr->setHeader("Content-Type", "text/plain");
+        _httpResponsePtr->setBody("Multiple HTTP Host headers in request.\n");
         return;
     }
     else if (hostHeaders.length() == 1) {
@@ -368,9 +368,9 @@ void StreamClient::processRequest()
             if (!found) {
                 if (verbose >= 0)
                     qInfo() << qPrintable(_logPrefix) << "HTTP host invalid for this server:" << host;
-                _httpReplyPtr = std::make_unique<HTTPReply>(400, "Bad Request");
-                _httpReplyPtr->setHeader("Content-Type", "text/plain");
-                _httpReplyPtr->setBody("HTTP host invalid for this server\n");
+                _httpResponsePtr = std::make_unique<HTTPResponse>(400, "Bad Request");
+                _httpResponsePtr->setHeader("Content-Type", "text/plain");
+                _httpResponsePtr->setBody("HTTP host invalid for this server\n");
                 return;
             }
         }
@@ -380,9 +380,9 @@ void StreamClient::processRequest()
     if (!(method == "GET" || method == "HEAD")) {
         if (verbose >= 0)
             qInfo() << qPrintable(_logPrefix) << "HTTP method not supported:" << method;
-        _httpReplyPtr = std::make_unique<HTTPReply>(400, "Bad Request");
-        _httpReplyPtr->setHeader("Content-Type", "text/plain");
-        _httpReplyPtr->setBody("HTTP method not supported.\n");
+        _httpResponsePtr = std::make_unique<HTTPResponse>(400, "Bad Request");
+        _httpResponsePtr->setHeader("Content-Type", "text/plain");
+        _httpResponsePtr->setBody("HTTP method not supported.\n");
         return;
     }
 
@@ -390,14 +390,14 @@ void StreamClient::processRequest()
     if (!(path == "/" || path == "/stream.m2ts" || path == "/live.m2ts")) {
         if (verbose >= 0)
             qInfo() << qPrintable(_logPrefix) << "Path not found:" << path;
-        _httpReplyPtr = std::make_unique<HTTPReply>(404, "Not Found");
-        _httpReplyPtr->setHeader("Content-Type", "text/plain");
-        _httpReplyPtr->setBody("Path not found.\n");
+        _httpResponsePtr = std::make_unique<HTTPResponse>(404, "Not Found");
+        _httpResponsePtr->setHeader("Content-Type", "text/plain");
+        _httpResponsePtr->setBody("Path not found.\n");
         return;
     }
 
-    _httpReplyPtr = std::make_unique<HTTPReply>(200, "OK");
-    _httpReplyPtr->setHeader("Content-Type", "video/mp2t");
+    _httpResponsePtr = std::make_unique<HTTPResponse>(200, "OK");
+    _httpResponsePtr->setHeader("Content-Type", "video/mp2t");
     if (_httpRequest.method() == "HEAD") {
         if (verbose >= -1)
             qInfo() << qPrintable(_logPrefix) << "Request OK, HEAD only";
@@ -413,7 +413,7 @@ void StreamClient::close()
 {
     // TODO: Respect current connection state,
     //       and ensure that all proper requests
-    //       receive a proper reply...
+    //       receive a proper response...
 
     if (verbose >= 0)
         qInfo() << qPrintable(_logPrefix) << "Closing down... (programmatic request)";
@@ -458,9 +458,9 @@ void StreamClient::receiveData()
                 qInfo() << qPrintable(_logPrefix) << "Rejected chunk was"
                         << HumanReadable::Hexdump { buf, true, true, true };
             }
-            _httpReplyPtr = std::make_unique<HTTPReply>(400, "Bad Request");
-            _httpReplyPtr->setHeader("Content-Type", "text/plain");
-            _httpReplyPtr->setBody("Unable to parse HTTP request.\n");
+            _httpResponsePtr = std::make_unique<HTTPResponse>(400, "Bad Request");
+            _httpResponsePtr->setHeader("Content-Type", "text/plain");
+            _httpResponsePtr->setBody("Unable to parse HTTP request.\n");
             return;
         }
     }

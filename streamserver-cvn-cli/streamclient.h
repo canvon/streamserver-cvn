@@ -13,7 +13,7 @@
 #include <QTcpSocket>
 
 #include "http/httprequest_netside.h"
-#include "http/httpreply.h"
+#include "http/httpresponse.h"
 #ifndef TS_PACKET_V2
 #include "tspacket.h"
 #else
@@ -38,8 +38,8 @@ private:
     quint64                      _socketBytesSent = 0;
     bool                         _isReceiving = true;
     HTTPRequest                  _httpRequest;
-    std::unique_ptr<HTTPReply>   _httpReplyPtr;
-    bool                         _replyHeaderSent = false;
+    std::unique_ptr<HTTPResponse>  _httpResponsePtr;
+    bool                         _responseHeaderSent = false;
     bool                         _forwardPackets = false;
     bool                         _tsStripAdditionalInfo = true;
 #ifndef TS_PACKET_V2
@@ -64,7 +64,7 @@ public:
     quint64 socketBytesReceived() const;
     quint64 socketBytesSent() const;
     const HTTPRequest &httpRequest() const;
-    const HTTPReply   *httpReply()   const;
+    const HTTPResponse *httpResponse() const;
 
     bool tsStripAdditionalInfo() const;
     void setTSStripAdditionalInfo(bool strip);
