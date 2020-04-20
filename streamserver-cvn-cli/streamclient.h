@@ -20,6 +20,9 @@
 #include "tspacketv2.h"
 #endif
 
+// TODO: Wrap into namespace SSCvn ourselves; then, remove this:
+using namespace SSCvn;
+
 class StreamServer;
 
 class StreamClient : public QObject
@@ -37,8 +40,8 @@ private:
     quint64                      _socketBytesReceived = 0;
     quint64                      _socketBytesSent = 0;
     bool                         _isReceiving = true;
-    HTTPRequest                  _httpRequest;
-    std::unique_ptr<HTTPResponse>  _httpResponsePtr;
+    HTTP::RequestNetside         _httpRequest;
+    std::unique_ptr<HTTP::Response>  _httpResponsePtr;
     bool                         _responseHeaderSent = false;
     bool                         _forwardPackets = false;
     bool                         _tsStripAdditionalInfo = true;
@@ -63,8 +66,8 @@ public:
     const QTcpSocket &socket() const;
     quint64 socketBytesReceived() const;
     quint64 socketBytesSent() const;
-    const HTTPRequest &httpRequest() const;
-    const HTTPResponse *httpResponse() const;
+    const HTTP::RequestNetside &httpRequest() const;
+    const HTTP::Response *httpResponse() const;
 
     bool tsStripAdditionalInfo() const;
     void setTSStripAdditionalInfo(bool strip);

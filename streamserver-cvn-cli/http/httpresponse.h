@@ -5,8 +5,11 @@
 #include <QString>
 #include <QList>
 
+namespace SSCvn {
+namespace HTTP {  // namespace SSCvn::HTTP
+
 // An HTTP request response(/reply) being constructed by the program.
-class HTTPResponse
+class Response
 {
     QString  _httpVersion;
     int      _statusCode;
@@ -18,7 +21,7 @@ private:
     QByteArray   _body;
 
 public:
-    explicit HTTPResponse(int statusCode = 200, const QString &statusMsg = "OK", const QString &httpVersion = "HTTP/1.0");
+    explicit Response(int statusCode = 200, const QString &statusMsg = "OK", const QString &httpVersion = "HTTP/1.0");
 
     const QByteArray lineSep = "\r\n";
     const QByteArray fieldSepStatusLine = " ";
@@ -41,5 +44,8 @@ public:
 
     QByteArray toBytes() const;
 };
+
+}  // namespace SSCvn::HTTP
+}  // namespace SSCvn
 
 #endif // HTTPRESPONSE_H

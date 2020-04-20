@@ -215,8 +215,8 @@ void StreamServer::clientDisconnected(QObject *objPtr)
     QTcpSocket &socket(clientPtr->socket());
     const QString logPrefix = clientPtr->logPrefix();
 
-    const HTTPRequest &theHTTPRequest(clientPtr->httpRequest());
-    if (theHTTPRequest.receiveState() != HTTPRequest::ReceiveState::Ready) {
+    const HTTP::RequestNetside &theHTTPRequest(clientPtr->httpRequest());
+    if (theHTTPRequest.receiveState() != HTTP::RequestNetside::ReceiveState::Ready) {
         if (verbose >= 0) {
             qInfo() << qPrintable(logPrefix) << "No valid HTTP request before disconnect!";
             qInfo() << qPrintable(logPrefix) << "Buffer was"

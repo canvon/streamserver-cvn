@@ -6,7 +6,8 @@
 #include <QList>
 #include <QDebug>
 
-namespace HTTP {
+namespace SSCvn {
+namespace HTTP {  // namespace SSCvn::HTTP
 
 namespace impl {
 class HeaderNetsideImpl;
@@ -42,6 +43,7 @@ public:
 
 QDebug operator<<(QDebug debug, const HeaderNetside::Field &field);
 
-}  // namespace HTTP
+}  // namespace SSCvn::HTTP
+}  // namespace SSCvn
 
 #endif // HTTPHEADER_NETSIDE_H

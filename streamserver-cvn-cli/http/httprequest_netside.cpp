@@ -4,12 +4,15 @@
 
 #include <stdexcept>
 
-HTTPRequest::HTTPRequest()
+namespace SSCvn {
+namespace HTTP {  // namespace SSCvn::HTTP
+
+RequestNetside::RequestNetside()
 {
 
 }
 
-QByteArray HTTPRequest::simplifiedLinearWhiteSpace(const QByteArray &bytes)
+QByteArray RequestNetside::simplifiedLinearWhiteSpace(const QByteArray &bytes)
 {
     QByteArray ret;
     QByteArray lws;
@@ -65,86 +68,86 @@ QByteArray HTTPRequest::simplifiedLinearWhiteSpace(const QByteArray &bytes)
     return ret;
 }
 
-qint64 HTTPRequest::byteCount() const
+qint64 RequestNetside::byteCount() const
 {
     return _byteCount;
 }
 
-qint64 HTTPRequest::byteCountMax() const
+qint64 RequestNetside::byteCountMax() const
 {
     return _byteCountMax;
 }
 
-void HTTPRequest::setByteCountMax(qint64 max)
+void RequestNetside::setByteCountMax(qint64 max)
 {
     if (!(max >= 0))
-        throw std::invalid_argument("HTTP request: Set byte count maximum: Invalid maximum " +
+        throw std::invalid_argument("HTTP request netside: Set byte count maximum: Invalid maximum " +
                                     std::to_string(max));
 
     _byteCountMax = max;
 }
 
-const QByteArray &HTTPRequest::buf() const
+const QByteArray &RequestNetside::buf() const
 {
     return _buf;
 }
 
-const QByteArray &HTTPRequest::headerLinesBuf() const
+const QByteArray &RequestNetside::headerLinesBuf() const
 {
     return _headerLinesBuf;
 }
 
-HTTPRequest::ReceiveState HTTPRequest::receiveState() const
+RequestNetside::ReceiveState RequestNetside::receiveState() const
 {
     return _receiveState;
 }
 
-const QByteArray &HTTPRequest::requestLine() const
+const QByteArray &RequestNetside::requestLine() const
 {
     if (_receiveState <= ReceiveState::RequestLine)
-        throw std::runtime_error("HTTP request: Request line is not available, yet");
+        throw std::runtime_error("HTTP request netside: Request line is not available, yet");
 
     return _requestLine;
 }
 
-const QByteArray &HTTPRequest::method() const
+const QByteArray &RequestNetside::method() const
 {
     if (_receiveState <= ReceiveState::RequestLine)
-        throw std::runtime_error("HTTP request: Request method is not available, yet");
+        throw std::runtime_error("HTTP request netside: Request method is not available, yet");
 
     return _method;
 }
 
-const QByteArray &HTTPRequest::path() const
+const QByteArray &RequestNetside::path() const
 {
     if (_receiveState <= ReceiveState::RequestLine)
-        throw std::runtime_error("HTTP request: Request path is not available, yet");
+        throw std::runtime_error("HTTP request netside: Request path is not available, yet");
 
     return _path;
 }
 
-const QByteArray &HTTPRequest::httpVersion() const
+const QByteArray &RequestNetside::httpVersion() const
 {
     if (_receiveState <= ReceiveState::RequestLine)
-        throw std::runtime_error("HTTP request: HTTP version is not available, yet");
+        throw std::runtime_error("HTTP request netside: HTTP version is not available, yet");
 
     return _httpVersion;
 }
 
-const HTTPHeaderParser &HTTPRequest::header() const
+const HeaderNetside &RequestNetside::header() const
 {
     return _header;
 }
 
-void HTTPRequest::processChunk(const QByteArray &in)
+void RequestNetside::processChunk(const QByteArray &in)
 {
     if (_receiveState >= ReceiveState::Ready)
-        throw std::runtime_error("HTTP request: Can't process chunk, as request is already ready");
+        throw std::runtime_error("HTTP request netside: Can't process chunk, as request is already ready");
 
     _buf.append(in);
     _byteCount += in.length();
     if (!(_byteCount <= _byteCountMax))
-        throw std::runtime_error("HTTP request: Byte count maximum exceeded (" +
+        throw std::runtime_error("HTTP request netside: Byte count maximum exceeded (" +
                                  std::to_string(_byteCount) + " bytes = " +
                                  HumanReadable::byteCount(_byteCount).toStdString() + ")");
 
@@ -162,23 +165,23 @@ void HTTPRequest::processChunk(const QByteArray &in)
 
             iFieldSep = _requestLine.indexOf(fieldSepRequestLine, iFrom);
             if (iFieldSep < 0)
-                throw std::runtime_error("HTTP request: No field separator after HTTP method");
+                throw std::runtime_error("HTTP request netside: No field separator after HTTP method");
             _method = _requestLine.mid(iFrom, iFieldSep - iFrom);
             if (_method.isEmpty())
-                throw std::runtime_error("HTTP request: HTTP method is missing");
+                throw std::runtime_error("HTTP request netside: HTTP method is missing");
             iFrom = iFieldSep + fieldSepRequestLine.length();
 
             iFieldSep = _requestLine.indexOf(fieldSepRequestLine, iFrom);
             if (iFieldSep < 0)
-                throw std::runtime_error("HTTP request: No field separator after request path");
+                throw std::runtime_error("HTTP request netside: No field separator after request path");
             _path = _requestLine.mid(iFrom, iFieldSep - iFrom);
             if (_path.isEmpty())
-                throw std::runtime_error("HTTP request: Request path is missing");
+                throw std::runtime_error("HTTP request netside: Request path is missing");
             iFrom = iFieldSep + fieldSepRequestLine.length();
 
             _httpVersion = _requestLine.mid(iFrom);
             if (_httpVersion.isEmpty())
-                throw std::runtime_error("HTTP request: Request version is missing");
+                throw std::runtime_error("HTTP request netside: Request version is missing");
 
             _buf.remove(0, iLineSep + lineSep.length());
             _receiveState = ReceiveState::Header;
@@ -226,9 +229,12 @@ void HTTPRequest::processChunk(const QByteArray &in)
             }
             break;
         case ReceiveState::Body:
-            throw std::runtime_error("HTTP request: Request body not supported, yet");
+            throw std::runtime_error("HTTP request netside: Request body not supported, yet");
         case ReceiveState::Ready:
-            throw std::runtime_error("HTTP request: Trailing data");
+            throw std::runtime_error("HTTP request netside: Trailing data");
         }
     }
 }
+
+}  // namespace SSCvn::HTTP
+}  // namespace SSCvn

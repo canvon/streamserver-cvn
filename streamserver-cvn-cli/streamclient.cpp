@@ -82,12 +82,12 @@ quint64 StreamClient::socketBytesSent() const
     return _socketBytesSent;
 }
 
-const HTTPRequest &StreamClient::httpRequest() const
+const HTTP::RequestNetside &StreamClient::httpRequest() const
 {
     return _httpRequest;
 }
 
-const HTTPResponse *StreamClient::httpResponse() const
+const HTTP::Response *StreamClient::httpResponse() const
 {
     return _httpResponsePtr.get();
 }
@@ -309,7 +309,7 @@ void StreamClient::processRequest()
     if (!(httpVersion == "HTTP/1.0" || httpVersion == "HTTP/1.1")) {
         if (verbose >= 0)
             qInfo() << qPrintable(_logPrefix) << "HTTP version not recognized:" << httpVersion;
-        _httpResponsePtr = std::make_unique<HTTPResponse>(400, "Bad Request");
+        _httpResponsePtr = std::make_unique<HTTP::Response>(400, "Bad Request");
         _httpResponsePtr->setHeader("Content-Type", "text/plain");
         _httpResponsePtr->setBody("HTTP version not recognized.\n");
         return;
@@ -325,7 +325,7 @@ void StreamClient::processRequest()
             for (const HTTP::HeaderNetside::Field &hostHeader : hostHeaders)
                 info << hostHeader.fieldValue;
         }
-        _httpResponsePtr = std::make_unique<HTTPResponse>(400, "Bad Request");
+        _httpResponsePtr = std::make_unique<HTTP::Response>(400, "Bad Request");
         _httpResponsePtr->setHeader("Content-Type", "text/plain");
         _httpResponsePtr->setBody("Multiple HTTP Host headers in request.\n");
         return;
@@ -368,7 +368,7 @@ void StreamClient::processRequest()
             if (!found) {
                 if (verbose >= 0)
                     qInfo() << qPrintable(_logPrefix) << "HTTP host invalid for this server:" << host;
-                _httpResponsePtr = std::make_unique<HTTPResponse>(400, "Bad Request");
+                _httpResponsePtr = std::make_unique<HTTP::Response>(400, "Bad Request");
                 _httpResponsePtr->setHeader("Content-Type", "text/plain");
                 _httpResponsePtr->setBody("HTTP host invalid for this server\n");
                 return;
@@ -380,7 +380,7 @@ void StreamClient::processRequest()
     if (!(method == "GET" || method == "HEAD")) {
         if (verbose >= 0)
             qInfo() << qPrintable(_logPrefix) << "HTTP method not supported:" << method;
-        _httpResponsePtr = std::make_unique<HTTPResponse>(400, "Bad Request");
+        _httpResponsePtr = std::make_unique<HTTP::Response>(400, "Bad Request");
         _httpResponsePtr->setHeader("Content-Type", "text/plain");
         _httpResponsePtr->setBody("HTTP method not supported.\n");
         return;
@@ -390,13 +390,13 @@ void StreamClient::processRequest()
     if (!(path == "/" || path == "/stream.m2ts" || path == "/live.m2ts")) {
         if (verbose >= 0)
             qInfo() << qPrintable(_logPrefix) << "Path not found:" << path;
-        _httpResponsePtr = std::make_unique<HTTPResponse>(404, "Not Found");
+        _httpResponsePtr = std::make_unique<HTTP::Response>(404, "Not Found");
         _httpResponsePtr->setHeader("Content-Type", "text/plain");
         _httpResponsePtr->setBody("Path not found.\n");
         return;
     }
 
-    _httpResponsePtr = std::make_unique<HTTPResponse>(200, "OK");
+    _httpResponsePtr = std::make_unique<HTTP::Response>(200, "OK");
     _httpResponsePtr->setHeader("Content-Type", "video/mp2t");
     if (_httpRequest.method() == "HEAD") {
         if (verbose >= -1)
@@ -458,7 +458,7 @@ void StreamClient::receiveData()
                 qInfo() << qPrintable(_logPrefix) << "Rejected chunk was"
                         << HumanReadable::Hexdump { buf, true, true, true };
             }
-            _httpResponsePtr = std::make_unique<HTTPResponse>(400, "Bad Request");
+            _httpResponsePtr = std::make_unique<HTTP::Response>(400, "Bad Request");
             _httpResponsePtr->setHeader("Content-Type", "text/plain");
             _httpResponsePtr->setBody("Unable to parse HTTP request.\n");
             return;
@@ -473,7 +473,7 @@ void StreamClient::receiveData()
     //if (buf.isEmpty())
     //    ...;
 
-    if (_httpRequest.receiveState() == HTTPRequest::ReceiveState::Ready) {
+    if (_httpRequest.receiveState() == HTTP::RequestNetside::ReceiveState::Ready) {
         _isReceiving = false;
         if (verbose >= 2)
             qDebug() << qPrintable(_logPrefix) << "Received request; processing...";

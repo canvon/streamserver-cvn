@@ -7,11 +7,12 @@
 #include <QDebug>
 #include <QMultiMap>
 
-namespace HTTP {
+namespace SSCvn {
+namespace HTTP {  // namespace SSCvn::HTTP
 
 const QByteArray HeaderNetside::fieldSep = ":";
 
-namespace impl {
+namespace impl {  // namespace SSCvn::HTTP::impl
 
 class HeaderNetsideImpl {
     QList<HeaderNetside::Field>  _fields;
@@ -37,7 +38,7 @@ public:
     }
 };
 
-}  // namespace HTTP::impl
+}  // namespace SSCvn::HTTP::impl
 
 HeaderNetside::HeaderNetside() :
     _implPtr(std::make_unique<impl::HeaderNetsideImpl>())
@@ -119,7 +120,7 @@ void HeaderNetside::append(const QByteArray &fieldBytes)
 
     // Simplify linear white-space to single SPs,
     // with LWS at start and end trimmed.
-    theField.fieldValue = HTTPRequest::simplifiedLinearWhiteSpace(theField.fieldValueRaw);
+    theField.fieldValue = RequestNetside::simplifiedLinearWhiteSpace(theField.fieldValueRaw);
 
     _implPtr->append(theField);
 }
@@ -136,4 +137,5 @@ QDebug operator<<(QDebug debug, const HeaderNetside::Field &field)
     return debug;
 }
 
-}  // namespace HTTP
+}  // namespace SSCvn::HTTP
+}  // namespace SSCvn

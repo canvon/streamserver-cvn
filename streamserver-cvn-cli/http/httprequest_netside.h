@@ -5,11 +5,11 @@
 
 #include <QByteArray>
 
-// FIXME: Remove.
-using HTTPHeaderParser = HTTP::HeaderNetside;
+namespace SSCvn {
+namespace HTTP {  // namespace SSCvn::HTTP
 
 // An HTTP request from the wire.
-class HTTPRequest
+class RequestNetside
 {
     qint64      _byteCount = 0;
     qint64      _byteCountMax = 10 * 1024;  // 10 KiB
@@ -28,11 +28,11 @@ private:
     QByteArray    _method;
     QByteArray    _path;
     QByteArray    _httpVersion;
-    HTTPHeaderParser  _header;
+    HeaderNetside  _header;
     QByteArray    _body;
 
 public:
-    explicit HTTPRequest();
+    explicit RequestNetside();
 
     const QByteArray lineSep = "\r\n";
     const QByteArray fieldSepRequestLine = " ";
@@ -50,9 +50,12 @@ public:
     const QByteArray &method() const;
     const QByteArray &path() const;
     const QByteArray &httpVersion() const;
-    const HTTPHeaderParser &header() const;
+    const HeaderNetside &header() const;
 
     void processChunk(const QByteArray &in);
 };
+
+}  // namespace SSCvn::HTTP
+}  // namespace SSCvn
 
 #endif // HTTPREQUEST_NETSIDE_H
