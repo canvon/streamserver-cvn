@@ -9,17 +9,17 @@
 
 namespace HTTP {
 
-const QByteArray HeaderParser::fieldSep = ":";
+const QByteArray HeaderNetside::fieldSep = ":";
 
 namespace impl {
 
-class HeaderParserImpl {
-    QList<HeaderParser::Field>  _fields;
+class HeaderNetsideImpl {
+    QList<HeaderNetside::Field>  _fields;
     QMultiMap<QByteArray, int>  _fieldNameIndices;
-    friend HeaderParser;
+    friend HeaderNetside;
 
 public:
-    void append(const HeaderParser::Field &theField)
+    void append(const HeaderNetside::Field &theField)
     {
         _fields.append(theField);
         _fieldNameIndices.insert(
@@ -31,7 +31,7 @@ public:
     {
         _fieldNameIndices.clear();
         for (int i = 0; i < _fields.length(); i++) {
-            const HeaderParser::Field &theField(_fields.at(i));
+            const HeaderNetside::Field &theField(_fields.at(i));
             _fieldNameIndices.insert(theField.fieldName.toLower(), i);
         }
     }
@@ -39,23 +39,23 @@ public:
 
 }  // namespace HTTP::impl
 
-HeaderParser::HeaderParser() :
-    _implPtr(std::make_unique<impl::HeaderParserImpl>())
+HeaderNetside::HeaderNetside() :
+    _implPtr(std::make_unique<impl::HeaderNetsideImpl>())
 {
 
 }
 
-HeaderParser::~HeaderParser()
+HeaderNetside::~HeaderNetside()
 {
 
 }
 
-QList<HeaderParser::Field> HeaderParser::fields() const
+QList<HeaderNetside::Field> HeaderNetside::fields() const
 {
     return _implPtr->_fields;
 }
 
-QList<HeaderParser::Field> HeaderParser::fields(const QByteArray &fieldName) const
+QList<HeaderNetside::Field> HeaderNetside::fields(const QByteArray &fieldName) const
 {
     QList<Field> ret;
     QList<int> indicesReverse = _implPtr->_fieldNameIndices.values(fieldName.toLower());
@@ -65,7 +65,7 @@ QList<HeaderParser::Field> HeaderParser::fields(const QByteArray &fieldName) con
     return ret;
 }
 
-QList<QByteArray> HeaderParser::fieldValues(const QByteArray &fieldName) const
+QList<QByteArray> HeaderNetside::fieldValues(const QByteArray &fieldName) const
 {
     QList<QByteArray> ret;
     for (const Field &theField : fields(fieldName))
@@ -74,10 +74,10 @@ QList<QByteArray> HeaderParser::fieldValues(const QByteArray &fieldName) const
     return ret;
 }
 
-void HeaderParser::setField(const QByteArray &fieldName, const QByteArray &fieldValue)
+void HeaderNetside::setField(const QByteArray &fieldName, const QByteArray &fieldValue)
 {
     if (fieldName.isEmpty())
-        throw std::invalid_argument("HTTP header parser: Set field: Field name can't be empty");
+        throw std::invalid_argument("HTTP header netside: Set field: Field name can't be empty");
 
     Field theField;
     theField.fieldName = fieldName;
@@ -97,13 +97,13 @@ void HeaderParser::setField(const QByteArray &fieldName, const QByteArray &field
     }
 }
 
-void HeaderParser::append(const QByteArray &fieldBytes)
+void HeaderNetside::append(const QByteArray &fieldBytes)
 {
     int i = fieldBytes.indexOf(fieldSep);
     if (!(i >= 0)) {
         QString exMsg;
         QDebug(&exMsg).nospace()
-            << "HTTP header parser: Field bytes are missing the field separator "
+            << "HTTP header netside: Field bytes are missing the field separator "
             << fieldSep << ": " << HumanReadable::Hexdump { fieldBytes, true, true };
         throw std::runtime_error(exMsg.toStdString());
     }
@@ -112,7 +112,7 @@ void HeaderParser::append(const QByteArray &fieldBytes)
     if (theField.fieldName.isEmpty()) {
         QString exMsg;
         QDebug(&exMsg)
-            << "HTTP header parser: Empty field name in field bytes"
+            << "HTTP header netside: Empty field name in field bytes"
             << HumanReadable::Hexdump { fieldBytes, true, true };
         throw std::runtime_error(exMsg.toStdString());
     }
@@ -124,12 +124,12 @@ void HeaderParser::append(const QByteArray &fieldBytes)
     _implPtr->append(theField);
 }
 
-QDebug operator<<(QDebug debug, const HeaderParser::Field &field)
+QDebug operator<<(QDebug debug, const HeaderNetside::Field &field)
 {
     QDebugStateSaver saver(debug);
     debug.nospace();
 
-    debug << "HTTP::HeaderParser::Field(";
+    debug << "HTTP::HeaderNetside::Field(";
     debug << "fieldName="  << field.fieldName << " ";
     debug << "fieldValue=" << field.fieldValue << ")";
 

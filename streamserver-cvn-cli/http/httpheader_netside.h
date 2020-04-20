@@ -9,12 +9,12 @@
 namespace HTTP {
 
 namespace impl {
-class HeaderParserImpl;
+class HeaderNetsideImpl;
 }
 
-class HeaderParser
+class HeaderNetside
 {
-    std::unique_ptr<impl::HeaderParserImpl>  _implPtr;
+    std::unique_ptr<impl::HeaderNetsideImpl>  _implPtr;
 
 public:
     struct Field {
@@ -24,8 +24,8 @@ public:
         QByteArray  fieldValue;
     };
 
-    explicit HeaderParser();
-    ~HeaderParser();
+    explicit HeaderNetside();
+    ~HeaderNetside();
 
     static const QByteArray fieldSep;
 
@@ -40,7 +40,7 @@ public:
     //QByteArray toBytes() const;
 };
 
-QDebug operator<<(QDebug debug, const HeaderParser::Field &field);
+QDebug operator<<(QDebug debug, const HeaderNetside::Field &field);
 
 }  // namespace HTTP
 

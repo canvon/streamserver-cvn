@@ -5,7 +5,8 @@
 
 #include <QByteArray>
 
-using HTTPHeaderParser = HTTP::HeaderParser;
+// FIXME: Remove.
+using HTTPHeaderParser = HTTP::HeaderNetside;
 
 // An HTTP request from the wire.
 class HTTPRequest

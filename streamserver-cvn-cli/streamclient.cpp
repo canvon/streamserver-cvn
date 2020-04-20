@@ -294,14 +294,14 @@ void StreamClient::processRequest()
                 << "HTTP version " << _httpRequest.httpVersion()
                 << "...";
 
-        const HTTP::HeaderParser &header(_httpRequest.header());
+        const HTTP::HeaderNetside &header(_httpRequest.header());
         qInfo() << qPrintable(_logPrefix) << "Headers extract:"
                 << "Host:"       << header.fieldValues("Host")
                 << "User-Agent:" << header.fieldValues("User-Agent");
     }
     if (verbose >= 1) {
         qInfo() << qPrintable(_logPrefix) << "HTTP header:";
-        for (const HTTP::HeaderParser::Field &headerField : _httpRequest.header().fields())
+        for (const HTTP::HeaderNetside::Field &headerField : _httpRequest.header().fields())
             qInfo() << qPrintable(_logPrefix) << headerField;
     }
 
@@ -317,12 +317,12 @@ void StreamClient::processRequest()
 
     // TODO: Determine host according to RFC2616 5.2
     QByteArray host;
-    const QList<HTTP::HeaderParser::Field> hostHeaders = _httpRequest.header().fields("Host");
+    const QList<HTTP::HeaderNetside::Field> hostHeaders = _httpRequest.header().fields("Host");
     if (hostHeaders.length() > 1) {
         if (verbose >= 0) {
             QDebug info = qInfo();
             info << qPrintable(_logPrefix) << "Multiple HTTP Host headers:";
-            for (const HTTP::HeaderParser::Field &hostHeader : hostHeaders)
+            for (const HTTP::HeaderNetside::Field &hostHeader : hostHeaders)
                 info << hostHeader.fieldValue;
         }
         _httpResponsePtr = std::make_unique<HTTPResponse>(400, "Bad Request");
