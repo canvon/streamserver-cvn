@@ -23,6 +23,10 @@
 // TODO: Wrap into namespace SSCvn ourselves; then, remove this:
 using namespace SSCvn;
 
+namespace SSCvn { namespace HTTP {
+enum StatusCode;
+} }
+
 class StreamServer;
 
 class StreamClient : public QObject
@@ -42,6 +46,7 @@ private:
     bool                         _isReceiving = true;
     HTTP::RequestNetside         _httpRequest;
     std::unique_ptr<HTTP::Response>  _httpResponsePtr;
+    void _setHttpResponseError(HTTP::StatusCode statusCode, const QByteArray &body);
     bool                         _responseHeaderSent = false;
     bool                         _forwardPackets = false;
     bool                         _tsStripAdditionalInfo = true;

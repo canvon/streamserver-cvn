@@ -1,7 +1,8 @@
 #ifndef HTTPUTIL_H
 #define HTTPUTIL_H
 
-#include <QByteArray>
+class QByteArray;
+class QString;
 
 namespace SSCvn {
 namespace HTTP {  // namespace SSCvn::HTTP
@@ -21,6 +22,8 @@ enum StatusCode {
     SC_400_BadRequest = 400,
     SC_404_NotFound   = 404,
 };
+
+QString statusMsgFromStatusCode(StatusCode statusCode);
 
 
 }  // namespace SSCvn::HTTP

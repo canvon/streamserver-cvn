@@ -93,6 +93,13 @@ const HTTP::Response *StreamClient::httpResponse() const
     return _httpResponsePtr.get();
 }
 
+void StreamClient::_setHttpResponseError(HTTP::StatusCode statusCode, const QByteArray &body)
+{
+    _httpResponsePtr = std::make_unique<HTTP::Response>(statusCode, HTTP::statusMsgFromStatusCode(statusCode));
+    _httpResponsePtr->setHeader("Content-Type", "text/plain");
+    _httpResponsePtr->setBody(body);
+}
+
 bool StreamClient::tsStripAdditionalInfo() const
 {
     return _tsStripAdditionalInfo;
@@ -310,9 +317,7 @@ void StreamClient::processRequest()
     if (!(httpVersion == "HTTP/1.0" || httpVersion == "HTTP/1.1")) {
         if (verbose >= 0)
             qInfo() << qPrintable(_logPrefix) << "HTTP version not recognized:" << httpVersion;
-        _httpResponsePtr = std::make_unique<HTTP::Response>(HTTP::SC_400_BadRequest, "Bad Request");
-        _httpResponsePtr->setHeader("Content-Type", "text/plain");
-        _httpResponsePtr->setBody("HTTP version not recognized.\n");
+        _setHttpResponseError(HTTP::SC_400_BadRequest, "HTTP version not recognized.\n");
         return;
     }
 
@@ -326,9 +331,7 @@ void StreamClient::processRequest()
             for (const HTTP::HeaderNetside::Field &hostHeader : hostHeaders)
                 info << hostHeader.fieldValue;
         }
-        _httpResponsePtr = std::make_unique<HTTP::Response>(HTTP::SC_400_BadRequest, "Bad Request");
-        _httpResponsePtr->setHeader("Content-Type", "text/plain");
-        _httpResponsePtr->setBody("Multiple HTTP Host headers in request.\n");
+        _setHttpResponseError(HTTP::SC_400_BadRequest, "Multiple HTTP Host headers in request.\n");
         return;
     }
     else if (hostHeaders.length() == 1) {
@@ -369,9 +372,7 @@ void StreamClient::processRequest()
             if (!found) {
                 if (verbose >= 0)
                     qInfo() << qPrintable(_logPrefix) << "HTTP host invalid for this server:" << host;
-                _httpResponsePtr = std::make_unique<HTTP::Response>(HTTP::SC_400_BadRequest, "Bad Request");
-                _httpResponsePtr->setHeader("Content-Type", "text/plain");
-                _httpResponsePtr->setBody("HTTP host invalid for this server\n");
+                _setHttpResponseError(HTTP::SC_400_BadRequest, "HTTP host invalid for this server\n");
                 return;
             }
         }
@@ -381,9 +382,7 @@ void StreamClient::processRequest()
     if (!(method == "GET" || method == "HEAD")) {
         if (verbose >= 0)
             qInfo() << qPrintable(_logPrefix) << "HTTP method not supported:" << method;
-        _httpResponsePtr = std::make_unique<HTTP::Response>(HTTP::SC_400_BadRequest, "Bad Request");
-        _httpResponsePtr->setHeader("Content-Type", "text/plain");
-        _httpResponsePtr->setBody("HTTP method not supported.\n");
+        _setHttpResponseError(HTTP::SC_400_BadRequest, "HTTP method not supported.\n");
         return;
     }
 
@@ -391,9 +390,7 @@ void StreamClient::processRequest()
     if (!(path == "/" || path == "/stream.m2ts" || path == "/live.m2ts")) {
         if (verbose >= 0)
             qInfo() << qPrintable(_logPrefix) << "Path not found:" << path;
-        _httpResponsePtr = std::make_unique<HTTP::Response>(HTTP::SC_404_NotFound, "Not Found");
-        _httpResponsePtr->setHeader("Content-Type", "text/plain");
-        _httpResponsePtr->setBody("Path not found.\n");
+        _setHttpResponseError(HTTP::SC_404_NotFound, "Path not found.\n");
         return;
     }
 
@@ -459,9 +456,7 @@ void StreamClient::receiveData()
                 qInfo() << qPrintable(_logPrefix) << "Rejected chunk was"
                         << HumanReadable::Hexdump { buf, true, true, true };
             }
-            _httpResponsePtr = std::make_unique<HTTP::Response>(HTTP::SC_400_BadRequest, "Bad Request");
-            _httpResponsePtr->setHeader("Content-Type", "text/plain");
-            _httpResponsePtr->setBody("Unable to parse HTTP request.\n");
+            _setHttpResponseError(HTTP::SC_400_BadRequest, "Unable to parse HTTP request.\n");
             return;
         }
     }
