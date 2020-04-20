@@ -1,7 +1,7 @@
-#ifndef HTTPREQUEST_H
-#define HTTPREQUEST_H
+#ifndef HTTPREQUEST_NETSIDE_H
+#define HTTPREQUEST_NETSIDE_H
 
-#include "httpheader.h"
+#include "httpheader_netside.h"
 
 #include <QByteArray>
 
@@ -54,4 +54,4 @@ public:
     void processChunk(const QByteArray &in);
 };
 
-#endif // HTTPREQUEST_H
+#endif // HTTPREQUEST_NETSIDE_H

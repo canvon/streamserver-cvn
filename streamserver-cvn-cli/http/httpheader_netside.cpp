@@ -1,6 +1,6 @@
-#include "httpheader.h"
+#include "httpheader_netside.h"
 
-#include "httprequest.h"
+#include "httprequest_netside.h"
 #include "humanreadable.h"
 
 #include <stdexcept>

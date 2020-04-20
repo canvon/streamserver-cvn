@@ -1,5 +1,5 @@
-#ifndef HTTPHEADER_H
-#define HTTPHEADER_H
+#ifndef HTTPHEADER_NETSIDE_H
+#define HTTPHEADER_NETSIDE_H
 
 #include <memory>
 #include <QByteArray>
@@ -44,4 +44,4 @@ QDebug operator<<(QDebug debug, const HeaderParser::Field &field);
 
 }  // namespace HTTP
 
-#endif // HTTPHEADER_H
+#endif // HTTPHEADER_NETSIDE_H

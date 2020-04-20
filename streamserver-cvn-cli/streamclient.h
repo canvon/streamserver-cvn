@@ -12,8 +12,8 @@
 #include <QElapsedTimer>
 #include <QTcpSocket>
 
-#include "httprequest.h"
-#include "httpreply.h"
+#include "http/httprequest_netside.h"
+#include "http/httpreply.h"
 #ifndef TS_PACKET_V2
 #include "tspacket.h"
 #else

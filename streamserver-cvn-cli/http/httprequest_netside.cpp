@@ -1,4 +1,4 @@
-#include "httprequest.h"
+#include "httprequest_netside.h"
 
 #include "humanreadable.h"
 

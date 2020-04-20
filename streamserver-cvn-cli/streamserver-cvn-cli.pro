@@ -12,16 +12,16 @@ TEMPLATE = app
 SOURCES += main.cpp \
     streamserver.cpp \
     streamclient.cpp \
-    httprequest.cpp \
-    httpreply.cpp \
-    httpheader.cpp
+    http/httpheader_netside.cpp \
+    http/httprequest_netside.cpp \
+    http/httpreply.cpp
 
 HEADERS += \
     streamserver.h \
     streamclient.h \
-    httprequest.h \
-    httpreply.h \
-    httpheader.h
+    http/httpheader_netside.h \
+    http/httprequest_netside.h \
+    http/httpreply.h
 
 include(../config.pri)
 
