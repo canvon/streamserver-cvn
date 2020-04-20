@@ -5,6 +5,8 @@
 #include <QString>
 #include <QList>
 
+#include "httputil.h"
+
 namespace SSCvn {
 namespace HTTP {  // namespace SSCvn::HTTP
 
@@ -12,7 +14,7 @@ namespace HTTP {  // namespace SSCvn::HTTP
 class Response
 {
     QString  _httpVersion;
-    int      _statusCode;
+    StatusCode  _statusCode;
     QString  _statusMsg;
 public:
     typedef QList<std::pair<QString, QString>>  header_type;
@@ -21,13 +23,13 @@ private:
     QByteArray   _body;
 
 public:
-    explicit Response(int statusCode = 200, const QString &statusMsg = "OK", const QString &httpVersion = "HTTP/1.0");
+    explicit Response(StatusCode statusCode = SC_200_OK, const QString &statusMsg = "OK", const QString &httpVersion = "HTTP/1.0");
 
     const QString &httpVersion() const;
     void setHttpVersion(const QString &version);
 
-    int statusCode() const;
-    void setStatusCode(int status);
+    StatusCode statusCode() const;
+    void setStatusCode(StatusCode status);
 
     const QString &statusMsg() const;
     void setStatusMsg(const QString &msg);

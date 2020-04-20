@@ -16,6 +16,13 @@ extern const QByteArray
 QByteArray simplifiedLinearWhiteSpace(const QByteArray &bytes);
 
 
+enum StatusCode {
+    SC_200_OK         = 200,
+    SC_400_BadRequest = 400,
+    SC_404_NotFound   = 404,
+};
+
+
 }  // namespace SSCvn::HTTP
 }  // namespace SSCvn
 

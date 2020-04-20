@@ -9,7 +9,7 @@
 namespace SSCvn {
 namespace HTTP {  // namespace SSCvn::HTTP
 
-Response::Response(int statusCode, const QString &statusMsg, const QString &httpVersion)
+Response::Response(StatusCode statusCode, const QString &statusMsg, const QString &httpVersion)
 {
     setHttpVersion(httpVersion);
     setStatusCode(statusCode);
@@ -32,12 +32,12 @@ void Response::setHttpVersion(const QString &version)
     _httpVersion = version;
 }
 
-int Response::statusCode() const
+StatusCode Response::statusCode() const
 {
     return _statusCode;
 }
 
-void Response::setStatusCode(int status)
+void Response::setStatusCode(StatusCode status)
 {
     if (status < 100 || status > 999)
         throw std::invalid_argument("HTTP response: Refusing to set invalid (non 3-digit) status code " +
