@@ -10,12 +10,14 @@
 #include <functional>
 #include <QDebug>
 #include <QCoreApplication>
+#include <QTcpServer>
 
 // (Note: As of 2019-04-17, we need both old and new packet defined...)
 #include "tspacket.h"
 #include "tspacketv2.h"
 #include "humanreadable.h"
 #include "log.h"
+#include "http/httprequest_netside.h"
 
 using SSCvn::log::verbose;
 
@@ -35,25 +37,73 @@ double timenow()
 
 }  // namespace
 
-StreamServer::StreamServer(std::unique_ptr<QFile> inputFilePtr, quint16 listenPort, QObject *parent) :
-    QObject(parent),
-    _listenPort(listenPort), _listenSocket(this),
-    _inputFilePtr(std::move(inputFilePtr)),
-    _clientDisconnectedMapper(this)
-{
-    connect(&_listenSocket, &QTcpServer::newConnection, this, &StreamServer::clientConnected);
 
-    if (verbose >= -1)
-        qInfo() << "Listening on port" << _listenPort << "...";
-    if (!_listenSocket.listen(QHostAddress::Any, _listenPort)) {
-        qCritical() << "Error listening on port" << _listenPort
-                    << "due to" << _listenSocket.errorString();
-        throw std::runtime_error("Listening on network port failed");
+/*
+ * StreamHandler
+ */
+
+class StreamHandlerPrivate {
+    StreamHandler *q_ptr;
+    Q_DECLARE_PUBLIC(StreamHandler)
+
+    StreamServer *_streamServer;
+
+    explicit StreamHandlerPrivate(StreamServer *streamServer, StreamHandler *q);
+};
+
+StreamHandlerPrivate::StreamHandlerPrivate(StreamServer *streamServer, StreamHandler *q) : q_ptr(q),
+    _streamServer(streamServer)
+{
+    const std::string prefix = "StreamHandler hidden implementation ctor: ";
+
+    if (!q_ptr)
+        throw std::invalid_argument(prefix + "Back-pointer must not be null");
+    if (!_streamServer)
+        throw std::invalid_argument(prefix + "StreamServer must not be null");
+}
+
+
+StreamHandler::StreamHandler(StreamServer *streamServer) :
+    d_ptr(new StreamHandlerPrivate(streamServer, this))
+{
+
+}
+
+QString StreamHandler::name() const
+{
+    return "StreamServer client producer";
+}
+
+void StreamHandler::handleRequest(HTTP::ServerContext *ctx)
+{
+    Q_D(StreamHandler);
+
+    auto client_ptr = d->_streamServer->client(ctx);
+    if (!client_ptr) {
+        if (verbose >= -1)
+            qCritical() << qPrintable(name() + ":") << "StreamServer returned no stream client";
+        return;
     }
 
+    client_ptr->processRequest(ctx);
+}
 
-    connect(&_clientDisconnectedMapper, static_cast<void(QSignalMapper::*)(QObject *)>(&QSignalMapper::mapped),
-            this, &StreamServer::clientDisconnected);
+
+/*
+ * StreamServer
+ */
+
+StreamServer::StreamServer(std::unique_ptr<QFile> inputFilePtr, HTTP::Server *httpServer, QObject *parent) :
+    QObject(parent),
+    _httpServer(httpServer),
+    _httpServerHandler(new StreamHandler(this)),
+    _inputFilePtr(std::move(inputFilePtr))
+{
+    if (!_httpServer)
+        throw std::runtime_error("StreamServer ctor: HTTP server must not be null");
+
+    // TODO: Be more specific.
+    _httpServer->setDefaultHandler(_httpServerHandler);
 }
 
 bool StreamServer::isShuttingDown() const
@@ -61,21 +111,34 @@ bool StreamServer::isShuttingDown() const
     return _isShuttingDown;
 }
 
-quint16 StreamServer::listenPort() const
+HTTP::Server *StreamServer::httpServer() const
 {
-    return _listenPort;
+    return _httpServer;
 }
 
-const QStringList &StreamServer::serverHostWhitelist() const
+StreamClient *StreamServer::client(HTTP::ServerContext *ctx)
 {
-    return _serverHostWhitelist;
-}
+    if (verbose >= -1) {
+        qInfo() << "StreamServer: Creating stream client" << _nextClientID
+                << "from" << ctx->client()->peerAddress()
+                << "port" << ctx->client()->peerPort()
+                << "requesting" << ctx->request().path();
+    }
 
-void StreamServer::setServerHostWhitelist(const QStringList &whitelist)
-{
-    if (verbose >= 1)
-        qInfo() << "Changing server host white-list from" << _serverHostWhitelist << "to" << whitelist;
-    _serverHostWhitelist = whitelist;
+    // Set up client object and signal mapping.
+    auto *client_ptr = new StreamClient(ctx, _nextClientID++, this);
+    connect(client_ptr, &QObject::destroyed, this, &StreamServer::handleStreamClientDestroyed);
+
+    // Pass on current settings.
+    client_ptr->setTSStripAdditionalInfo(_tsStripAdditionalInfoDefault);
+
+    // Store client object in list.
+    _clients.append(client_ptr);
+
+    if (verbose >= 0)
+        qInfo() << "Stream client count:" << _clients.length();
+
+    return client_ptr;
 }
 
 QFile &StreamServer::inputFile()
@@ -169,93 +232,22 @@ void StreamServer::setBrakeType(StreamServer::BrakeType type)
     _brakeType = type;
 }
 
-void StreamServer::clientConnected()
+void StreamServer::handleStreamClientDestroyed(QObject *obj)
 {
-    StreamClient::socketPtr_type socketPtr(_listenSocket.nextPendingConnection(),
-                                           std::mem_fn(&QTcpSocket::deleteLater));
-    if (!socketPtr) {
-        qDebug() << "No next pending connection";
+    auto *streamClient = qobject_cast<StreamClient*>(obj);
+    if (!streamClient) {
+        if (verbose >= 0) {
+            qWarning() << "StreamServer: Can't handle stream client destroyed:"
+                       << "Passed object is not a StreamClient!";
+        }
         return;
     }
-    if (verbose >= -1) {
-        qInfo() << "Client" << _nextClientID << "connected:"
-                << "From" << socketPtr->peerAddress()
-                << "port" << socketPtr->peerPort();
-    }
 
-    // Set up client object and signal mapping.
-    std::shared_ptr<StreamClient> clientPtr(
-        new StreamClient(std::move(socketPtr), _nextClientID++, this),
-        std::mem_fn(&StreamClient::deleteLater));
-    clientPtr->setTSStripAdditionalInfo(_tsStripAdditionalInfoDefault);
-    _clientDisconnectedMapper.setMapping(&clientPtr->socket(), clientPtr.get());
-    connect(&clientPtr->socket(), &QTcpSocket::disconnected,
-            &_clientDisconnectedMapper, static_cast<void(QSignalMapper::*)()>(&QSignalMapper::map));
-
-    // Store client object in list.
-    _clients.push_back(clientPtr);
-
-    if (verbose >= 0)
-        qInfo() << "Client count:" << _clients.length();
+    _clients.removeOne(streamClient);
 }
 
-void StreamServer::clientDisconnected(QObject *objPtr)
+void StreamServer::handleHTTPServerClientDestroyed(HTTP::ServerClient * /* httpServerClient */)
 {
-    if (!objPtr) {
-        qDebug() << "No object specified";
-        return;
-    }
-
-    auto *clientPtr = dynamic_cast<StreamClient *>(objPtr);
-    if (!clientPtr) {
-        qDebug() << "Not a StreamClient";
-        return;
-    }
-
-    QTcpSocket &socket(clientPtr->socket());
-    const QString logPrefix = clientPtr->logPrefix();
-
-    const HTTP::RequestNetside &theHTTPRequest(clientPtr->httpRequest());
-    if (theHTTPRequest.receiveState() != HTTP::RequestNetside::ReceiveState::Ready) {
-        if (verbose >= 0) {
-            qInfo() << qPrintable(logPrefix) << "No valid HTTP request before disconnect!";
-            qInfo() << qPrintable(logPrefix) << "Buffer was"
-                    << HumanReadable::Hexdump { theHTTPRequest.buf(), true, true, true };
-            qInfo() << qPrintable(logPrefix) << "Header lines buffer was"
-                    << HumanReadable::Hexdump { theHTTPRequest.headerLinesBuf(), true, true, true };
-        }
-    }
-
-    if (verbose >= -1) {
-        qInfo() << qPrintable(logPrefix)
-                << "Client" << clientPtr->id() << "disconnected:"
-                << "From" << socket.peerAddress()
-                << "port" << socket.peerPort();
-
-        qint64 elapsed = clientPtr->createdElapsed().elapsed();
-        qInfo() << qPrintable(logPrefix)
-                << "Client was connected for" << elapsed << "ms"
-                << qPrintable("(" + HumanReadable::timeDuration(elapsed) + "),")
-                << "since" << clientPtr->createdTimestamp();
-
-        quint64 received = clientPtr->socketBytesReceived(), sent = clientPtr->socketBytesSent();
-        qInfo() << qPrintable(logPrefix)
-                << "Client transfer statistics:"
-                << "Received from client" << received << "bytes"
-                << qPrintable("(" + HumanReadable::byteCount(received) + "),")
-                << "sent to client" << sent << "bytes"
-                << qPrintable("(" + HumanReadable::byteCount(sent) + ")");
-    }
-
-    // Clean up resources.
-    _clientDisconnectedMapper.removeMappings(&socket);
-
-    // Remove client object from list.
-    _clients.removeOne(std::shared_ptr<StreamClient>(clientPtr, std::mem_fn(&StreamClient::deleteLater)));
-
-    if (verbose >= 0)
-        qInfo() << "Client count:" << _clients.length();
-
     if (_isShuttingDown && _clients.length() == 0) {
         if (verbose >= -1)
             qInfo() << "Shutdown: Client count reached zero, exiting event loop";
@@ -634,7 +626,7 @@ void StreamServer::processInput()
 #else
                 client->queuePacket(packetNode);
 #endif
-                client->sendData();
+                // FIXME: client->sendData();
             }
             catch (std::exception &ex) {
                 qWarning().nospace()
@@ -678,7 +670,7 @@ void StreamServer::shutdown(int sigNum, const QString &sigStr)
 
     if (verbose >= 1)
         qInfo() << "Shutdown: Closing listening socket...";
-    _listenSocket.close();
+    _httpServer->closeListeningSocket();
 
     if (_clients.length() > 0) {
         if (verbose >= 0)

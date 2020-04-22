@@ -81,6 +81,8 @@ QString statusMsgFromStatusCode(StatusCode statusCode)
         return "Bad Request";
     case SC_404_NotFound:
         return "Not Found";
+    case SC_500_InternalServerError:
+        return "Internal Server Error";
     default:
         if (log::verbose >= 0) {
             qWarning() << "Unrecognized HTTP status code" << statusCode

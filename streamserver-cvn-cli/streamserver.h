@@ -5,23 +5,42 @@
 
 #include <ctime>
 #include <memory>
+#include <QPointer>
+#include <QScopedPointer>
 #include <QList>
 #include <QFile>
-#include <QSignalMapper>
 #include <QSocketNotifier>
 #include <QTimer>
-#include <QTcpServer>
 
 #include "streamclient.h"
+#include "http/httpserver.h"
+
+// FIXME: Remove after wrapping in namespace SSCvn:
+using namespace SSCvn;
+
+
+class StreamServer;
+class StreamHandlerPrivate;
+
+class StreamHandler : public HTTP::ServerHandler {
+    QScopedPointer<StreamHandlerPrivate>  d_ptr;
+    Q_DECLARE_PRIVATE(StreamHandler)
+
+public:
+    explicit StreamHandler(StreamServer *streamServer);
+
+    QString name() const override;
+    void handleRequest(HTTP::ServerContext *ctx) override;
+};
+
 
 class StreamServer : public QObject
 {
     Q_OBJECT
 
     bool                    _isShuttingDown = false;
-    quint16                 _listenPort;
-    QTcpServer              _listenSocket;
-    QStringList             _serverHostWhitelist;
+    QPointer<HTTP::Server>  _httpServer;
+    QSharedPointer<StreamHandler>  _httpServerHandler;
     std::unique_ptr<QFile>  _inputFilePtr;
     QString                 _inputFileName;
     bool                    _inputFileOpenNonblocking = true;
@@ -47,19 +66,17 @@ public:
 private:
     BrakeType               _brakeType = BrakeType::PCRSleep;
 
-    quint64                               _nextClientID = 1;
-    QList<std::shared_ptr<StreamClient>>  _clients;
-    QSignalMapper                         _clientDisconnectedMapper;
+    quint64                 _nextClientID = 1;
+    QList<StreamClient*>    _clients;
 
 public:
-    explicit StreamServer(std::unique_ptr<QFile> inputFilePtr, quint16 listenPort = listenPort_default, QObject *parent = 0);
+    explicit StreamServer(std::unique_ptr<QFile> inputFilePtr, HTTP::Server *httpServer, QObject *parent = nullptr);
 
-    static const quint16 listenPort_default = 8000;
+    bool isShuttingDown() const;
 
-    bool         isShuttingDown() const;
-    quint16      listenPort() const;
-    const QStringList &serverHostWhitelist() const;
-    void         setServerHostWhitelist(const QStringList &whitelist);
+    HTTP::Server *httpServer() const;
+    StreamClient *client(HTTP::ServerContext *ctx);
+
     QFile       &inputFile();
     const QFile &inputFile() const;
     bool         inputFileOpenNonblocking() const;
@@ -80,14 +97,14 @@ public:
 
 signals:
 
+private slots:
+    void handleStreamClientDestroyed(QObject *obj);
+    void handleHTTPServerClientDestroyed(HTTP::ServerClient *httpServerClient);
+
 public slots:
     void initInputSlot();
     void processInput();
     void shutdown(int sigNum = 0, const QString &sigStr = QString());
-
-private slots:
-    void clientConnected();
-    void clientDisconnected(QObject *objPtr);
 };
 
 #endif // STREAMSERVER_H

@@ -3,17 +3,15 @@
 
 #include <QObject>
 
-#include <memory>
-#include <functional>
+#include <QPointer>
 #include <QList>
 #include <QByteArray>
 #include <QDateTime>
 #include <QString>
 #include <QElapsedTimer>
-#include <QTcpSocket>
 
-#include "http/httprequest_netside.h"
-#include "http/httpresponse.h"
+#include "http/httpserver.h"
+
 #ifndef TS_PACKET_V2
 #include "tspacket.h"
 #else
@@ -23,31 +21,17 @@
 // TODO: Wrap into namespace SSCvn ourselves; then, remove this:
 using namespace SSCvn;
 
-namespace SSCvn { namespace HTTP {
-enum StatusCode;
-} }
-
 class StreamServer;
 
 class StreamClient : public QObject
 {
     Q_OBJECT
 
-public:
-    typedef std::unique_ptr<QTcpSocket, std::function<void(QTcpSocket *)>>  socketPtr_type;
-private:
     quint64                      _id;
     QString                      _logPrefix;
     QDateTime                    _createdTimestamp;
     QElapsedTimer                _createdElapsed;
-    socketPtr_type               _socketPtr;
-    quint64                      _socketBytesReceived = 0;
-    quint64                      _socketBytesSent = 0;
-    bool                         _isReceiving = true;
-    HTTP::RequestNetside         _httpRequest;
-    std::unique_ptr<HTTP::Response>  _httpResponsePtr;
-    void _setHttpResponseError(HTTP::StatusCode statusCode, const QByteArray &body);
-    bool                         _responseHeaderSent = false;
+    QPointer<HTTP::ServerContext>  _httpServerContext;
     bool                         _forwardPackets = false;
     bool                         _tsStripAdditionalInfo = true;
 #ifndef TS_PACKET_V2
@@ -56,23 +40,15 @@ private:
     TS::PacketV2Generator        _tsGenerator;
     QList<QSharedPointer<ConversionNode<TS::PacketV2>>>  _queue;
 #endif
-    QByteArray                   _sendBuf;
 
 public:
-    explicit StreamClient(socketPtr_type socketPtr, quint64 id = 0, QObject *parent = 0);
+    explicit StreamClient(HTTP::ServerContext *httpServerContext, quint64 id = 0, QObject *parent = 0);
 
     StreamServer *parentServer() const;
     quint64 id() const;
     const QString &logPrefix() const;
     QDateTime createdTimestamp() const;
     const QElapsedTimer &createdElapsed() const;
-
-    QTcpSocket &socket();
-    const QTcpSocket &socket() const;
-    quint64 socketBytesReceived() const;
-    quint64 socketBytesSent() const;
-    const HTTP::RequestNetside &httpRequest() const;
-    const HTTP::Response *httpResponse() const;
 
     bool tsStripAdditionalInfo() const;
     void setTSStripAdditionalInfo(bool strip);
@@ -86,15 +62,16 @@ public:
 #else
     void queuePacket(const QSharedPointer<ConversionNode<TS::PacketV2>> &packetNode);
 #endif
-    void sendData();
-    void processRequest();
-
-    void close();
 
 signals:
 
+private slots:
+    bool handleGenerateResponseBody(QByteArray &buf);
+    void handleHTTPServerContextDestroyed(QObject *obj);
+
 public slots:
-    void receiveData();
+    void processRequest(HTTP::ServerContext *ctx);
+    void close();
 };
 
 #endif // STREAMCLIENT_H

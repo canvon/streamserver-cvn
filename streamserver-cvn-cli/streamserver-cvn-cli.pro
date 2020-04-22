@@ -15,7 +15,8 @@ SOURCES += main.cpp \
     http/httputil.cpp \
     http/httpheader_netside.cpp \
     http/httprequest_netside.cpp \
-    http/httpresponse.cpp
+    http/httpresponse.cpp \
+    http/httpserver.cpp
 
 HEADERS += \
     streamserver.h \
@@ -23,7 +24,8 @@ HEADERS += \
     http/httputil.h \
     http/httpheader_netside.h \
     http/httprequest_netside.h \
-    http/httpresponse.h
+    http/httpresponse.h \
+    http/httpserver.h
 
 include(../config.pri)
 

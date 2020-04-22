@@ -21,6 +21,7 @@ enum StatusCode {
     SC_200_OK         = 200,
     SC_400_BadRequest = 400,
     SC_404_NotFound   = 404,
+    SC_500_InternalServerError = 500,
 };
 
 QString statusMsgFromStatusCode(StatusCode statusCode);

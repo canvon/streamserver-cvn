@@ -1,6 +1,7 @@
 #include <QCoreApplication>
 
 #include "log_backend.h"
+#include "http/httpserver.h"
 #include "streamserver.h"
 #include "demangle.h"
 #include "humanreadable.h"
@@ -189,7 +190,7 @@ int main(int argc, char *argv[])
         { "debug-level", "Set debug level (default: 0)",
           "level_number" },
         { { "l", "listen-port" }, "Port to listen on for HTTP streaming client connections"
-          " (default: " + QString::number(StreamServer::listenPort_default) + ")",
+          " (default: " + QString::number(HTTP::Server::listenPort_default) + ")",
           "port" },
         { "server-host-whitelist", "HTTP server host names to require (e.g., \"foo:8000,bar:8000\")"
           " (default: accept any)",
@@ -325,7 +326,7 @@ int main(int argc, char *argv[])
     }
 
 
-    quint16 listenPort = StreamServer::listenPort_default;
+    quint16 listenPort = HTTP::Server::listenPort_default;
     {
         QVariant valueVar = effectiveValue("listen-port");
         if (valueVar.isValid()) {
@@ -441,13 +442,22 @@ int main(int argc, char *argv[])
     log::backend::logStarting = false;
 
 
-    StreamServer server(std::make_unique<QFile>(inputFilePath), listenPort);
+    QPointer<HTTP::Server> httpServer;
+    try {
+        httpServer = new HTTP::Server(listenPort, &a);
+
+        if (serverHostWhitelistPtr)
+            httpServer->setServerHostWhitelist(*serverHostWhitelistPtr);
+    }
+    catch (const std::exception &ex) {
+        qCritical() << "Error setting up HTTP server:" << ex.what();
+        return 1;
+    }
+
+    StreamServer server(std::make_unique<QFile>(inputFilePath), httpServer);
     ::server = &server;
 
     try {
-        if (serverHostWhitelistPtr)
-            server.setServerHostWhitelist(*serverHostWhitelistPtr);
-
         if (tsPacketSizePtr) {
             server.setTSPacketSize(*tsPacketSizePtr);
             server.setTSPacketAutosize(false);
