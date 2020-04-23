@@ -163,19 +163,24 @@ void Server::handleClientDestroyed(QObject *obj)
 {
     if (!obj)
         return;
-
     Q_D(Server);
 
-    auto *client = qobject_cast<ServerClient*>(obj);
-    if (!client)
-        return;
-
-    d->_clients.removeOne(client);
+    // As it seems that the object's dtor has already run,
+    // and in any case we can't cast down to ServerClient*:
+    // Cast existing ServerClient* up to QObject* for comparison with obj.
+    QMutableListIterator<ServerClient*> iter(d->_clients);
+    while (iter.hasNext()) {
+        if (static_cast<QObject*>(iter.next()) != obj)
+            continue;
+        // Update the clients list to no longer point to the destroyed object.
+        iter.remove();
+        break;
+    }
 
     if (verbose >= 0)
         qInfo() << "HTTP server: Client count:" << d->_clients.length();
 
-    emit clientDestroyed(client);
+    emit clientDestroyed(obj);
 }
 
 void Server::processRequest(ServerContext *ctx)

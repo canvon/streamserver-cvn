@@ -239,19 +239,21 @@ void StreamServer::setBrakeType(StreamServer::BrakeType type)
 
 void StreamServer::handleStreamClientDestroyed(QObject *obj)
 {
-    auto *streamClient = qobject_cast<StreamClient*>(obj);
-    if (!streamClient) {
-        if (verbose >= 0) {
-            qWarning() << "StreamServer: Can't handle stream client destroyed:"
-                       << "Passed object is not a StreamClient!";
-        }
+    if (!obj)
         return;
-    }
 
-    _clients.removeOne(streamClient);
+    // (Note that we can't cast obj down to StreamClient* anymore,
+    // most probably as the dtor will already have run.)
+    QMutableListIterator<StreamClient*> iter(_clients);
+    while (iter.hasNext()) {
+        if (static_cast<QObject*>(iter.next()) != obj)
+            continue;
+        iter.remove();
+        break;
+    }
 }
 
-void StreamServer::handleHTTPServerClientDestroyed(HTTP::ServerClient * /* httpServerClient */)
+void StreamServer::handleHTTPServerClientDestroyed(QObject * /* obj */)
 {
     if (_isShuttingDown && (!_httpServer || _httpServer->clients().isEmpty())) {
         if (verbose >= -1)

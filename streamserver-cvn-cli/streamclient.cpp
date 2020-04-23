@@ -195,13 +195,6 @@ void StreamClient::handleHTTPServerContextDestroyed(QObject *obj)
     if (!obj)
         return;
 
-    auto *ctx = qobject_cast<HTTP::ServerContext*>(obj);
-    if (!ctx)
-        return;
-
-    if (ctx != _httpServerContext)
-        return;
-
     _queue.clear();
     deleteLater();
 }

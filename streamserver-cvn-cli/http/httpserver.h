@@ -50,7 +50,7 @@ public:
 
 signals:
     void clientConnected(ServerClient *client);
-    void clientDestroyed(ServerClient *client);
+    void clientDestroyed(QObject *obj);
 
 private slots:
     void handleClientConnected();

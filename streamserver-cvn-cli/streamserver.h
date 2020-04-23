@@ -99,7 +99,7 @@ signals:
 
 private slots:
     void handleStreamClientDestroyed(QObject *obj);
-    void handleHTTPServerClientDestroyed(HTTP::ServerClient *httpServerClient);
+    void handleHTTPServerClientDestroyed(QObject *obj);
 
 public slots:
     void initInputSlot();
