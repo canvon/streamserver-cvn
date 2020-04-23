@@ -14,9 +14,9 @@ StreamClient::StreamClient(HTTP::ServerContext *httpServerContext, quint64 id, Q
     _httpServerContext(httpServerContext)
 {
     _createdElapsed.start();
-    _logPrefix = "{Stream client " + QString::number(_id) +
-        ", HTTP context " + QString::number(httpServerContext->id()) +
-        ", HTTP client " + QString::number(httpServerContext->client()->id()) + "}";
+    _logPrefix = "{HTTPClient" + QString::number(httpServerContext->client()->id()) +
+        "/HTTPCtx" + QString::number(httpServerContext->id()) +
+        "/StreamClient" + QString::number(_id) + "}";
 
     connect(httpServerContext, &QObject::destroyed, this, &StreamClient::handleHTTPServerContextDestroyed);
 }

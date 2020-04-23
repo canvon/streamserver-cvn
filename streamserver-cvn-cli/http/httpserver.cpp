@@ -334,7 +334,7 @@ ServerClientPrivate::ServerClientPrivate(QTcpSocket *socket, quint64 id, ServerC
         throw std::invalid_argument(prefix + "Socket must not be null");
 
     _createdElapsed.start();
-    _logPrefix = "{HTTP client " + QString::number(_id) + "}";
+    _logPrefix = "{HTTPClient" + QString::number(_id) + "}";
 }
 
 void ServerClientPrivate::_handleDisconnected()
@@ -656,7 +656,7 @@ ServerContextPrivate::ServerContextPrivate(ServerClient *client, quint64 id, Ser
         throw std::invalid_argument(prefix + "Client must not be null");
 
     _createdElapsed.start();
-    _logPrefix = "{HTTP context " + QString::number(_id) + ", HTTP client " + QString::number(_client->id()) + "}";
+    _logPrefix = "{HTTPClient" + QString::number(_client->id()) + "/HTTPCtx" + QString::number(_id) + "}";
 }
 
 bool ServerContextPrivate::_bufferResponse(QByteArray &buf)
