@@ -319,7 +319,7 @@ class ServerClientPrivate {
     QByteArray _sendBuf;
 
     quint64 _nextContextID = 1;
-    ServerContext *_currentContext;
+    QPointer<ServerContext> _currentContext;
 
     explicit ServerClientPrivate(QTcpSocket *socket, quint64 id, ServerClient *q);
 
@@ -347,6 +347,8 @@ ServerClientPrivate::ServerClientPrivate(QTcpSocket *socket, quint64 id, ServerC
 void ServerClientPrivate::_handleDisconnected()
 {
     Q_Q(ServerClient);
+    if (_currentContext)
+        _currentContext->deleteLater();
     q->deleteLater();
 
     if (_currentContext) {
