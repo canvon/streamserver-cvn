@@ -50,6 +50,9 @@ public:
     QDateTime createdTimestamp() const;
     const QElapsedTimer &createdElapsed() const;
 
+    HTTP::ServerContext *httpServerContext() const;
+
+    bool isForwardingPackets() const;
     bool tsStripAdditionalInfo() const;
     void setTSStripAdditionalInfo(bool strip);
 #ifdef TS_PACKET_V2

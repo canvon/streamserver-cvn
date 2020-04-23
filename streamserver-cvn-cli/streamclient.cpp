@@ -60,6 +60,16 @@ const QElapsedTimer &StreamClient::createdElapsed() const
     return _createdElapsed;
 }
 
+HTTP::ServerContext *StreamClient::httpServerContext() const
+{
+    return _httpServerContext;
+}
+
+bool StreamClient::isForwardingPackets() const
+{
+    return _forwardPackets;
+}
+
 bool StreamClient::tsStripAdditionalInfo() const
 {
     return _tsStripAdditionalInfo;
