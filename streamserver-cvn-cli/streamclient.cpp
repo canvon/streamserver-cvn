@@ -241,7 +241,14 @@ void StreamClient::close()
     //       receive a proper response...
 
     if (verbose >= 0)
-        qInfo() << qPrintable(_logPrefix) << "Closing down... (programmatic request)";
-    if (_httpServerContext)
-        _httpServerContext->client()->close();
+        qInfo() << qPrintable(_logPrefix) << "Checking for close down. (programmatic request)";
+    if (!_httpServerContext)
+        return;
+    HTTP::ServerClient *client = _httpServerContext->client();
+    if (!client)
+        return;
+
+    if (verbose >= 0)
+        qInfo() << qPrintable(_logPrefix) << "Closing down our remaining client... (programmatic request)";
+    client->close();
 }
