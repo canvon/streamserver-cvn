@@ -244,8 +244,9 @@ void StreamServer::handleStreamClientDestroyed(QObject *obj)
 
     // (Note that we can't cast obj down to StreamClient* anymore,
     // most probably as the dtor will already have run.)
-    QMutableListIterator<StreamClient*> iter(_clients);
-    while (iter.hasNext()) {
+    for (QMutableListIterator<StreamClient*> iter(_clients);
+         iter.hasNext(); )
+    {
         if (static_cast<QObject*>(iter.next()) != obj)
             continue;
         iter.remove();
