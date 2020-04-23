@@ -120,6 +120,8 @@ StreamClient *StreamServer::client(HTTP::ServerContext *ctx)
 {
     if (verbose >= -1) {
         qInfo() << "StreamServer: Creating stream client" << _nextClientID
+                << "from HTTP context" << ctx->id()
+                << "of HTTP client" << ctx->client()->id()
                 << "from" << ctx->client()->peerAddress()
                 << "port" << ctx->client()->peerPort()
                 << "requesting" << ctx->request().path();
