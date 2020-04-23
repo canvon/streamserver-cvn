@@ -126,6 +126,15 @@ void StreamClient::queuePacket(const QSharedPointer<ConversionNode<TS::PacketV2>
 
     _queue.append(packetNode);
 #endif
+
+    // Start sending data to the client, (again?).
+    // (Might have stopped while queue might have been empty.)
+    if (!_httpServerContext)
+        return;
+    HTTP::ServerClient *httpServerClient = _httpServerContext->client();
+    if (!httpServerClient)
+        return;
+    httpServerClient->sendData();
 }
 
 bool StreamClient::handleGenerateResponseBody(QByteArray &buf)

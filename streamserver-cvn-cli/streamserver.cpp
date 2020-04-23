@@ -634,7 +634,6 @@ void StreamServer::processInput()
 #else
                 client->queuePacket(packetNode);
 #endif
-                // FIXME: client->sendData();
             }
             catch (std::exception &ex) {
                 qWarning().nospace()
