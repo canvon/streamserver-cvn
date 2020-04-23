@@ -128,7 +128,9 @@ QDebug operator<<(QDebug debug, const Hexdump &dump)
     QDebugStateSaver saver(debug);
     debug.nospace();
 
-    if (dump.compressAllOneBits && !hasOtherThan('\xff', dump.data))
+    if (dump.data.isEmpty())
+        debug << "(empty)";
+    else if (dump.compressAllOneBits && !hasOtherThan('\xff', dump.data))
         debug << dump.data.length() << "x\"ff\"";
     else if (dump.compressAllZeroBits && !hasOtherThan('\x00', dump.data))
         debug << dump.data.length() << "x\"00\"";
