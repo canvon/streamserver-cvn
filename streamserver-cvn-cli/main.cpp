@@ -16,11 +16,11 @@
 #include <QCommandLineParser>
 #include <QSettings>
 
-using SSCvn::log::debug_level;
-using SSCvn::log::verbose;
+namespace SSCvn {
 
-// TODO: Convert to ambitious use of namespaces.
-using namespace SSCvn;
+using log::debug_level;
+using log::verbose;
+
 
 sig_atomic_t lastSigNum = 0;
 
@@ -54,7 +54,7 @@ static void handleSignalShutdown(int sigNum)
     }
     lastSigNum = sigNum;
 
-    StreamServer *theServer = ::server;
+    StreamServer *theServer = SSCvn::server;
     if (theServer) {
         if (!QMetaObject::invokeMethod(theServer, "shutdown", Qt::QueuedConnection,
                                        Q_ARG(int, sigNum), Q_ARG(QString, sigStr)))
@@ -77,7 +77,7 @@ void setupSignals()
         throw std::system_error(errno, std::generic_category(), "Can't set signal handler for " + signalNumberToString(SIGTERM).toStdString());
 }
 
-namespace {
+namespace {  // namespace SSCvn::(anonymous)
 void handleTerminate() {
     try {
         auto exPtr = std::current_exception();
@@ -143,10 +143,18 @@ void handleTerminate() {
         abort();
     }
 }
-}
+}  // namespace SSCvn::(anonymous)
+
+}  // namespace SSCvn
+
 
 int main(int argc, char *argv[])
 {
+    // (It seems main() can't be inside a namespace,
+    // nor can it be declared as ::main() from inside a namespace;
+    // so...)
+    using namespace SSCvn;
+
     log::backend::updateIsSystemdJournal();
     if (log::backend::isSystemdJournal_stderr) {
         // With systemd journal, always use fancy output.
@@ -455,7 +463,7 @@ int main(int argc, char *argv[])
     }
 
     StreamServer server(std::make_unique<QFile>(inputFilePath), httpServer);
-    ::server = &server;
+    SSCvn::server = &server;
 
     try {
         if (tsPacketSizePtr) {
