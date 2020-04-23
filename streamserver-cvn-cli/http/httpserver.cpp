@@ -365,10 +365,16 @@ void ServerClientPrivate::_handleDisconnected()
     }
 
     if (verbose >= -1) {
-        qInfo() << qPrintable(_logPrefix)
-                << "Client disconnected:"
-                << "From" << _socket_ptr->peerAddress()
-                << "port" << _socket_ptr->peerPort();
+        if (!_socket_ptr) {
+            qInfo() << qPrintable(_logPrefix)
+                    << "Client disconnected: (Socket already unavailable, peer address/port unknown.)";
+        }
+        else {
+            qInfo() << qPrintable(_logPrefix)
+                    << "Client disconnected:"
+                    << "From" << _socket_ptr->peerAddress()
+                    << "port" << _socket_ptr->peerPort();
+        }
 
         qint64 elapsed = _createdElapsed.elapsed();
         qInfo() << qPrintable(_logPrefix)
