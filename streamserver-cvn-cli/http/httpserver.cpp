@@ -20,7 +20,7 @@
 #include <QDebug>
 
 namespace SSCvn {
-namespace HTTP {
+namespace HTTP {  // namespace SSCvn::HTTP
 
 using log::verbose;
 using log::debug_level;

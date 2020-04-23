@@ -19,7 +19,10 @@
 #include "log.h"
 #include "http/httprequest_netside.h"
 
-using SSCvn::log::verbose;
+namespace SSCvn {
+
+using log::verbose;
+
 
 namespace {
 
@@ -700,3 +703,6 @@ void StreamServer::shutdown(int sigNum, const QString &sigStr)
     if (verbose >= 1)
         qDebug() << "Shutdown: Returning to caller, expecting to ultimately return to event loop";
 }
+
+
+}  // namespace SSCvn

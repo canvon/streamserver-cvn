@@ -18,8 +18,8 @@
 #include "tspacketv2.h"
 #endif
 
-// TODO: Wrap into namespace SSCvn ourselves; then, remove this:
-using namespace SSCvn;
+namespace SSCvn {
+
 
 class StreamServer;
 
@@ -76,5 +76,8 @@ public slots:
     void processRequest(HTTP::ServerContext *ctx);
     void close();
 };
+
+
+}  // namespace SSCvn
 
 #endif // STREAMCLIENT_H

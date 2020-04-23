@@ -7,7 +7,10 @@
 #include "http/httpresponse.h"
 #include "humanreadable.h"
 
-using SSCvn::log::verbose;
+namespace SSCvn {
+
+using log::verbose;
+
 
 StreamClient::StreamClient(HTTP::ServerContext *httpServerContext, quint64 id, QObject *parent) :
     QObject(parent), _id(id), _createdTimestamp(QDateTime::currentDateTime()),
@@ -264,3 +267,6 @@ void StreamClient::close()
         qInfo() << qPrintable(_logPrefix) << "Closing down our remaining client... (programmatic request)";
     client->close();
 }
+
+
+}  // namespace SSCvn

@@ -17,7 +17,7 @@ class QDateTime;
 class QElapsedTimer;
 
 namespace SSCvn {
-namespace HTTP {
+namespace HTTP {  // namespace SSCvn::HTTP
 
 
 class ServerClient;

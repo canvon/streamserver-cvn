@@ -15,8 +15,7 @@
 #include "streamclient.h"
 #include "http/httpserver.h"
 
-// FIXME: Remove after wrapping in namespace SSCvn:
-using namespace SSCvn;
+namespace SSCvn {
 
 
 class StreamServer;
@@ -106,5 +105,8 @@ public slots:
     void processInput();
     void shutdown(int sigNum = 0, const QString &sigStr = QString());
 };
+
+
+}  // namespace SSCvn
 
 #endif // STREAMSERVER_H
