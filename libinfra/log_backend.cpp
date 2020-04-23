@@ -103,9 +103,6 @@ void msgHandler(QtMsgType type, const QMessageLogContext &ctx, const QString &ms
         errout << "[" << ctx.category << "] ";
     }
 
-    // Optional prefix.
-    errout << prefix;
-
     // Optional debugging aids.
     if (debug_level > 0) {
         if (debug_level > 1 && ctx.file) {
@@ -119,6 +116,9 @@ void msgHandler(QtMsgType type, const QMessageLogContext &ctx, const QString &ms
             errout << ctx.function << ": ";
         }
     }
+
+    // Optional prefix.
+    errout << prefix;
 
     // The message.
     errout << msg << endl;
