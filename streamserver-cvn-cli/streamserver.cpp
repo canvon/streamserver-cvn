@@ -102,6 +102,9 @@ StreamServer::StreamServer(std::unique_ptr<QFile> inputFilePtr, HTTP::Server *ht
     if (!_httpServer)
         throw std::runtime_error("StreamServer ctor: HTTP server must not be null");
 
+    // (This is required (at least) for clean & timely exit.)
+    connect(httpServer, &HTTP::Server::clientDestroyed, this, &StreamServer::handleHTTPServerClientDestroyed);
+
     // TODO: Be more specific.
     _httpServer->setDefaultHandler(_httpServerHandler);
 }
