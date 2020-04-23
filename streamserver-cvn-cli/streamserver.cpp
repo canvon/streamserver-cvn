@@ -250,9 +250,9 @@ void StreamServer::handleStreamClientDestroyed(QObject *obj)
 
 void StreamServer::handleHTTPServerClientDestroyed(HTTP::ServerClient * /* httpServerClient */)
 {
-    if (_isShuttingDown && _clients.length() == 0) {
+    if (_isShuttingDown && (!_httpServer || _httpServer->clients().isEmpty())) {
         if (verbose >= -1)
-            qInfo() << "Shutdown: Client count reached zero, exiting event loop";
+            qInfo() << "Shutdown: No HTTP clients left, exiting event loop";
         if (qApp)
             qApp->exit();
         else
