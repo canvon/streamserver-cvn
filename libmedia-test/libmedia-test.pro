@@ -1,18 +1,8 @@
-#-------------------------------------------------
-#
-# Project created by QtCreator 2018-03-11T16:19:23
-#
-#-------------------------------------------------
-
-QT       += testlib
-
-QT       -= gui
-
 TARGET = tst_tsparsertest
-CONFIG   += console
-CONFIG   -= app_bundle
-
-TEMPLATE = app
+CONFIG += console
+CONFIG -= app_bundle
+QT += testlib
+QT -= gui
 
 include(../config.pri)
 
