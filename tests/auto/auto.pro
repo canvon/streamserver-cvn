@@ -1,3 +1,4 @@
 TEMPLATE = subdirs
 SUBDIRS = \
-    libmedia
+    libmedia \
+    streamserver-cvn-cli
