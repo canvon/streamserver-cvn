@@ -28,15 +28,6 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
-!isEmpty(QMAKE_REL_RPATH_BASE): QMAKE_RPATHDIR += .
-unix: QMAKE_RPATHDIR += /usr/lib/streamserver-cvn
-
 SSCVN_REL_ROOT = ..
-
-# Link against internal library libinfra.
-SSCVN_LIB_NAME = infra
-include(../include/internal_lib.pri)
-
-# Link against internal library libmedia.
-SSCVN_LIB_NAME = media
-include(../include/internal_lib.pri)
+SSCVN_LIB_NAMES = infra media
+include(../include/app_internal_libs.pri)
