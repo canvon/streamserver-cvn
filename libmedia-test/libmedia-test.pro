@@ -8,8 +8,6 @@ QT       += testlib
 
 QT       -= gui
 
-CONFIG += c++14
-
 TARGET = tst_tsparsertest
 CONFIG   += console
 CONFIG   -= app_bundle

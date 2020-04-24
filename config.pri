@@ -1,5 +1,7 @@
 # streamserver-cvn config.pri - qmake include file common to all sub-projects
 
+CONFIG += c++14
+
 # Use the new TS::PacketV2 code.
 #
 # This is not the default, yet, as not every part of the code base

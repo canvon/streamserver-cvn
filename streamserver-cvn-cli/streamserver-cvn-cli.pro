@@ -1,8 +1,6 @@
 QT += core network
 QT -= gui
 
-CONFIG += c++14
-
 TARGET = streamserver-cvn-cli
 CONFIG += console
 CONFIG -= app_bundle

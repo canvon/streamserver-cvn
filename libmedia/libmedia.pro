@@ -6,8 +6,6 @@
 
 QT       -= gui
 
-CONFIG += c++14
-
 TARGET = media
 VERSION = 0.1.0
 TEMPLATE = lib

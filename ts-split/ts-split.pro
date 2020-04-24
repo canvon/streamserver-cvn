@@ -1,8 +1,6 @@
 QT += core
 QT -= gui
 
-CONFIG += c++14
-
 TARGET = ts-split
 CONFIG += console
 CONFIG -= app_bundle
