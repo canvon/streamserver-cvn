@@ -13,8 +13,11 @@ else:unix: LIBS += $$SSCVN_LIB_LINK_DIR/ $$SSCVN_LIB_LINK_LIB
 # Allow to find the lib at runtime via relative path.
 !isEmpty(QMAKE_REL_RPATH_BASE): QMAKE_RPATHDIR += $$SSCVN_LIB_REL_DIR
 
-INCLUDEPATH += $$PWD/$${SSCVN_LIB_REL_DIR}
-DEPENDPATH  += $$PWD/$${SSCVN_LIB_REL_DIR}
+# N.B.: PWD will point at this project include file's directory!
+#   It'll *not* point at the directory where an in-place build would place
+#   its Makefile... So using SSCVN_REL_ROOT would be wrong, here.
+INCLUDEPATH += $$PWD/../lib$${SSCVN_LIB_NAME}
+DEPENDPATH  += $$PWD/../lib$${SSCVN_LIB_NAME}
 
 # Unset our temporary variables again.
 unset(SSCVN_LIB_LINK_DIR)
