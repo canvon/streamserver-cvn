@@ -33,19 +33,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += tst_tsparsertest.cpp
 DEFINES += SRCDIR=\\\"$$PWD/\\\"
 
-
-# Link against libinfra.
-win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../libinfra/release/ -linfra
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../libinfra/debug/ -linfra
-else:unix: LIBS += -L$$OUT_PWD/../libinfra/ -linfra
-
-# Link against libmedia.
-win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../libmedia/release/ -lmedia
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../libmedia/debug/ -lmedia
-else:unix: LIBS += -L$$OUT_PWD/../libmedia/ -lmedia
-
-!isEmpty(QMAKE_REL_RPATH_BASE): QMAKE_RPATHDIR += . ../libmedia ../libinfra
-unix: QMAKE_RPATHDIR += /usr/lib/streamserver-cvn
-
-INCLUDEPATH += $$PWD/../libinfra $$PWD/../libmedia
-DEPENDPATH += $$PWD/../libinfra $$PWD/../libmedia
+# Link against internal libraries used.
+SSCVN_REL_ROOT = ..
+SSCVN_LIB_NAMES = infra media
+for(SSCVN_LIB_NAME, SSCVN_LIB_NAMES): include(../include/internal_lib.pri)

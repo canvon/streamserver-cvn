@@ -47,9 +47,7 @@ unix {
     INSTALLS += target
 }
 
-win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../libinfra/release/ -linfra
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../libinfra/debug/ -linfra
-else:unix: LIBS += -L$$OUT_PWD/../libinfra/ -linfra
-
-INCLUDEPATH += $$PWD/../libinfra
-DEPENDPATH += $$PWD/../libinfra
+# Link against internal library libinfra.
+SSCVN_REL_ROOT = ..
+SSCVN_LIB_NAME = infra
+include(../include/internal_lib.pri)
