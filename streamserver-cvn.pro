@@ -6,10 +6,10 @@ SUBDIRS += \
     streamserver-cvn-cli \
     ts-dump \
     ts-split \
-    libmedia-test
+    tests
 
 libmedia.depends             = libinfra
 streamserver-cvn-cli.depends = libinfra libmedia
 ts-dump.depends              = libinfra libmedia
 ts-split.depends             = libinfra libmedia
-libmedia-test.depends        = libmedia
+tests.depends                = libinfra libmedia streamserver-cvn-cli ts-dump ts-split
