@@ -1,4 +1,3 @@
-#include <QString>
 #include <QtTest>
 
 #include "tsprimitive.h"
@@ -10,10 +9,7 @@ class TSParserTest : public QObject
 {
     Q_OBJECT
 
-public:
-    TSParserTest();
-
-private Q_SLOTS:
+private slots:
     void bitStreamBitwiseRead();
     void bslbf1Assign();
     void bslbfAdaptationFieldControl();
@@ -22,10 +18,6 @@ private Q_SLOTS:
 
     void sinkTest();
 };
-
-TSParserTest::TSParserTest()
-{
-}
 
 void TSParserTest::bitStreamBitwiseRead()
 {
@@ -142,5 +134,4 @@ void TSParserTest::sinkTest()
 }
 
 QTEST_APPLESS_MAIN(TSParserTest)
-
 #include "tst_tsparsertest.moc"

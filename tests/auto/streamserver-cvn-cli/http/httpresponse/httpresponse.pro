@@ -9,7 +9,6 @@ SSCVN_REL_ROOT = ../../../../..
 include($${SSCVN_REL_ROOT}/config.pri)
 
 SOURCES += tst_httpresponse.cpp
-#DEFINES += SRCDIR=\\\"$$PWD/\\\"
 
 SSCVN_APP_REL_DIR = $${SSCVN_REL_ROOT}/streamserver-cvn-cli
 
