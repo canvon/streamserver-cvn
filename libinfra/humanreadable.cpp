@@ -141,7 +141,7 @@ QDebug operator<<(QDebug debug, const Hexdump &dump)
         QByteArray mainData = dump.data;
         int mainDataLen = mainData.length();
         int trailingCount = 0;
-        char trailingByte;
+        char trailingByte = '\0';
         if (dump.compressTrailing && mainDataLen >= 3) {
             trailingByte = mainData.at(mainDataLen - 1);
             if (mainData.at(mainDataLen - 2) == trailingByte &&
