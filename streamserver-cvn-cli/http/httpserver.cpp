@@ -107,10 +107,10 @@ void Server::setDefaultHandler(QSharedPointer<ServerHandler> handler)
     Q_D(Server);
 
     bool hadPrevious = d->_defaultHandler;
-    const QString prevName = hadPrevious ? d->_defaultHandler->name() : QString::null;
+    const QString prevName = hadPrevious ? d->_defaultHandler->name() : QString();
 
     bool haveNext = handler;
-    const QString nextName = haveNext ? handler->name() : QString::null;
+    const QString nextName = haveNext ? handler->name() : QString();
 
     if (verbose >= 0) {
         if (hadPrevious && haveNext)
